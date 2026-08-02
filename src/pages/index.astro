@@ -1,11 +1,293 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
 <Layout>
-	<Welcome />
+	<section id="hero" class="section">
+		<div class="hero-content">
+			<h1><img src="/logo/primary.png" alt="Mentor Game Studio" class="hero-logo" /></h1>
+			<p class="tagline">Battle-tested game developer team built for collaboration.</p>
+		</div>
+		<a href="#team" class="scroll-cue" aria-label="Scroll to team section">↓</a>
+	</section>
+
+	<section id="team" class="section">
+		<h2 class="section-title brand-heading">The Team</h2>
+		<div class="team-grid">
+			<article class="member">
+				<h3>Mitko Prodanov</h3>
+				<p class="role">Gameplay & AI Programmer</p>
+				<p class="location">Budapest, Hungary</p>
+
+				<h4>Skills</h4>
+				<ul>
+					<li>C, C++, C#</li>
+					<li>HLSL, GLSL, Cg</li>
+					<li>OpenGL, DirectX</li>
+					<li>Unity, Unreal Engine 4/5 (GAS), Lumberyard</li>
+					<li>TensorFlow (DeepLearning.AI certified)</li>
+				</ul>
+
+				<h4>Experience</h4>
+				<ul>
+					<li><strong>Flying Wild Hog</strong> — Senior Gameplay Programmer, Space Punks (UE4)</li>
+					<li><strong>Primal Game Studio</strong> — crowd movement, ability &amp; commander systems on Supernova</li>
+					<li><strong>Black Hole Entertainment</strong> — campaign AI &amp; ability systems on Might &amp; Magic: Heroes VI</li>
+					<li><strong>Ericsson Hungary</strong> — backbone network traffic analysis in C</li>
+				</ul>
+
+				<h4>Education</h4>
+				<ul>
+					<li>MSc Computer Engineering, Budapest University of Technology and Economics</li>
+				</ul>
+			</article>
+
+			<article class="member common">
+				<h3>Where We Overlap</h3>
+				<p class="role">Since 2012, Budapest</p>
+
+				<ul>
+					<li><strong>Primal Game Studio</strong> — built and designed <em>Supernova</em> together, a sci-fi strategy MOBA</li>
+					<li><strong>Black Hole Entertainment</strong> — shipped <em>Might &amp; Magic: Heroes VI</em>, working on its campaign AI</li>
+					<li><strong>Around</strong> — a narrative-driven puzzle adventure in Unreal Engine 4</li>
+					<li>5 years supporting League of Legends products alongside Riot Games</li>
+					<li>13+ years working side by side across programming and design</li>
+				</ul>
+			</article>
+
+			<article class="member">
+				<h3>Ádám Nemesházi</h3>
+				<p class="role">Senior Game Designer</p>
+				<p class="location">Budapest, Hungary</p>
+
+				<h4>Skills</h4>
+				<ul>
+					<li>Systems, mechanics &amp; level design</li>
+					<li>UI/UX, encounter &amp; ability design</li>
+					<li>Agile/Scrum, prototyping, playtesting</li>
+					<li>Unreal Engine Blueprint scripting</li>
+					<li>Jira, Perforce, SVN, Figma</li>
+				</ul>
+
+				<h4>Experience</h4>
+				<ul>
+					<li><strong>Primal Game Studio</strong> — army wave behavior, tech-tree &amp; commander mechanics on Supernova</li>
+					<li><strong>Black Hole Entertainment</strong> — level design on Armies of Exigo and Warhammer: Mark of Chaos; campaign AI design on Might &amp; Magic: Heroes VI</li>
+					<li><strong>Beasts of Brawlia</strong> — won an in-house pitch contest, led development</li>
+					<li>1st Place, Qubit Spring Card Game Design Competition (2026)</li>
+				</ul>
+
+				<h4>Education</h4>
+				<ul>
+					<li>BSc Business Informatics, Corvinus University of Budapest</li>
+				</ul>
+			</article>
+		</div>
+	</section>
+
+	<section id="contact" class="section">
+		<h2 class="section-title brand-heading">Contact</h2>
+		<div class="contact-grid">
+			<div class="contact-card">
+				<h3>Mentor Game Studio</h3>
+				<a href="mailto:mitko.prodanov@mentorgamestudio.com">mitko.prodanov@mentorgamestudio.com</a>
+				<a href="https://www.linkedin.com/company/mentor-game-studio" target="_blank" rel="noopener noreferrer"
+					>LinkedIn</a
+				>
+			</div>
+			<div class="contact-card">
+				<h3>Mitko Prodanov</h3>
+				<a
+					href="https://www.linkedin.com/in/mitko-prodanov-920b55b7/"
+					target="_blank"
+					rel="noopener noreferrer">LinkedIn</a
+				>
+			</div>
+			<div class="contact-card">
+				<h3>Ádám Nemesházi</h3>
+				<a href="https://linkedin.com/in/adam-nemeshazi" target="_blank" rel="noopener noreferrer"
+					>LinkedIn</a
+				>
+			</div>
+		</div>
+	</section>
 </Layout>
+
+<style>
+	.section {
+		min-height: 100vh;
+		width: 100%;
+		padding: 4rem 1.5rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	#hero {
+		position: relative;
+		background:
+			radial-gradient(ellipse at 50% 30%, var(--accent-soft), transparent 60%),
+			var(--bg);
+		text-align: center;
+	}
+
+	.hero-content h1 {
+		margin: 0;
+		line-height: 0;
+	}
+
+	.hero-logo {
+		width: min(90vw, 420px);
+		height: auto;
+	}
+
+	.tagline {
+		color: var(--fg-muted);
+		font-size: clamp(1rem, 2vw, 1.35rem);
+		margin-top: 1rem;
+	}
+
+	.scroll-cue {
+		position: absolute;
+		bottom: 2rem;
+		text-decoration: none;
+		font-size: 1.5rem;
+		color: var(--fg-muted);
+		animation: bounce 2s infinite;
+	}
+
+	@keyframes bounce {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(8px);
+		}
+	}
+
+	#team {
+		background: var(--bg-alt);
+		justify-content: flex-start;
+		padding-top: 5rem;
+	}
+
+	.section-title {
+		font-size: clamp(1.75rem, 4vw, 2.5rem);
+		margin-bottom: 3rem;
+		text-align: center;
+	}
+
+	.team-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: 1.5rem;
+		max-width: 1200px;
+		width: 100%;
+		align-items: start;
+	}
+
+	.member {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		padding: 1.75rem;
+	}
+
+	.member.common {
+		background: var(--accent-soft);
+		border-color: rgba(255, 122, 69, 0.35);
+	}
+
+	.member h3 {
+		margin: 0 0 0.25rem;
+		font-size: 1.3rem;
+	}
+
+	.member .role {
+		color: var(--accent);
+		margin: 0;
+		font-size: 0.95rem;
+	}
+
+	.member .location {
+		color: var(--fg-muted);
+		margin: 0.25rem 0 0;
+		font-size: 0.85rem;
+	}
+
+	.member h4 {
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--fg-muted);
+		margin: 1.5rem 0 0.5rem;
+	}
+
+	.member ul {
+		margin: 0;
+		padding-left: 1.1rem;
+		color: var(--fg);
+	}
+
+	.member li {
+		margin-bottom: 0.5rem;
+		font-size: 0.92rem;
+		line-height: 1.4;
+	}
+
+	.member.common ul {
+		padding-left: 1.1rem;
+	}
+
+	#contact {
+		background: var(--bg);
+	}
+
+	.contact-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(200px, 1fr));
+		gap: 1.5rem;
+		max-width: 900px;
+		width: 100%;
+	}
+
+	.contact-card {
+		background: var(--bg-alt);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		padding: 1.75rem;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.contact-card h3 {
+		margin: 0 0 0.25rem;
+		font-size: 1.1rem;
+	}
+
+	.contact-card a {
+		color: var(--accent);
+		text-decoration: none;
+		font-size: 0.95rem;
+		word-break: break-word;
+	}
+
+	.contact-card a:hover {
+		text-decoration: underline;
+	}
+
+	@media (max-width: 900px) {
+		.team-grid,
+		.contact-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.member.common {
+			order: -1;
+		}
+	}
+</style>

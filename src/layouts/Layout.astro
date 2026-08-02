@@ -1,23 +1,83 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = 'Mentor Game Studio',
+	description = 'Battle-tested game developer team built for collaboration.',
+} = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" href="/favicon.ico" sizes="any" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<meta name="description" content={description} />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		<title>{title}</title>
 	</head>
 	<body>
 		<slot />
 	</body>
 </html>
 
-<style>
+<style is:global>
+	:root {
+		--bg: #0b0d12;
+		--bg-alt: #12151c;
+		--fg: #e9ecf1;
+		--fg-muted: #9aa3b2;
+		--accent: #ff7a00;
+		--accent-2: #ffa500;
+		--accent-3: #ffd166;
+		--accent-soft: rgba(255, 122, 0, 0.15);
+		--border: rgba(255, 255, 255, 0.08);
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
 	html,
 	body {
 		margin: 0;
 		width: 100%;
 		height: 100%;
+	}
+
+	body {
+		background: var(--bg);
+		color: var(--fg);
+		font-family:
+			Inter,
+			Roboto,
+			'Helvetica Neue',
+			'Arial Nova',
+			'Nimbus Sans',
+			Arial,
+			sans-serif;
+		scroll-behavior: smooth;
+	}
+
+	h1,
+	h2,
+	h3 {
+		font-weight: 600;
+		letter-spacing: -0.01em;
+	}
+
+	.brand-heading {
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		font-weight: 700;
+	}
+
+	a {
+		color: inherit;
 	}
 </style>
