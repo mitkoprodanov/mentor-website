@@ -1,0 +1,95 @@
+---
+import type { Person } from '../../data/people';
+
+interface Props {
+	person: Person;
+}
+
+const { person } = Astro.props;
+---
+
+<div class="person-card" style={`--person-color: var(--${person.id}-color)`}>
+	<h3>{person.name}</h3>
+	<p class="role">{person.role}</p>
+	<div class="skill-groups">
+		{
+			person.skillGroups.map((group) => (
+				<div class="skill-group">
+					<h4>{group.category}</h4>
+					<div class="tag-row">
+						{group.skills.map((skill) => (
+							<span class="tag">{skill}</span>
+						))}
+					</div>
+				</div>
+			))
+		}
+	</div>
+	<p class="stat-line">In the games industry since {person.since}</p>
+	<p class="edu-line">{person.education}</p>
+</div>
+
+<style>
+	.person-card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-top: 3px solid var(--person-color);
+		border-radius: 16px;
+		padding: 1.75rem;
+		text-align: left;
+	}
+
+	.person-card h3 {
+		margin: 0 0 0.15rem;
+		font-size: 1.2rem;
+	}
+
+	.role {
+		color: var(--person-color);
+		margin: 0 0 1.25rem;
+		font-size: 0.9rem;
+	}
+
+	.skill-groups {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.skill-group h4 {
+		margin: 0 0 0.4rem;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	.tag-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.tag {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 999px;
+		background: var(--accent-soft);
+		color: var(--accent-3);
+		border: 1px solid rgba(255, 122, 0, 0.3);
+		white-space: nowrap;
+	}
+
+	.stat-line {
+		font-size: 0.85rem;
+		color: var(--fg);
+		margin: 0 0 0.25rem;
+	}
+
+	.edu-line {
+		font-size: 0.8rem;
+		color: var(--fg-muted);
+		margin: 0;
+	}
+</style>

@@ -1,0 +1,139 @@
+---
+import { getEntry, render } from 'astro:content';
+import { getPerson, COLUMN } from '../../data/people';
+import type { ProjectDef } from '../../data/timeline';
+
+interface Props {
+	project: ProjectDef;
+	current?: boolean;
+}
+
+const { project, current = false } = Astro.props;
+
+const cards = await Promise.all(
+	project.experiences.map(async (ref) => {
+		const entry = await getEntry('experiences', ref.slug);
+		if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
+		const { Content } = await render(entry);
+		return { person: getPerson(ref.person), Content };
+	}),
+);
+
+const leftCard = cards.find((c) => COLUMN[c.person.id] === 'left');
+const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
+---
+
+<div class="project-row">
+	<div class="col col-left">
+		{
+			leftCard && (
+				<div class="card" style={`--person-color: var(--${leftCard.person.id}-color)`}>
+					<leftCard.Content />
+				</div>
+			)
+		}
+	</div>
+	<div class="col col-center">
+		<span class="dot" class:list={{ current }}></span>
+		{project.name && <h5 class="node-label">{project.name}</h5>}
+	</div>
+	<div class="col col-right">
+		{
+			rightCard && (
+				<div class="card" style={`--person-color: var(--${rightCard.person.id}-color)`}>
+					<rightCard.Content />
+				</div>
+			)
+		}
+	</div>
+</div>
+
+<style>
+	.project-row {
+		display: contents;
+	}
+
+	.col {
+		min-width: 0;
+	}
+
+	.col-left {
+		justify-self: end;
+		width: 100%;
+	}
+
+	.col-right {
+		justify-self: start;
+		width: 100%;
+	}
+
+	.col-center {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		padding-top: 0.35rem;
+	}
+
+	.dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--accent);
+		box-shadow:
+			0 0 0 4px var(--bg-alt),
+			0 0 12px var(--accent-soft);
+	}
+
+	.dot.current {
+		background: var(--accent-3);
+		box-shadow:
+			0 0 0 4px var(--bg-alt),
+			0 0 16px 4px var(--accent-soft);
+	}
+
+	.node-label {
+		margin: 0;
+		text-align: center;
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: var(--fg);
+	}
+
+	.card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		padding: 1.1rem 1.25rem;
+	}
+
+	.col-left .card {
+		border-right: 2px solid var(--person-color, var(--accent));
+	}
+
+	.col-right .card {
+		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.card :global(p) {
+		font-size: 0.88rem;
+		line-height: 1.5;
+		color: var(--fg);
+		margin: 0;
+	}
+
+	@media (max-width: 900px) {
+		.col-left,
+		.col-right {
+			justify-self: stretch;
+			width: 100%;
+		}
+
+		.col-left .card {
+			border-right: none;
+			border-left: 2px solid var(--person-color, var(--accent));
+		}
+	}
+</style>

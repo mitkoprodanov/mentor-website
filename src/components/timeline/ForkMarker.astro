@@ -1,0 +1,103 @@
+---
+import { getPerson, COLUMN, type PersonId } from '../../data/people';
+
+interface Props {
+	/** People present at the next company but not the previous one. */
+	joined: PersonId[];
+	/** People present at the previous company but not the next one. */
+	left: PersonId[];
+}
+
+const { joined, left } = Astro.props;
+
+const events = [
+	...joined.map((id) => ({ person: getPerson(id), type: 'joins' as const })),
+	...left.map((id) => ({ person: getPerson(id), type: 'leaves' as const })),
+];
+
+const leftColumnEvents = events.filter((e) => COLUMN[e.person.id] === 'left');
+const rightColumnEvents = events.filter((e) => COLUMN[e.person.id] === 'right');
+---
+
+<div class="fork" role="note" aria-label="Team change">
+	<div class="fork-side fork-left">
+		{
+			leftColumnEvents.map((e) => (
+				<span class="fork-chip" style={`--person-color: var(--${e.person.id}-color)`}>
+					{e.person.name.split(' ')[0]} {e.type} →
+				</span>
+			))
+		}
+	</div>
+	<div class="fork-center"><span class="fork-stub" aria-hidden="true"></span></div>
+	<div class="fork-side fork-right">
+		{
+			rightColumnEvents.map((e) => (
+				<span class="fork-chip" style={`--person-color: var(--${e.person.id}-color)`}>
+					← {e.person.name.split(' ')[0]} {e.type}
+				</span>
+			))
+		}
+	</div>
+</div>
+
+<style>
+	.fork {
+		display: grid;
+		grid-template-columns: 1fr minmax(190px, 240px) 1fr;
+		column-gap: 1.25rem;
+		align-items: center;
+		margin: -0.5rem 0;
+	}
+
+	.fork-side {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.fork-left {
+		align-items: flex-end;
+		text-align: right;
+	}
+
+	.fork-right {
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.fork-center {
+		display: flex;
+		justify-content: center;
+	}
+
+	.fork-stub {
+		width: 2px;
+		height: 2.5rem;
+		background: var(--border);
+	}
+
+	.fork-chip {
+		font-size: 0.75rem;
+		color: var(--person-color);
+		white-space: nowrap;
+	}
+
+	@media (max-width: 900px) {
+		.fork {
+			grid-template-columns: 1fr;
+			justify-items: center;
+			text-align: center;
+			margin: 0.5rem 0;
+		}
+
+		.fork-left,
+		.fork-right {
+			align-items: center;
+		}
+
+		.fork-center {
+			display: none;
+		}
+	}
+</style>

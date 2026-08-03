@@ -1,0 +1,58 @@
+---
+import Section from '../Section.astro';
+import { timeline, getTenure } from '../../data/timeline';
+import type { PersonId } from '../../data/people';
+import CompanyBlock from './CompanyBlock.astro';
+import ForkMarker from './ForkMarker.astro';
+
+// A fork marker is inserted whenever the roster of people changes between
+// one company and the next — that's the whole "join/leave" thread derived
+// straight from data/timeline.ts, nothing to hand-maintain.
+const rows: Array<
+	{ kind: 'company'; company: (typeof timeline)[number] } | { kind: 'fork'; joined: PersonId[]; left: PersonId[] }
+> = [];
+
+let previousTenure: PersonId[] = [];
+for (const company of timeline) {
+	const tenure = getTenure(company);
+	if (previousTenure.length > 0) {
+		const joined = tenure.filter((p) => !previousTenure.includes(p));
+		const left = previousTenure.filter((p) => !tenure.includes(p));
+		if (joined.length || left.length) {
+			rows.push({ kind: 'fork', joined, left });
+		}
+	}
+	rows.push({ kind: 'company', company });
+	previousTenure = tenure;
+}
+---
+
+<Section id="timeline" title="Timeline" class="timeline-section">
+	<div class="timeline">
+		{
+			rows.map((row) =>
+				row.kind === 'company' ? (
+					<CompanyBlock company={row.company} />
+				) : (
+					<ForkMarker joined={row.joined} left={row.left} />
+				),
+			)
+		}
+	</div>
+</Section>
+
+<style>
+	:global(.timeline-section) {
+		background: var(--bg-alt);
+		justify-content: flex-start;
+		padding-top: 5rem;
+	}
+
+	.timeline {
+		display: flex;
+		flex-direction: column;
+		gap: 2.5rem;
+		max-width: 1200px;
+		width: 100%;
+	}
+</style>

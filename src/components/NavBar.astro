@@ -1,0 +1,75 @@
+---
+const links = [
+	{ href: '#about', label: 'About' },
+	{ href: '#timeline', label: 'Timeline' },
+	{ href: '#personal', label: 'Personal' },
+	{ href: '#contact', label: 'Contact' },
+];
+---
+
+<header class="navbar">
+	<a href="#about" class="navbar-brand brand-heading">Mentor Game Studio</a>
+	<nav>
+		<ul class="navbar-links">
+			{
+				links.map((link) => (
+					<li>
+						<a href={link.href}>{link.label}</a>
+					</li>
+				))
+			}
+		</ul>
+	</nav>
+</header>
+
+<style>
+	.navbar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1rem 1.5rem;
+		background: rgba(11, 13, 18, 0.7);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.navbar-brand {
+		font-size: 0.85rem;
+		text-decoration: none;
+		color: var(--fg);
+	}
+
+	.navbar-links {
+		display: flex;
+		gap: 1.5rem;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.navbar-links a {
+		text-decoration: none;
+		color: var(--fg-muted);
+		font-size: 0.9rem;
+		transition: color 0.15s ease;
+	}
+
+	.navbar-links a:hover {
+		color: var(--accent);
+	}
+
+	@media (max-width: 600px) {
+		.navbar-links {
+			gap: 1rem;
+		}
+
+		.navbar-links a {
+			font-size: 0.8rem;
+		}
+	}
+</style>

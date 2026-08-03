@@ -1,0 +1,58 @@
+---
+import Section from '../Section.astro';
+---
+
+<Section id="about" class="about">
+	<div class="hero-content">
+		<h1><img src="/logo/primary.png" alt="Mentor Game Studio" class="hero-logo" /></h1>
+		<p class="tagline">Battle-tested game developer team built for collaboration.</p>
+	</div>
+	<a href="#timeline" class="scroll-cue" aria-label="Scroll to timeline section">↓</a>
+</Section>
+
+<style>
+	/* .about is applied to <section>, which is rendered by Section.astro — :global()
+	   is required here so this rule isn't scoped away from that element. */
+	:global(.about) {
+		position: relative;
+		background:
+			radial-gradient(ellipse at 50% 30%, var(--accent-soft), transparent 60%),
+			var(--bg);
+		text-align: center;
+	}
+
+	.hero-content h1 {
+		margin: 0;
+		line-height: 0;
+	}
+
+	.hero-logo {
+		width: min(90vw, 420px);
+		height: auto;
+	}
+
+	.tagline {
+		color: var(--fg-muted);
+		font-size: clamp(1rem, 2vw, 1.35rem);
+		margin-top: 1rem;
+	}
+
+	.scroll-cue {
+		position: absolute;
+		bottom: 2rem;
+		text-decoration: none;
+		font-size: 1.5rem;
+		color: var(--fg-muted);
+		animation: bounce 2s infinite;
+	}
+
+	@keyframes bounce {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(8px);
+		}
+	}
+</style>

@@ -1,0 +1,87 @@
+---
+import type { CompanyDef } from '../../data/timeline';
+import ProjectRow from './ProjectRow.astro';
+
+interface Props {
+	company: CompanyDef;
+}
+
+const { company } = Astro.props;
+const isCurrent = company.dateRange.toLowerCase().includes('present');
+---
+
+<div class="company">
+	<div class="company-header">
+		<h3 class:list={{ current: isCurrent }}>{company.name}</h3>
+		<p class="company-dates">{company.dateRange}</p>
+	</div>
+	<div class="company-grid">
+		<div class="thread-line" aria-hidden="true"></div>
+		{company.projects.map((project) => <ProjectRow project={project} current={isCurrent} />)}
+	</div>
+</div>
+
+<style>
+	.company {
+		width: 100%;
+	}
+
+	.company-header {
+		text-align: center;
+		padding: 0.5rem 0 1.75rem;
+	}
+
+	.company-header h3 {
+		margin: 0 0 0.15rem;
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		font-size: 0.85rem;
+		color: var(--accent-3);
+	}
+
+	.company-header h3.current {
+		color: var(--accent-3);
+		text-shadow: 0 0 12px var(--accent-soft);
+	}
+
+	.company-dates {
+		margin: 0;
+		font-size: 0.75rem;
+		color: var(--fg-muted);
+	}
+
+	.company-grid {
+		position: relative;
+		display: grid;
+		grid-template-columns: 1fr minmax(190px, 240px) 1fr;
+		column-gap: 1.25rem;
+		row-gap: 2.5rem;
+		align-items: start;
+	}
+
+	/* Positioned absolutely (not as a grid item) so it merely renders behind the
+	   center column instead of occupying it — a real grid item spanning many rows
+	   there would block auto-placement of the actual per-row dots/cards. The two
+	   outer columns are both `1fr`, so the center column is always exactly
+	   horizontally centered in the grid regardless of its own width. */
+	.thread-line {
+		position: absolute;
+		left: 50%;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		transform: translateX(-50%);
+		background: var(--border);
+	}
+
+	@media (max-width: 900px) {
+		.company-grid {
+			grid-template-columns: 1fr;
+			row-gap: 1rem;
+		}
+
+		.thread-line {
+			display: none;
+		}
+	}
+</style>
