@@ -3,12 +3,14 @@ interface Props {
 	id: string;
 	title?: string;
 	class?: string;
+	/** Skip the full-viewport centering — for embedding inline (e.g. inside the Timeline/Personal scrolly grid) instead of as a standalone full-screen stop. */
+	compact?: boolean;
 }
 
-const { id, title, class: className } = Astro.props;
+const { id, title, class: className, compact = false } = Astro.props;
 ---
 
-<section id={id} class:list={['section', className]}>
+<section id={id} class:list={['section', { 'section--compact': compact }, className]}>
 	{title && <h2 class="section-title brand-heading">{title}</h2>}
 	<slot />
 </section>
@@ -22,6 +24,12 @@ const { id, title, class: className } = Astro.props;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.section.section--compact {
+		min-height: 0;
+		padding: 2rem 0;
+		justify-content: flex-start;
 	}
 
 	.section-title {

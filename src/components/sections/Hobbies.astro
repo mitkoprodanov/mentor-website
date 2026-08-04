@@ -1,0 +1,76 @@
+---
+import Section from '../Section.astro';
+import { people } from '../../data/people';
+
+const withHobbies = people.filter((person) => person.hobbies && person.hobbies.length > 0);
+---
+
+{
+	withHobbies.length > 0 && (
+		<Section id="hobbies" title="Hobbies">
+			<div class="hobbies-grid">
+				{withHobbies.map((person) => (
+					<div class="hobbies-card" style={`--person-color: var(--${person.id}-color)`}>
+						<h3>{person.name}</h3>
+						<ul>
+							{person.hobbies?.map((hobby) => <li>{hobby}</li>)}
+						</ul>
+					</div>
+				))}
+			</div>
+		</Section>
+	)
+}
+
+<style>
+	.hobbies-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 1.5rem;
+		max-width: 1000px;
+		width: 100%;
+	}
+
+	.hobbies-card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-top: 3px solid var(--person-color);
+		border-radius: 16px;
+		padding: 1.75rem;
+		text-align: left;
+	}
+
+	.hobbies-card h3 {
+		margin: 0 0 1rem;
+		font-size: 1.1rem;
+		color: var(--person-color);
+	}
+
+	.hobbies-card ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.hobbies-card li {
+		font-size: 0.9rem;
+		line-height: 1.5;
+		color: var(--fg);
+		padding-left: 1.1rem;
+		position: relative;
+	}
+
+	.hobbies-card li::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.5em;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--person-color);
+	}
+</style>

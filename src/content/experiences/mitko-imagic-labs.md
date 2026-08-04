@@ -1,0 +1,6 @@
+---
+person: mitko
+project: imagic-labs-project
+---
+
+Took a detour into an image/gallery-based startup product to branch into mobile development and bring usable SOLID and Clean Code principles into my day-to-day repertoire.

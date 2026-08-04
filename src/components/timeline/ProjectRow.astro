@@ -2,6 +2,7 @@
 import { getEntry, render } from 'astro:content';
 import { getPerson, COLUMN } from '../../data/people';
 import type { ProjectDef } from '../../data/timeline';
+import { slugify } from '../../lib/slug';
 
 interface Props {
 	project: ProjectDef;
@@ -15,7 +16,7 @@ const cards = await Promise.all(
 		const entry = await getEntry('experiences', ref.slug);
 		if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 		const { Content } = await render(entry);
-		return { person: getPerson(ref.person), Content };
+		return { person: getPerson(ref.person), Content, skills: (ref.skills ?? []).map(slugify) };
 	}),
 );
 
@@ -29,6 +30,8 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 			leftCard && (
 				<div
 					class="card"
+					data-person={leftCard.person.id}
+					data-skills={leftCard.skills.join(' ')}
 					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${leftCard.person.id}-color)`}`}
 				>
 					<leftCard.Content />
@@ -36,7 +39,7 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 			)
 		}
 	</div>
-	<div class="col col-center">
+	<div class="col col-center node">
 		<span class="dot" class:list={{ emphasized }}></span>
 		{project.name && <h5 class="node-label">{project.name}</h5>}
 	</div>
@@ -45,6 +48,8 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 			rightCard && (
 				<div
 					class="card"
+					data-person={rightCard.person.id}
+					data-skills={rightCard.skills.join(' ')}
 					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${rightCard.person.id}-color)`}`}
 				>
 					<rightCard.Content />

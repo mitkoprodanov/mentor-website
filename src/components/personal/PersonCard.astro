@@ -1,11 +1,14 @@
 ---
 import type { Person } from '../../data/people';
+import { getLinkedSkills } from '../../data/skills';
+import { slugify } from '../../lib/slug';
 
 interface Props {
 	person: Person;
 }
 
 const { person } = Astro.props;
+const linkedSkills = getLinkedSkills(person.id);
 ---
 
 <div class="person-card" style={`--person-color: var(--${person.id}-color)`}>
@@ -17,9 +20,21 @@ const { person } = Astro.props;
 				<div class="skill-group">
 					<h4>{group.category}</h4>
 					<div class="tag-row">
-						{group.skills.map((skill) => (
-							<span class="tag">{skill}</span>
-						))}
+						{group.skills.map((skill) =>
+							linkedSkills.has(skill) ? (
+								<button
+									type="button"
+									class="tag tag--linked"
+									data-person={person.id}
+									data-skill={slugify(skill)}
+									aria-pressed="false"
+								>
+									{skill}
+								</button>
+							) : (
+								<span class="tag">{skill}</span>
+							),
+						)}
 					</div>
 				</div>
 			))
@@ -79,6 +94,40 @@ const { person } = Astro.props;
 		color: var(--accent-3);
 		border: 1px solid rgba(255, 122, 0, 0.3);
 		white-space: nowrap;
+	}
+
+	button.tag {
+		font-family: inherit;
+		cursor: pointer;
+		text-decoration: underline dotted rgba(255, 209, 102, 0.5);
+		text-underline-offset: 3px;
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+
+	button.tag:hover {
+		background: var(--accent-3);
+		color: var(--bg);
+	}
+
+	button.tag:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	button.tag[aria-pressed='true'] {
+		background: var(--accent-3);
+		color: var(--bg);
+		text-decoration: none;
+		transform: scale(1.05);
+		box-shadow: 0 0 12px 2px var(--accent-soft);
+	}
+
+	:global(body.filter-active) button.tag:not([aria-pressed='true']) {
+		opacity: 0.45;
 	}
 
 	.stat-line {

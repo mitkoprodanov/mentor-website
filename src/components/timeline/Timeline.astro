@@ -48,7 +48,11 @@ const contained = containerStart >= 0 ? nodes.slice(containerStart, containerEnd
 const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 ---
 
-<Section id="timeline" title="Timeline" class="timeline-section">
+<Section id="timeline" title="Timeline" compact>
+	<div class="filter-chip" id="timeline-filter-chip" hidden>
+		<span class="filter-chip-label">Filtered by: <strong id="timeline-filter-chip-skill"></strong></span>
+		<button type="button" class="filter-chip-clear" id="timeline-filter-chip-clear" aria-label="Clear filter">✕</button>
+	</div>
 	<div class="timeline">
 		{
 			before.map((node) =>
@@ -91,10 +95,96 @@ const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 </Section>
 
 <style>
-	:global(.timeline-section) {
+	.filter-chip {
+		position: sticky;
+		top: 5.5rem;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		align-self: center;
+		margin-bottom: 1.5rem;
+		padding: 0.5rem 0.5rem 0.5rem 1rem;
+		border-radius: 999px;
 		background: var(--bg-alt);
-		justify-content: flex-start;
-		padding-top: 5rem;
+		border: 1px solid var(--accent-3);
+		box-shadow: 0 0 16px 2px var(--accent-soft);
+		font-size: 0.85rem;
+		transition:
+			opacity 220ms ease,
+			transform 220ms ease;
+	}
+
+	.filter-chip[hidden] {
+		display: flex;
+		opacity: 0;
+		transform: translateY(-10px);
+		pointer-events: none;
+	}
+
+	.filter-chip:not([hidden]) {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	.filter-chip-label strong {
+		color: var(--accent-3);
+	}
+
+	.filter-chip-clear {
+		display: grid;
+		place-items: center;
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 50%;
+		border: none;
+		background: var(--accent-soft);
+		color: var(--fg);
+		cursor: pointer;
+		font-size: 0.75rem;
+		line-height: 1;
+	}
+
+	.filter-chip-clear:hover {
+		background: var(--accent-3);
+		color: var(--bg);
+	}
+
+	/* Filter-collapse transition states — global because they target elements
+	   rendered by CompanyBlock/ApartBlock/ProjectRow/ForkConnector/MentorContainer,
+	   not just direct children here. Driven by src/scripts/timelineFilter.client.ts. */
+	:global(.tf-hidden) {
+		display: none !important;
+	}
+
+	:global(.tf-leaving) {
+		opacity: 0 !important;
+		transform: scale(0.92) !important;
+		transition:
+			opacity 200ms cubic-bezier(0.4, 0, 1, 1),
+			transform 200ms cubic-bezier(0.4, 0, 1, 1) !important;
+		pointer-events: none;
+	}
+
+	:global(.tf-enter-from) {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+
+	:global(.card),
+	:global(.node),
+	:global(.company),
+	:global(.track-company),
+	:global(.apart),
+	:global(.mentor-container),
+	:global(.fork-connector) {
+		transition:
+			opacity 260ms ease,
+			transform 260ms ease;
+	}
+
+	:global(.apart.apart--single) {
+		grid-template-columns: 1fr;
 	}
 
 	.timeline {

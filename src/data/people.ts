@@ -21,6 +21,7 @@ export interface Person {
 	linkedin: string;
 	email?: string;
 	skillGroups: SkillGroup[];
+	hobbies?: string[];
 }
 
 export const people: Person[] = [
@@ -38,6 +39,13 @@ export const people: Person[] = [
 			{ category: 'AI', skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding', 'TensorFlow / Deep Learning'] },
 			{ category: 'Gameplay', skills: ['Abilities & Status Effects', 'Tech Trees & Progression'] },
 			{ category: 'Graphics', skills: ['Shader Programming (HLSL/GLSL/Cg)', 'OpenGL', 'DirectX'] },
+			{ category: 'Practices', skills: ['Mobile Development', 'SOLID / Clean Code', 'Agile'] },
+		],
+		hobbies: [
+			'Paragliding — both solo and as a tandem pilot',
+			'Formerly speedcubing for a while',
+			'Studied the game of go, up to 1 dan',
+			'Board games and table football',
 		],
 	},
 	{

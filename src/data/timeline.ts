@@ -49,6 +49,8 @@ export interface ExperienceRef {
 	person: PersonId;
 	/** Slug of the matching file in src/content/experiences/. */
 	slug: string;
+	/** Labels matching entries in this person's `skillGroups` (see people.ts) that this experience used. */
+	skills?: string[];
 }
 
 export interface ProjectDef {
@@ -82,7 +84,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'ericsson-consulting',
-						experiences: [{ person: 'mitko', slug: 'mitko-ericsson' }],
+						experiences: [{ person: 'mitko', slug: 'mitko-ericsson', skills: ['C'] }],
 					},
 				],
 			},
@@ -96,12 +98,12 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'exigo',
 						name: 'Armies of Exigo',
-						experiences: [{ person: 'adam', slug: 'adam-exigo' }],
+						experiences: [{ person: 'adam', slug: 'adam-exigo', skills: ['Systems & Level Design'] }],
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
 						name: 'Warhammer: Mark of Chaos',
-						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos' }],
+						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', skills: ['Systems & Level Design'] }],
 					},
 				],
 			},
@@ -118,8 +120,8 @@ export const timeline: TimelineEntry[] = [
 					id: 'heroes6',
 					name: 'Might & Magic: Heroes VI',
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-heroes6' },
-						{ person: 'adam', slug: 'adam-heroes6' },
+						{ person: 'mitko', slug: 'mitko-heroes6', skills: ['Gameplay AI'] },
+						{ person: 'adam', slug: 'adam-heroes6', skills: ['UI/UX Design', 'Systems & Level Design'] },
 					],
 				},
 			],
@@ -136,8 +138,12 @@ export const timeline: TimelineEntry[] = [
 					id: 'supernova',
 					name: 'Supernova',
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-supernova' },
-						{ person: 'adam', slug: 'adam-supernova' },
+						{
+							person: 'mitko',
+							slug: 'mitko-supernova',
+							skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding', 'Abilities & Status Effects', 'Tech Trees & Progression'],
+						},
+						{ person: 'adam', slug: 'adam-supernova', skills: ['Systems & Level Design'] },
 					],
 				},
 				{
@@ -153,7 +159,7 @@ export const timeline: TimelineEntry[] = [
 					name: 'Around',
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-around' },
-						{ person: 'adam', slug: 'adam-around' },
+						{ person: 'adam', slug: 'adam-around', skills: ['UE Blueprint'] },
 					],
 				},
 				{
@@ -164,7 +170,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'mmo-rework',
 					name: 'MMO Microservices Rework',
-					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework' }],
+					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', skills: ['C++', 'Agile'] }],
 				},
 			],
 		},
@@ -180,7 +186,25 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'space-punks',
-						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog' }],
+						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog', skills: ['Gameplay Ability System (GAS)'] }],
+					},
+				],
+			},
+			{
+				id: 'imagic-labs',
+				name: 'Imagic Labs',
+				dateRange: '2025',
+				underMentor: false,
+				projects: [
+					{
+						id: 'imagic-labs-project',
+						experiences: [
+							{
+								person: 'mitko',
+								slug: 'mitko-imagic-labs',
+								skills: ['Mobile Development', 'SOLID / Clean Code'],
+							},
+						],
 					},
 				],
 			},
@@ -206,7 +230,7 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
-						experiences: [{ person: 'adam', slug: 'adam-mandragora' }],
+						experiences: [{ person: 'adam', slug: 'adam-mandragora', skills: ['UI/UX Design', 'Encounter Design'] }],
 					},
 				],
 			},

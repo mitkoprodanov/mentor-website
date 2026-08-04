@@ -1,7 +1,6 @@
 ---
 import Section from '../Section.astro';
 import { people } from '../../data/people';
-import { sideProjects } from '../../data/sideProjects';
 import PersonCard from './PersonCard.astro';
 ---
 
@@ -9,22 +8,11 @@ import PersonCard from './PersonCard.astro';
 	<div class="people-grid">
 		{people.map((person) => <PersonCard person={person} />)}
 	</div>
-
-	{
-		sideProjects.length > 0 && (
-			<div class="side-projects">
-				<h3 class="side-projects-title brand-heading">Side Projects</h3>
-				{sideProjects.map((project) => (
-					<div class="side-project-card">
-						<h4>{project.name}</h4>
-						<p class="side-project-tag">{project.tag}</p>
-						<p>{project.description}</p>
-					</div>
-				))}
-			</div>
-		)
-	}
 </Section>
+
+<script>
+	import '../../scripts/timelineFilter.client';
+</script>
 
 <style>
 	.people-grid {
@@ -33,44 +21,6 @@ import PersonCard from './PersonCard.astro';
 		gap: 1.5rem;
 		max-width: 1000px;
 		width: 100%;
-		margin-bottom: 3.5rem;
-	}
-
-	.side-projects {
-		max-width: 600px;
-		width: 100%;
-		text-align: center;
-	}
-
-	.side-projects-title {
-		font-size: 1.1rem;
-		color: var(--fg-muted);
-		margin-bottom: 1.5rem;
-	}
-
-	.side-project-card {
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		padding: 1.5rem 1.75rem;
-	}
-
-	.side-project-card h4 {
-		margin: 0 0 0.25rem;
-		font-size: 1.1rem;
-	}
-
-	.side-project-tag {
-		color: var(--accent);
-		font-size: 0.85rem;
-		margin: 0 0 0.75rem;
-	}
-
-	.side-project-card p:not(.side-project-tag) {
-		font-size: 0.9rem;
-		line-height: 1.5;
-		color: var(--fg);
-		margin: 0;
 	}
 
 	@media (max-width: 900px) {

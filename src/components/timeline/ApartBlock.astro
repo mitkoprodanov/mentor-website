@@ -3,6 +3,7 @@ import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
 import type { CompanyDef } from '../../data/timeline';
 import { DOT_COLUMN_PX, TRACK_GAP_PX } from './layout';
+import { slugify } from '../../lib/slug';
 
 interface Props {
 	mitko: CompanyDef[];
@@ -27,7 +28,7 @@ const tracks = await Promise.all(
 								const entry = await getEntry('experiences', ref.slug);
 								if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 								const { Content } = await render(entry);
-								return { person: getPerson(ref.person), Content };
+								return { person: getPerson(ref.person), Content, skills: (ref.skills ?? []).map(slugify) };
 							}),
 						);
 						return { project, cards };
@@ -67,6 +68,8 @@ const tracks = await Promise.all(
 									{cards.map((card) => (
 										<div
 											class="card"
+											data-person={card.person.id}
+											data-skills={card.skills.join(' ')}
 											style={`--person-color: ${
 												company.underMentor ? 'var(--accent-3)' : `var(--${card.person.id}-color)`
 											}`}
