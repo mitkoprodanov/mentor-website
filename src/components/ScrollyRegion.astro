@@ -1,0 +1,105 @@
+---
+/**
+ * Timeline + Side Projects + Personal, woven into one continuous scroll:
+ * each person's panel (skills, hobbies) pins to its side of the screen
+ * while the Timeline and Side Projects scroll past in the center. Once
+ * that center content runs out, the panels release from their pinned
+ * position and their contact info reveals right below them — the studio's
+ * shared contact card sits at the very end of the center column, marking
+ * the bottom of the page.
+ */
+import { getPerson } from '../data/people';
+import PersonCard from './personal/PersonCard.astro';
+import PersonContactCard from './personal/PersonContactCard.astro';
+import Timeline from './timeline/Timeline.astro';
+import SideProjects from './sections/SideProjects.astro';
+import CompanyContactCard from './sections/CompanyContactCard.astro';
+
+const mitko = getPerson('mitko');
+const adam = getPerson('adam');
+---
+
+<div id="personal" class="scrolly">
+	<div class="scrolly-grid">
+		<div class="scrolly-col scrolly-col--left">
+			<div class="person-sticky">
+				<PersonCard person={mitko} />
+			</div>
+			<div class="person-contact">
+				<PersonContactCard person={mitko} />
+			</div>
+		</div>
+
+		<div class="scrolly-col scrolly-col--center">
+			<Timeline />
+			<SideProjects />
+			<CompanyContactCard />
+		</div>
+
+		<div class="scrolly-col scrolly-col--right">
+			<div class="person-sticky">
+				<PersonCard person={adam} />
+			</div>
+			<div class="person-contact">
+				<PersonContactCard person={adam} />
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	import '../scripts/timelineFilter.client';
+</script>
+
+<style>
+	.scrolly {
+		width: 100%;
+		padding: 4rem 1.5rem;
+	}
+
+	.scrolly-grid {
+		display: grid;
+		grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
+		column-gap: 2rem;
+		max-width: 1600px;
+		margin: 0 auto;
+	}
+
+	.scrolly-col--left,
+	.scrolly-col--right {
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* Pushes the contact card to the bottom of the column, which — because
+	   the grid stretches every column to the height of the tallest one
+	   (the center column) — is exactly where the center content ends. That's
+	   what makes the sticky panel above release right as Side Projects ends
+	   instead of holding on for the rest of the page. */
+	.person-contact {
+		margin-top: auto;
+		padding-top: 2rem;
+	}
+
+	.person-sticky {
+		position: sticky;
+		top: 6rem;
+	}
+
+	@media (max-width: 900px) {
+		.scrolly-grid {
+			display: flex;
+			flex-direction: column;
+			gap: 3rem;
+		}
+
+		.person-sticky {
+			position: static;
+		}
+
+		.person-contact {
+			margin-top: 0;
+			padding-top: 1.5rem;
+		}
+	}
+</style>

@@ -42,6 +42,18 @@ const linkedSkills = getLinkedSkills(person.id);
 	</div>
 	<p class="stat-line">In the games industry since {person.since}</p>
 	<p class="edu-line">{person.education}</p>
+	{
+		person.hobbies && person.hobbies.length > 0 && (
+			<div class="hobbies">
+				<h4>Hobbies</h4>
+				<ul>
+					{person.hobbies.map((hobby) => (
+						<li>{hobby}</li>
+					))}
+				</ul>
+			</div>
+		)
+	}
 </div>
 
 <style>
@@ -140,5 +152,47 @@ const linkedSkills = getLinkedSkills(person.id);
 		font-size: 0.8rem;
 		color: var(--fg-muted);
 		margin: 0;
+	}
+
+	.hobbies {
+		margin-top: 1.25rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.hobbies h4 {
+		margin: 0 0 0.6rem;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--fg-muted);
+	}
+
+	.hobbies ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.hobbies li {
+		font-size: 0.85rem;
+		line-height: 1.4;
+		color: var(--fg);
+		padding-left: 1rem;
+		position: relative;
+	}
+
+	.hobbies li::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.5em;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: var(--person-color);
 	}
 </style>

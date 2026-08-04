@@ -1,0 +1,45 @@
+---
+import type { Person } from '../../data/people';
+
+interface Props {
+	person: Person;
+}
+
+const { person } = Astro.props;
+---
+
+<div class="contact-card" style={`--person-color: var(--${person.id}-color)`}>
+	<h4>{person.name}</h4>
+	<a href={person.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+	{person.email && <a href={`mailto:${person.email}`}>{person.email}</a>}
+</div>
+
+<style>
+	.contact-card {
+		background: var(--bg-alt);
+		border: 1px solid var(--border);
+		border-top: 3px solid var(--person-color);
+		border-radius: 16px;
+		padding: 1.25rem 1.5rem;
+		text-align: center;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.contact-card h4 {
+		margin: 0 0 0.15rem;
+		font-size: 1rem;
+	}
+
+	.contact-card a {
+		color: var(--accent);
+		text-decoration: none;
+		font-size: 0.9rem;
+		word-break: break-word;
+	}
+
+	.contact-card a:hover {
+		text-decoration: underline;
+	}
+</style>
