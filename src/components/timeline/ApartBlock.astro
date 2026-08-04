@@ -44,7 +44,12 @@ const tracks = await Promise.all(
 <div class="apart" style={`--dot-col: ${DOT_COLUMN_PX}px; --track-gap: ${TRACK_GAP_PX}px`}>
 	{
 		tracks.map((track) => (
-			<div class={`track track-${track.side}`}>
+			<div
+				class={`track track-${track.side}`}
+				class:list={{
+					'under-mentor': track.companies.length > 0 && track.companies.every((c) => c.company.underMentor === true),
+				}}
+			>
 				{track.companies.map(({ company, projects }) => (
 					<div class="track-company">
 						<div class="track-header">
@@ -88,10 +93,24 @@ const tracks = await Promise.all(
 	}
 
 	.track {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 1.5rem;
 		min-width: 0;
+	}
+
+	/* A visual boundary independent of DOM nesting — makes it unambiguous that
+	   only this track is inside the Mentor Game Studio container, regardless
+	   of what its sibling track (the other person, not under Mentor) is doing. */
+	.track.under-mentor::before {
+		content: '';
+		position: absolute;
+		inset: -0.75rem -1rem;
+		border: 1px dashed var(--accent-3);
+		border-radius: 16px;
+		background: var(--accent-soft);
+		z-index: -1;
 	}
 
 	.track-header {
