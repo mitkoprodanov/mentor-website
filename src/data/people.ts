@@ -34,10 +34,10 @@ export const people: Person[] = [
 		skillGroups: [
 			{ category: 'Languages', skills: ['C', 'C++', 'C#'] },
 			{ category: 'Unreal', skills: ['Gameplay Ability System (GAS)'] },
-			{ category: 'Engines', skills: ['Unity'] },
-			{ category: 'AI', skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding'] },
+			{ category: 'Engines', skills: ['Unity', 'Lumberyard'] },
+			{ category: 'AI', skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding', 'TensorFlow / Deep Learning'] },
 			{ category: 'Gameplay', skills: ['Abilities & Status Effects', 'Tech Trees & Progression'] },
-			{ category: 'Graphics', skills: ['Shader Programming'] },
+			{ category: 'Graphics', skills: ['Shader Programming (HLSL/GLSL/Cg)', 'OpenGL', 'DirectX'] },
 		],
 	},
 	{

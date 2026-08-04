@@ -7,17 +7,17 @@ interface Props {
 }
 
 const { company } = Astro.props;
-const isCurrent = company.dateRange.toLowerCase().includes('present');
+const emphasized = company.underMentor === true;
 ---
 
 <div class="company">
 	<div class="company-header">
-		<h3 class:list={{ current: isCurrent }}>{company.name}</h3>
+		<h3 class:list={{ emphasized }}>{company.name}</h3>
 		<p class="company-dates">{company.dateRange}</p>
 	</div>
 	<div class="company-grid">
 		<div class="thread-line" aria-hidden="true"></div>
-		{company.projects.map((project) => <ProjectRow project={project} current={isCurrent} />)}
+		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} />)}
 	</div>
 </div>
 
@@ -36,10 +36,10 @@ const isCurrent = company.dateRange.toLowerCase().includes('present');
 		text-transform: uppercase;
 		letter-spacing: 0.15em;
 		font-size: 0.85rem;
-		color: var(--accent-3);
+		color: var(--fg);
 	}
 
-	.company-header h3.current {
+	.company-header h3.emphasized {
 		color: var(--accent-3);
 		text-shadow: 0 0 12px var(--accent-soft);
 	}

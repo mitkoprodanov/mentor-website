@@ -1,0 +1,248 @@
+---
+import { getEntry, render } from 'astro:content';
+import { getPerson, type PersonId } from '../../data/people';
+import type { CompanyDef } from '../../data/timeline';
+import { DOT_COLUMN_PX, TRACK_GAP_PX } from './layout';
+
+interface Props {
+	mitko: CompanyDef[];
+	adam: CompanyDef[];
+}
+
+const { mitko, adam } = Astro.props;
+
+const sides = [
+	{ person: 'mitko' as PersonId, side: 'left' as const, companies: mitko },
+	{ person: 'adam' as PersonId, side: 'right' as const, companies: adam },
+];
+
+const tracks = await Promise.all(
+	sides.map(async (side) => {
+		const companies = await Promise.all(
+			side.companies.map(async (company) => {
+				const projects = await Promise.all(
+					company.projects.map(async (project) => {
+						const cards = await Promise.all(
+							project.experiences.map(async (ref) => {
+								const entry = await getEntry('experiences', ref.slug);
+								if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
+								const { Content } = await render(entry);
+								return { person: getPerson(ref.person), Content };
+							}),
+						);
+						return { project, cards };
+					}),
+				);
+				return { company, projects };
+			}),
+		);
+		return { ...side, companies };
+	}),
+);
+---
+
+<div class="apart" style={`--dot-col: ${DOT_COLUMN_PX}px; --track-gap: ${TRACK_GAP_PX}px`}>
+	{
+		tracks.map((track) => (
+			<div class={`track track-${track.side}`}>
+				{track.companies.map(({ company, projects }) => (
+					<div class="track-company">
+						<div class="track-header">
+							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+							<p class="track-dates">{company.dateRange}</p>
+						</div>
+						<div class="track-grid">
+							<div class="thread-line" aria-hidden="true" />
+							{projects.map(({ project, cards }) => (
+								<div class="track-row">
+									<div class="node">
+										<span class="dot" class:list={{ emphasized: company.underMentor === true }} />
+										{project.name && <h5 class="node-label">{project.name}</h5>}
+									</div>
+									{cards.map((card) => (
+										<div
+											class="card"
+											style={`--person-color: ${
+												company.underMentor ? 'var(--accent-3)' : `var(--${card.person.id}-color)`
+											}`}
+										>
+											<card.Content />
+										</div>
+									))}
+								</div>
+							))}
+						</div>
+					</div>
+				))}
+			</div>
+		))
+	}
+</div>
+
+<style>
+	.apart {
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		column-gap: var(--track-gap);
+	}
+
+	.track {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		min-width: 0;
+	}
+
+	.track-header {
+		text-align: center;
+		padding: 0.5rem 0 0.5rem;
+	}
+
+	.track-header h4 {
+		margin: 0 0 0.15rem;
+		text-transform: uppercase;
+		letter-spacing: 0.15em;
+		font-size: 0.8rem;
+		color: var(--fg);
+	}
+
+	.track-header h4.emphasized {
+		color: var(--accent-3);
+		text-shadow: 0 0 12px var(--accent-soft);
+	}
+
+	.track-dates {
+		margin: 0;
+		font-size: 0.72rem;
+		color: var(--fg-muted);
+	}
+
+	.track-grid {
+		position: relative;
+		display: grid;
+		row-gap: 2rem;
+	}
+
+	.track-left .track-grid {
+		grid-template-columns: 1fr var(--dot-col);
+	}
+
+	.track-right .track-grid {
+		grid-template-columns: var(--dot-col) 1fr;
+	}
+
+	.track-row {
+		display: contents;
+	}
+
+	/* Same trick as CompanyBlock's thread-line: absolutely positioned so it
+	   renders behind the dot column instead of occupying it as a real grid
+	   item (which would block auto-placement of the per-row dots/cards). */
+	.thread-line {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 2px;
+		background: var(--border);
+	}
+
+	.track-left .thread-line {
+		left: calc(100% - (var(--dot-col) / 2));
+		transform: translateX(-50%);
+	}
+
+	.track-right .thread-line {
+		left: calc(var(--dot-col) / 2);
+		transform: translateX(-50%);
+	}
+
+	.node {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.track-left .node {
+		grid-column: 2;
+	}
+
+	.track-right .node {
+		grid-column: 1;
+	}
+
+	.dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		background: var(--accent);
+		box-shadow:
+			0 0 0 4px var(--bg-alt),
+			0 0 12px var(--accent-soft);
+	}
+
+	.dot.emphasized {
+		background: var(--accent-3);
+		box-shadow:
+			0 0 0 4px var(--bg-alt),
+			0 0 16px 4px var(--accent-soft);
+	}
+
+	.node-label {
+		margin: 0;
+		text-align: center;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--fg);
+	}
+
+	.card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		padding: 1rem 1.15rem;
+	}
+
+	.track-left .card {
+		grid-column: 1;
+		border-right: 2px solid var(--person-color, var(--accent));
+	}
+
+	.track-right .card {
+		grid-column: 2;
+		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.card :global(p) {
+		font-size: 0.85rem;
+		line-height: 1.5;
+		color: var(--fg);
+		margin: 0;
+	}
+
+	@media (max-width: 900px) {
+		.apart {
+			grid-template-columns: 1fr;
+			row-gap: 2.5rem;
+		}
+
+		.track-left .track-grid,
+		.track-right .track-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.thread-line {
+			display: none;
+		}
+
+		.track-left .node,
+		.track-right .node,
+		.track-left .card,
+		.track-right .card {
+			grid-column: 1;
+		}
+	}
+</style>

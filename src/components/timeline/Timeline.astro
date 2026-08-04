@@ -1,40 +1,89 @@
 ---
 import Section from '../Section.astro';
-import { timeline, getTenure } from '../../data/timeline';
-import type { PersonId } from '../../data/people';
+import { timeline, MENTOR_ERA, type TimelineEntry } from '../../data/timeline';
 import CompanyBlock from './CompanyBlock.astro';
-import ForkMarker from './ForkMarker.astro';
+import ApartBlock from './ApartBlock.astro';
+import ForkConnector from './ForkConnector.astro';
+import MentorContainer from './MentorContainer.astro';
 
-// A fork marker is inserted whenever the roster of people changes between
-// one company and the next — that's the whole "join/leave" thread derived
-// straight from data/timeline.ts, nothing to hand-maintain.
-const rows: Array<
-	{ kind: 'company'; company: (typeof timeline)[number] } | { kind: 'fork'; joined: PersonId[]; left: PersonId[] }
-> = [];
+type Node =
+	| { type: 'connector'; direction: 'split' | 'merge' }
+	| { type: 'entry'; entry: TimelineEntry };
 
-let previousTenure: PersonId[] = [];
-for (const company of timeline) {
-	const tenure = getTenure(company);
-	if (previousTenure.length > 0) {
-		const joined = tenure.filter((p) => !previousTenure.includes(p));
-		const left = previousTenure.filter((p) => !tenure.includes(p));
-		if (joined.length || left.length) {
-			rows.push({ kind: 'fork', joined, left });
-		}
-	}
-	rows.push({ kind: 'company', company });
-	previousTenure = tenure;
+function entryHasMentor(entry: TimelineEntry): boolean {
+	if (entry.kind === 'together') return entry.company.underMentor === true;
+	return [...entry.mitko, ...entry.adam].some((c) => c.underMentor === true);
 }
+
+// Flatten entries + the connectors between them (same logic as before: a
+// connector appears wherever `kind` changes between consecutive entries)
+// into one ordered list of renderable nodes.
+const nodes: Node[] = [];
+timeline.forEach((entry, index) => {
+	const previous = timeline[index - 1];
+	if (previous && previous.kind !== entry.kind) {
+		nodes.push({ type: 'connector', direction: entry.kind === 'apart' ? 'split' : 'merge' });
+	}
+	nodes.push({ type: 'entry', entry });
+});
+
+// The Mentor Game Studio container wraps everything from the fork right
+// before the first underMentor entry through the last underMentor entry —
+// derived from the data, not hand-maintained.
+const mentorEntryIndexes = nodes
+	.map((n, i) => (n.type === 'entry' && entryHasMentor(n.entry) ? i : -1))
+	.filter((i) => i >= 0);
+
+const firstMentorIndex = mentorEntryIndexes[0];
+const containerStart =
+	mentorEntryIndexes.length === 0
+		? -1
+		: nodes[firstMentorIndex - 1]?.type === 'connector'
+			? firstMentorIndex - 1
+			: firstMentorIndex;
+const containerEnd = mentorEntryIndexes.length ? mentorEntryIndexes[mentorEntryIndexes.length - 1] : -1;
+
+const before = containerStart >= 0 ? nodes.slice(0, containerStart) : nodes;
+const contained = containerStart >= 0 ? nodes.slice(containerStart, containerEnd + 1) : [];
+const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 ---
 
 <Section id="timeline" title="Timeline" class="timeline-section">
 	<div class="timeline">
 		{
-			rows.map((row) =>
-				row.kind === 'company' ? (
-					<CompanyBlock company={row.company} />
+			before.map((node) =>
+				node.type === 'connector' ? (
+					<ForkConnector direction={node.direction} />
+				) : node.entry.kind === 'together' ? (
+					<CompanyBlock company={node.entry.company} />
 				) : (
-					<ForkMarker joined={row.joined} left={row.left} />
+					<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
+				),
+			)
+		}
+		{
+			contained.length > 0 && (
+				<MentorContainer label={MENTOR_ERA.label} dateRange={MENTOR_ERA.dateRange}>
+					{contained.map((node) =>
+						node.type === 'connector' ? (
+							<ForkConnector direction={node.direction} />
+						) : node.entry.kind === 'together' ? (
+							<CompanyBlock company={node.entry.company} />
+						) : (
+							<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
+						),
+					)}
+				</MentorContainer>
+			)
+		}
+		{
+			after.map((node) =>
+				node.type === 'connector' ? (
+					<ForkConnector direction={node.direction} />
+				) : node.entry.kind === 'together' ? (
+					<CompanyBlock company={node.entry.company} />
+				) : (
+					<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
 				),
 			)
 		}
@@ -51,8 +100,11 @@ for (const company of timeline) {
 	.timeline {
 		display: flex;
 		flex-direction: column;
-		gap: 2.5rem;
+		gap: 2rem;
 		max-width: 1200px;
 		width: 100%;
+		/* Reserved so MentorContainer's rail has a consistent gutter to sit in
+		   without ever shifting the actual timeline content — see MentorContainer.astro. */
+		padding-left: 2rem;
 	}
 </style>

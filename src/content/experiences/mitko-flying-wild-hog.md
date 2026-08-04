@@ -3,4 +3,4 @@ person: mitko
 project: flying-wild-hog
 ---
 
-Senior Gameplay Programmer — *Space Punks* (UE4), studied GAS with UE5.
+Supported several gameplay features on *Space Punks*, a sci-fi co-op action RPG built in Unreal Engine 4 — one of the international collaborations run through Mentor Game Studio. Took the opportunity to study GAS with Unreal Engine 5.

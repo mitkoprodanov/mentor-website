@@ -1,0 +1,51 @@
+---
+import { FORK_OFFSET_PX } from './layout';
+
+interface Props {
+	/** 'split': one thread above becomes two below. 'merge': two threads above become one below. */
+	direction: 'split' | 'merge';
+}
+
+const { direction } = Astro.props;
+
+// A single continuous curve, not separate straight segments — cubic bezier
+// control points hug the vertical near the shared endpoint and hug the
+// horizontal near the branch endpoints, giving the classic "river delta" /
+// git-graph curve. Coordinates line up exactly with CompanyBlock's/
+// ApartBlock's thread-lines (both centered ± FORK_OFFSET_PX), so the curve
+// reads as the same thread bending, not a separate decoration.
+const H = 56;
+const W = FORK_OFFSET_PX * 2;
+const cx = W / 2;
+const bend = H * 0.6;
+
+const d =
+	direction === 'split'
+		? `M${cx},0 C${cx},${bend} 0,${H - bend} 0,${H} M${cx},0 C${cx},${bend} ${W},${H - bend} ${W},${H}`
+		: `M0,0 C0,${bend} ${cx},${H - bend} ${cx},${H} M${W},0 C${W},${bend} ${cx},${H - bend} ${cx},${H}`;
+---
+
+<div class="fork-connector" aria-hidden="true">
+	<svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+		<path d={d} stroke="var(--border)" stroke-width="2" fill="none" stroke-linecap="round" />
+	</svg>
+</div>
+
+<style>
+	/* Negative margins cancel out .timeline's flex `gap` on both sides, so the
+	   curve sits flush against the straight thread-line above and below it
+	   instead of floating in a visible break — one unbroken thread. */
+	.fork-connector {
+		width: 100%;
+		display: flex;
+		justify-content: center;
+		height: 56px;
+		margin: -2rem 0;
+	}
+
+	@media (max-width: 900px) {
+		.fork-connector {
+			display: none;
+		}
+	}
+</style>

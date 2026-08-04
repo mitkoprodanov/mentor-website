@@ -5,10 +5,10 @@ import type { ProjectDef } from '../../data/timeline';
 
 interface Props {
 	project: ProjectDef;
-	current?: boolean;
+	emphasized?: boolean;
 }
 
-const { project, current = false } = Astro.props;
+const { project, emphasized = false } = Astro.props;
 
 const cards = await Promise.all(
 	project.experiences.map(async (ref) => {
@@ -27,20 +27,26 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 	<div class="col col-left">
 		{
 			leftCard && (
-				<div class="card" style={`--person-color: var(--${leftCard.person.id}-color)`}>
+				<div
+					class="card"
+					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${leftCard.person.id}-color)`}`}
+				>
 					<leftCard.Content />
 				</div>
 			)
 		}
 	</div>
 	<div class="col col-center">
-		<span class="dot" class:list={{ current }}></span>
+		<span class="dot" class:list={{ emphasized }}></span>
 		{project.name && <h5 class="node-label">{project.name}</h5>}
 	</div>
 	<div class="col col-right">
 		{
 			rightCard && (
-				<div class="card" style={`--person-color: var(--${rightCard.person.id}-color)`}>
+				<div
+					class="card"
+					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${rightCard.person.id}-color)`}`}
+				>
 					<rightCard.Content />
 				</div>
 			)
@@ -87,7 +93,7 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 			0 0 12px var(--accent-soft);
 	}
 
-	.dot.current {
+	.dot.emphasized {
 		background: var(--accent-3);
 		box-shadow:
 			0 0 0 4px var(--bg-alt),

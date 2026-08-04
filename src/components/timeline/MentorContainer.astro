@@ -1,0 +1,78 @@
+---
+interface Props {
+	label: string;
+	dateRange: string;
+}
+
+const { label, dateRange } = Astro.props;
+---
+
+<div class="mentor-container">
+	<div class="mentor-label">
+		<span class="mentor-name">{label}</span>
+		<span class="mentor-dates">{dateRange}</span>
+	</div>
+	<div class="mentor-body">
+		<div class="mentor-rail" aria-hidden="true"></div>
+		<div class="mentor-content">
+			<slot />
+		</div>
+	</div>
+</div>
+
+<style>
+	.mentor-container {
+		width: 100%;
+	}
+
+	.mentor-label {
+		display: flex;
+		align-items: baseline;
+		gap: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.mentor-name {
+		font-size: 0.85rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.2em;
+		color: var(--accent-3);
+		text-shadow: 0 0 12px var(--accent-soft);
+	}
+
+	.mentor-dates {
+		font-size: 0.75rem;
+		color: var(--fg-muted);
+	}
+
+	.mentor-body {
+		position: relative;
+	}
+
+	/* Sits in the gutter .timeline reserves via padding-left, so it never
+	   shifts the actual cards/dots inside — everything stays aligned with
+	   entries outside the container. */
+	.mentor-rail {
+		position: absolute;
+		left: -2rem;
+		top: 0;
+		bottom: 0;
+		width: 3px;
+		border-radius: 2px;
+		background: var(--accent-3);
+		box-shadow: 0 0 10px var(--accent-soft);
+	}
+
+	.mentor-content {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+	}
+
+	@media (max-width: 900px) {
+		.mentor-rail {
+			display: none;
+		}
+	}
+</style>

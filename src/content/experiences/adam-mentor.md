@@ -3,4 +3,4 @@ person: adam
 project: mentor
 ---
 
-Now building Mentor Game Studio together.
+Joined Mitko at Mentor Game Studio in 2026, building together again.
