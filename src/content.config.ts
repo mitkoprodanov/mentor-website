@@ -9,6 +9,12 @@ const experiences = defineCollection({
 	schema: z.object({
 		person: z.enum(['mitko', 'adam']),
 		project: z.string(),
+		/** What kind of work this entry describes — shown as a small badge on the card. */
+		category: z.enum(['content', 'system-feature']).optional(),
+		/** Optional showcase link (e.g. a YouTube video) — reveals an inline embed when the card is expanded. */
+		link: z.string().url().optional(),
+		/** Optional fallback thumbnail for non-video showcase links. */
+		previewImage: z.string().optional(),
 	}),
 });
 

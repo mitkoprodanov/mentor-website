@@ -1,23 +1,29 @@
 /**
- * Single-select tech/knowledge filter for the Timeline. Clicking a linked
- * tag on a PersonCard collapses the Timeline down to just the experiences
- * that used it — everything else fades out first, then the survivors slide
- * smoothly into their new positions (the FLIP technique: record rects
- * before the DOM mutation, then invert-and-play the delta as a transform).
+ * Single-select WorkTag filter shared by the Timeline and the Projects
+ * section. Clicking any linked tag (on a PersonCard or a ProjectCard)
+ * collapses whichever of those two sections contain a match down to just
+ * the matching entries — everything else fades out first, then the
+ * survivors slide smoothly into their new positions (the FLIP technique:
+ * record rects before the DOM mutation, then invert-and-play the delta as
+ * a transform).
  *
- * The collapse cascades bottom-up: a `.card` hides if it doesn't match →
- * its row's `.node` (dot + label) hides if none of that row's cards remain →
- * a `.company`/`.track-company` hides if it has no visible rows → a whole
- * `.track` (one side of an ApartBlock) hides if all its companies are gone,
- * collapsing the `.apart` grid to one column if only one side survives →
- * a `.mentor-container` hides if it's left empty → a `.fork-connector`
- * hides if either DOM-adjacent entry block is now empty.
+ * Timeline collapse cascades bottom-up: a `.card` hides if it doesn't match
+ * the active tag → its row's `.node` (dot + label) hides if none of that
+ * row's cards remain → a `.company`/`.track-company` hides if it has no
+ * visible rows → a whole `.track` (one side of an ApartBlock) hides if all
+ * its companies are gone, collapsing the `.apart` grid to one column if only
+ * one side survives → a `.mentor-container` hides if it's left empty → every
+ * `.fork-connector` hides outright whenever any filter is active (fork/join
+ * curves add nothing once the timeline is filtered down).
+ *
+ * Projects collapse is flat: a `.project-card` hides if it doesn't match.
  */
 
-type Filter = { person: string; skill: string } | null;
+type Filter = string | null;
 
-const FLIP_SELECTOR = '.card, .node, .company, .track-company, .apart, .mentor-container';
-const ANIMATED_SELECTOR = `${FLIP_SELECTOR}, .fork-connector`;
+const TIMELINE_FLIP_SELECTOR = '.card, .node, .project-row, .track-row, .company, .track-company, .apart, .mentor-container';
+const TIMELINE_ANIMATED_SELECTOR = `${TIMELINE_FLIP_SELECTOR}, .fork-connector`;
+const PROJECTS_SELECTOR = '.project-card';
 
 const EXIT_MS = 200;
 const EXIT_STAGGER_MS = 18;
@@ -40,14 +46,17 @@ function findNeighbor(start: Element, prop: 'previousElementSibling' | 'nextElem
 	return null;
 }
 
-function computeHiddenSet(root: HTMLElement, filter: Filter): Set<Element> {
+function matchesTags(el: HTMLElement, filter: Filter): boolean {
+	return filter === null || (el.dataset.tags ?? '').split(' ').includes(filter);
+}
+
+function computeHiddenTimelineSet(root: HTMLElement, filter: Filter): Set<Element> {
 	const toHide = new Set<Element>();
 	const emptyRows = new Set<Element>();
 
-	const cards = Array.from(root.querySelectorAll<HTMLElement>('.card[data-person]'));
+	const cards = Array.from(root.querySelectorAll<HTMLElement>('.card[data-tags]'));
 	for (const card of cards) {
-		const matches = filter === null || (card.dataset.person === filter.person && (card.dataset.skills ?? '').split(' ').includes(filter.skill));
-		if (!matches) toHide.add(card);
+		if (!matchesTags(card, filter)) toHide.add(card);
 	}
 
 	const rows = Array.from(root.querySelectorAll<HTMLElement>('.project-row, .track-row'));
@@ -55,6 +64,7 @@ function computeHiddenSet(root: HTMLElement, filter: Filter): Set<Element> {
 		const rowCards = Array.from(row.querySelectorAll<HTMLElement>('.card'));
 		if (rowCards.length > 0 && rowCards.every((c) => toHide.has(c))) {
 			emptyRows.add(row);
+			toHide.add(row);
 			const node = row.querySelector('.node');
 			if (node) toHide.add(node);
 		}
@@ -87,8 +97,14 @@ function computeHiddenSet(root: HTMLElement, filter: Filter): Set<Element> {
 		if (entries.length > 0 && visible.length === 0) toHide.add(mentor);
 	}
 
+	// Fork/join curves add no value once anything is filtered — hide them
+	// outright rather than only when a DOM-adjacent block is fully empty.
 	const connectors = Array.from(root.querySelectorAll<HTMLElement>('.fork-connector'));
 	for (const connector of connectors) {
+		if (filter !== null) {
+			toHide.add(connector);
+			continue;
+		}
 		const prev = findNeighbor(connector, 'previousElementSibling', root);
 		const next = findNeighbor(connector, 'nextElementSibling', root);
 		const prevEmpty = prev ? toHide.has(prev) : false;
@@ -96,6 +112,15 @@ function computeHiddenSet(root: HTMLElement, filter: Filter): Set<Element> {
 		if (prevEmpty || nextEmpty) toHide.add(connector);
 	}
 
+	return toHide;
+}
+
+function computeHiddenProjectsSet(root: HTMLElement, filter: Filter): Set<Element> {
+	const toHide = new Set<Element>();
+	const cards = Array.from(root.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`));
+	for (const card of cards) {
+		if (!matchesTags(card, filter)) toHide.add(card);
+	}
 	return toHide;
 }
 
@@ -140,13 +165,22 @@ function flipStayersAndRevealEnterers(staying: HTMLElement[], beforeRects: Map<H
 	});
 }
 
-function applyFilter(root: HTMLElement, filter: Filter) {
-	const toHide = computeHiddenSet(root, filter);
-	const animated = Array.from(root.querySelectorAll<HTMLElement>(ANIMATED_SELECTOR));
+function applyFilter(
+	root: HTMLElement,
+	filter: Filter,
+	opts: {
+		computeHidden: (root: HTMLElement, filter: Filter) => Set<Element>;
+		flipSelector: string;
+		animatedSelector: string;
+		onApplied?: (toHide: Set<Element>) => void;
+	},
+) {
+	const toHide = opts.computeHidden(root, filter);
+	const animated = Array.from(root.querySelectorAll<HTMLElement>(opts.animatedSelector));
 
 	if (prefersReducedMotion()) {
 		animated.forEach((el) => el.classList.toggle('tf-hidden', toHide.has(el)));
-		updateApartSingleModifier(root, toHide);
+		opts.onApplied?.(toHide);
 		return;
 	}
 
@@ -163,21 +197,18 @@ function applyFilter(root: HTMLElement, filter: Filter) {
 	}
 
 	const beforeRects = new Map<HTMLElement, DOMRect>();
-	staying.filter((el) => el.matches(FLIP_SELECTOR)).forEach((el) => beforeRects.set(el, el.getBoundingClientRect()));
+	staying.filter((el) => el.matches(opts.flipSelector)).forEach((el) => beforeRects.set(el, el.getBoundingClientRect()));
 
 	if (leaving.length === 0) {
-		// Nothing to fade out first — reveal/reflow can start right away.
 		entering.forEach((el) => {
 			el.classList.remove('tf-hidden');
 			el.classList.add('tf-enter-from');
 		});
-		updateApartSingleModifier(root, toHide);
+		opts.onApplied?.(toHide);
 		flipStayersAndRevealEnterers(staying, beforeRects, entering);
 		return;
 	}
 
-	// Let departures fully fade out (with their stagger) before the layout
-	// closes the gap they leave behind — avoids a visible "pop" mid-fade.
 	leaving.forEach((el, i) => {
 		const delay = Math.min(i, EXIT_STAGGER_CAP) * EXIT_STAGGER_MS;
 		el.style.transitionDelay = `${delay}ms`;
@@ -196,41 +227,74 @@ function applyFilter(root: HTMLElement, filter: Filter) {
 				el.classList.remove('tf-hidden');
 				el.classList.add('tf-enter-from');
 			});
-			updateApartSingleModifier(root, toHide);
+			opts.onApplied?.(toHide);
 			flipStayersAndRevealEnterers(staying, beforeRects, entering);
 		},
 		EXIT_MS + maxStagger,
 	);
 }
 
-function setTagPressedState(skillSlug: string | null, personId: string | null) {
-	document.querySelectorAll<HTMLButtonElement>('button.tag--linked').forEach((btn) => {
-		const isSelected = skillSlug !== null && btn.dataset.skill === skillSlug && btn.dataset.person === personId;
-		btn.setAttribute('aria-pressed', String(isSelected));
+function applyTimelineFilter(root: HTMLElement, filter: Filter) {
+	applyFilter(root, filter, {
+		computeHidden: computeHiddenTimelineSet,
+		flipSelector: TIMELINE_FLIP_SELECTOR,
+		animatedSelector: TIMELINE_ANIMATED_SELECTOR,
+		onApplied: (toHide) => updateApartSingleModifier(root, toHide),
 	});
 }
 
-function skillLabelFor(personId: string, skillSlug: string): string {
-	const btn = document.querySelector<HTMLButtonElement>(`button.tag--linked[data-person="${personId}"][data-skill="${skillSlug}"]`);
-	return btn?.textContent?.trim() ?? skillSlug;
+function applyProjectsFilter(root: HTMLElement, filter: Filter) {
+	applyFilter(root, filter, {
+		computeHidden: computeHiddenProjectsSet,
+		flipSelector: PROJECTS_SELECTOR,
+		animatedSelector: PROJECTS_SELECTOR,
+	});
+}
+
+function setTagPressedState(filter: Filter) {
+	document.querySelectorAll<HTMLButtonElement>('button.tag--linked').forEach((btn) => {
+		btn.setAttribute('aria-pressed', String(filter !== null && btn.dataset.tagId === filter));
+	});
+}
+
+function tagLabelFor(tagId: string): string {
+	const btn = document.querySelector<HTMLButtonElement>(`button.tag--linked[data-tag-id="${tagId}"]`);
+	return btn?.textContent?.trim() ?? tagId;
+}
+
+function updateChip(chipId: string, labelId: string, filter: Filter) {
+	const chip = document.getElementById(chipId) as HTMLElement | null;
+	const label = document.getElementById(labelId);
+	if (!chip || !label) return;
+	if (filter) {
+		label.textContent = tagLabelFor(filter);
+		chip.hidden = false;
+	} else {
+		chip.hidden = true;
+	}
 }
 
 function setFilter(filter: Filter) {
 	currentFilter = filter;
-	const root = document.getElementById('timeline');
-	if (root) applyFilter(root, filter);
+
+	const timelineRoot = document.getElementById('timeline');
+	if (timelineRoot) applyTimelineFilter(timelineRoot, filter);
+
+	const projectsRoot = document.getElementById('projects');
+	if (projectsRoot) applyProjectsFilter(projectsRoot, filter);
 
 	document.body.classList.toggle('filter-active', filter !== null);
-	setTagPressedState(filter?.skill ?? null, filter?.person ?? null);
+	setTagPressedState(filter);
 
-	const chip = document.getElementById('timeline-filter-chip');
-	const chipSkill = document.getElementById('timeline-filter-chip-skill');
-	if (chip && chipSkill) {
-		if (filter) {
-			chipSkill.textContent = skillLabelFor(filter.person, filter.skill);
-			chip.hidden = false;
-		} else {
-			chip.hidden = true;
+	updateChip('timeline-filter-chip', 'timeline-filter-chip-skill', filter);
+	updateChip('projects-filter-chip', 'projects-filter-chip-tag', filter);
+
+	if (filter && projectsRoot) {
+		const hasMatchingProject = Array.from(projectsRoot.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`)).some((card) =>
+			(card.dataset.tags ?? '').split(' ').includes(filter),
+		);
+		if (hasMatchingProject) {
+			projectsRoot.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 		}
 	}
 }
@@ -239,16 +303,15 @@ function init() {
 	document.addEventListener('click', (event) => {
 		const target = event.target as HTMLElement;
 
-		const tagButton = target.closest<HTMLButtonElement>('button.tag--linked');
+		const tagButton = target.closest<HTMLButtonElement>('button.tag--linked[data-tag-id]');
 		if (tagButton) {
-			const { person, skill } = tagButton.dataset;
-			if (!person || !skill) return;
-			const isSame = currentFilter?.person === person && currentFilter?.skill === skill;
-			setFilter(isSame ? null : { person, skill });
+			const tagId = tagButton.dataset.tagId;
+			if (!tagId) return;
+			setFilter(currentFilter === tagId ? null : tagId);
 			return;
 		}
 
-		if (target.closest('#timeline-filter-chip-clear')) {
+		if (target.closest('#timeline-filter-chip-clear') || target.closest('#projects-filter-chip-clear')) {
 			setFilter(null);
 		}
 	});
@@ -263,3 +326,5 @@ if (document.readyState === 'loading') {
 } else {
 	init();
 }
+
+export {};

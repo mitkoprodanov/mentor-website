@@ -1,0 +1,144 @@
+---
+import type { PersonId } from '../../data/people';
+
+interface Props {
+	personId: PersonId;
+	tagIds: string[];
+	/** Resolved CSS color value for the `--person-color` custom property (e.g. `var(--mitko-color)` or `var(--accent-3)` when emphasized). */
+	color: string;
+	/** Which side of the timeline this card sits on — controls which edge gets the person-color accent border. */
+	side: 'left' | 'right';
+	category?: 'content' | 'system-feature';
+	/** Optional showcase link (e.g. a YouTube video) — reveals an inline embed when the card is expanded. */
+	link?: string;
+	previewImage?: string;
+}
+
+const { personId, tagIds, color, side, link, previewImage } = Astro.props;
+---
+
+<div class:list={['card', `card--${side}`]} data-person={personId} data-tags={tagIds.join(' ')} style={`--person-color: ${color}`}>
+	<div class="content">
+		<slot />
+	</div>
+	{
+		link && (
+			<div class="showcase">
+				<button type="button" class="showcase-toggle" aria-expanded="false">
+					<span class="chevron" aria-hidden="true">
+						▸
+					</span>{' '}
+					Showcase
+				</button>
+				<div class="showcase-body">
+					<div class="showcase-body-inner" data-showcase-embed data-link={link} data-preview-image={previewImage} />
+				</div>
+			</div>
+		)
+	}
+</div>
+
+<style>
+	.card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		padding: 1.1rem 1.25rem;
+	}
+
+	.card--left {
+		border-right: 2px solid var(--person-color, var(--accent));
+	}
+
+	.card--right {
+		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.card :global(p) {
+		font-size: 0.88rem;
+		line-height: 1.5;
+		color: var(--fg);
+		margin: 0;
+	}
+
+	.showcase {
+		margin-top: 0.85rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.showcase-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-family: inherit;
+		font-size: 0.8rem;
+		color: var(--accent-3);
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.showcase-toggle:hover {
+		text-decoration: underline;
+	}
+
+	.showcase-toggle:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	.chevron {
+		display: inline-block;
+		transition: transform 0.2s ease;
+	}
+
+	.showcase-toggle[aria-expanded='true'] .chevron {
+		transform: rotate(90deg);
+	}
+
+	.showcase-body {
+		display: grid;
+		grid-template-rows: 0fr;
+		transition: grid-template-rows 300ms ease;
+	}
+
+	.showcase-toggle[aria-expanded='true'] + .showcase-body {
+		grid-template-rows: 1fr;
+	}
+
+	.showcase-body-inner {
+		overflow: hidden;
+	}
+
+	.showcase-body-inner:not(:empty) {
+		margin-top: 0.75rem;
+	}
+
+	.showcase-body-inner :global(iframe),
+	.showcase-body-inner :global(img) {
+		display: block;
+		width: 100%;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+	}
+
+	.showcase-body-inner :global(iframe) {
+		aspect-ratio: 16 / 9;
+		height: auto;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.showcase-body {
+			transition: none;
+		}
+	}
+
+	@media (max-width: 900px) {
+		.card--left {
+			border-right: none;
+			border-left: 2px solid var(--person-color, var(--accent));
+		}
+	}
+</style>

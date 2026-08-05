@@ -1,0 +1,67 @@
+---
+import type { Project } from '../../data/projects';
+import ExternalLink from '../common/ExternalLink.astro';
+
+interface Props {
+	project: Project;
+}
+
+const { project } = Astro.props;
+---
+
+<div class="card project-card" data-project-id={project.id} data-tags={project.tagIds.join(' ')}>
+	<div class="project-header">
+		<h4>{project.name}</h4>
+		{
+			project.url && (
+				<ExternalLink href={project.url} class="project-link">
+					Visit
+				</ExternalLink>
+			)
+		}
+	</div>
+	<div class="content">
+		<p>{project.detail}</p>
+		<p>{project.description}</p>
+	</div>
+</div>
+
+<style>
+	.card {
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		padding: 1.1rem 1.25rem;
+	}
+
+	.project-header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75rem;
+		margin-bottom: 0.6rem;
+	}
+
+	.project-header h4 {
+		margin: 0;
+		font-size: 1rem;
+	}
+
+	.project-link {
+		font-size: 0.8rem;
+		flex-shrink: 0;
+	}
+
+	.content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.card :global(p) {
+		font-size: 0.88rem;
+		line-height: 1.5;
+		color: var(--fg);
+		margin: 0;
+	}
+</style>

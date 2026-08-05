@@ -49,14 +49,16 @@ export interface ExperienceRef {
 	person: PersonId;
 	/** Slug of the matching file in src/content/experiences/. */
 	slug: string;
-	/** Labels matching entries in this person's `skillGroups` (see people.ts) that this experience used. */
-	skills?: string[];
+	/** WorkTag ids (see data/tags.ts) this experience used. */
+	tagIds?: string[];
 }
 
 export interface ProjectDef {
 	id: string;
 	/** Omit for a single-project company — the company name is used instead. */
 	name?: string;
+	/** Short project-level blurb shown on the timeline's center node card, alongside `name`. */
+	info?: string;
 	experiences: ExperienceRef[];
 }
 
@@ -84,7 +86,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'ericsson-consulting',
-						experiences: [{ person: 'mitko', slug: 'mitko-ericsson', skills: ['C'] }],
+						experiences: [{ person: 'mitko', slug: 'mitko-ericsson', tagIds: ['c'] }],
 					},
 				],
 			},
@@ -98,12 +100,14 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'exigo',
 						name: 'Armies of Exigo',
-						experiences: [{ person: 'adam', slug: 'adam-exigo', skills: ['Systems & Level Design'] }],
+						info: 'RTS campaign & multiplayer level design, plus contributions to the proprietary script editor.',
+						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['systems-level-design'] }],
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
 						name: 'Warhammer: Mark of Chaos',
-						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', skills: ['Systems & Level Design'] }],
+						info: 'RTS campaign & multiplayer maps, including the siege game mode.',
+						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', tagIds: ['systems-level-design'] }],
 					},
 				],
 			},
@@ -119,9 +123,10 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'heroes6',
 					name: 'Might & Magic: Heroes VI',
+					info: 'Turn-based fantasy strategy — campaign AI, tutorial system, hero abilities & boss encounters.',
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-heroes6', skills: ['Gameplay AI'] },
-						{ person: 'adam', slug: 'adam-heroes6', skills: ['UI/UX Design', 'Systems & Level Design'] },
+						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['gameplay-ai'] },
+						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['ui-ux-design', 'systems-level-design'] },
 					],
 				},
 			],
@@ -137,18 +142,20 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'supernova',
 					name: 'Supernova',
+					info: 'Wave army movement, status-effect system, tech tree, and hero ability kits.',
 					experiences: [
 						{
 							person: 'mitko',
 							slug: 'mitko-supernova',
-							skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding', 'Abilities & Status Effects', 'Tech Trees & Progression'],
+							tagIds: ['gameplay-ai', 'crowd-sim-pathfinding', 'abilities-status-effects', 'tech-trees-progression'],
 						},
-						{ person: 'adam', slug: 'adam-supernova', skills: ['Systems & Level Design'] },
+						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-level-design'] },
 					],
 				},
 				{
 					id: 'lol-universe',
 					name: 'League of Legends Universe',
+					info: 'Products in the League of Legends universe, built alongside Riot Games designers.',
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-lol-universe' },
 						{ person: 'adam', slug: 'adam-lol-universe' },
@@ -157,20 +164,23 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'around',
 					name: 'Around',
+					info: 'Narrative-driven, point-and-click adventure built in UE4 Blueprint.',
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-around' },
-						{ person: 'adam', slug: 'adam-around', skills: ['UE Blueprint'] },
+						{ person: 'adam', slug: 'adam-around', tagIds: ['ue-blueprint'] },
 					],
 				},
 				{
 					id: 'beasts-of-brawlia',
 					name: 'Beasts of Brawlia',
+					info: 'Arena brawler born from an in-house pitch contest.',
 					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
 				},
 				{
 					id: 'mmo-rework',
 					name: 'MMO Microservices Rework',
-					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', skills: ['C++', 'Agile'] }],
+					info: 'Reworked a monolithic MMO server into microservices, Agile-driven.',
+					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', tagIds: ['cpp', 'agile'] }],
 				},
 			],
 		},
@@ -186,7 +196,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'space-punks',
-						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog', skills: ['Gameplay Ability System (GAS)'] }],
+						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog', tagIds: ['gas'] }],
 					},
 				],
 			},
@@ -202,7 +212,7 @@ export const timeline: TimelineEntry[] = [
 							{
 								person: 'mitko',
 								slug: 'mitko-imagic-labs',
-								skills: ['Mobile Development', 'SOLID / Clean Code'],
+								tagIds: ['mobile-dev', 'solid-clean-code'],
 							},
 						],
 					},
@@ -230,7 +240,8 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
-						experiences: [{ person: 'adam', slug: 'adam-mandragora', skills: ['UI/UX Design', 'Encounter Design'] }],
+						info: 'Action-RPG — final two years: UI/UX, boss encounters, abilities & talent trees.',
+						experiences: [{ person: 'adam', slug: 'adam-mandragora', tagIds: ['ui-ux-design', 'encounter-design'] }],
 					},
 				],
 			},

@@ -4,19 +4,24 @@ import ProjectRow from './ProjectRow.astro';
 
 interface Props {
 	company: CompanyDef;
+	/** This company is the same real employer as the entry immediately above/below a fork or merge (see data/timeline.ts) — style the seam as one continuing entity rather than two unrelated companies. */
+	continuesAbove?: boolean;
+	continuesBelow?: boolean;
 }
 
-const { company } = Astro.props;
+const { company, continuesAbove = false, continuesBelow = false } = Astro.props;
 const emphasized = company.underMentor === true;
 ---
 
-<div class="company">
+<div class="company" class:list={{ 'continues-above': continuesAbove, 'continues-below': continuesBelow }}>
 	<div class="company-header">
 		<h3 class:list={{ emphasized }}>{company.name}</h3>
-		<p class="company-dates">{company.dateRange}</p>
+		<p class="company-dates">
+			{company.dateRange}
+			{continuesAbove && <span class="continued-tag">continued</span>}
+		</p>
 	</div>
-	<div class="company-grid">
-		<div class="thread-line" aria-hidden="true"></div>
+	<div class="company-projects">
 		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} />)}
 	</div>
 </div>
@@ -24,6 +29,20 @@ const emphasized = company.underMentor === true;
 <style>
 	.company {
 		width: 100%;
+		border: 1px solid var(--border);
+		border-radius: 20px;
+		background: var(--bg-alt);
+		padding: 1.5rem 1.5rem 2rem;
+	}
+
+	.company.continues-above {
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.company.continues-below {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
 	}
 
 	.company-header {
@@ -46,42 +65,27 @@ const emphasized = company.underMentor === true;
 
 	.company-dates {
 		margin: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
 		font-size: 0.75rem;
 		color: var(--fg-muted);
 	}
 
-	.company-grid {
-		position: relative;
-		display: grid;
-		grid-template-columns: 1fr minmax(190px, 240px) 1fr;
-		column-gap: 1.25rem;
-		row-gap: 2.5rem;
-		align-items: start;
+	.continued-tag {
+		font-size: 0.65rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--accent-3);
+		border: 1px solid var(--accent-3);
+		border-radius: 999px;
+		padding: 0.1rem 0.45rem;
 	}
 
-	/* Positioned absolutely (not as a grid item) so it merely renders behind the
-	   center column instead of occupying it — a real grid item spanning many rows
-	   there would block auto-placement of the actual per-row dots/cards. The two
-	   outer columns are both `1fr`, so the center column is always exactly
-	   horizontally centered in the grid regardless of its own width. */
-	.thread-line {
-		position: absolute;
-		left: 50%;
-		top: 0;
-		bottom: 0;
-		width: 2px;
-		transform: translateX(-50%);
-		background: var(--border);
-	}
-
-	@media (max-width: 900px) {
-		.company-grid {
-			grid-template-columns: 1fr;
-			row-gap: 1rem;
-		}
-
-		.thread-line {
-			display: none;
-		}
+	.company-projects {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
 	}
 </style>

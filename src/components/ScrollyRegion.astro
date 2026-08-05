@@ -12,7 +12,7 @@ import { getPerson } from '../data/people';
 import PersonCard from './personal/PersonCard.astro';
 import PersonContactCard from './personal/PersonContactCard.astro';
 import Timeline from './timeline/Timeline.astro';
-import SideProjects from './sections/SideProjects.astro';
+import Projects from './sections/Projects.astro';
 import CompanyContactCard from './sections/CompanyContactCard.astro';
 
 const mitko = getPerson('mitko');
@@ -32,7 +32,7 @@ const adam = getPerson('adam');
 
 		<div class="scrolly-col scrolly-col--center">
 			<Timeline />
-			<SideProjects />
+			<Projects />
 			<CompanyContactCard />
 		</div>
 
@@ -48,7 +48,8 @@ const adam = getPerson('adam');
 </div>
 
 <script>
-	import '../scripts/timelineFilter.client';
+	import '../scripts/tagFilter.client';
+	import '../scripts/experienceCard.client';
 </script>
 
 <style>

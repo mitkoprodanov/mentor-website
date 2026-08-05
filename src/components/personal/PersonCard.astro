@@ -1,14 +1,15 @@
 ---
 import type { Person } from '../../data/people';
-import { getLinkedSkills } from '../../data/skills';
-import { slugify } from '../../lib/slug';
+import { groupTagsByCategory, getLinkedTagIds } from '../../data/tags';
+import Tag from '../common/Tag.astro';
 
 interface Props {
 	person: Person;
 }
 
 const { person } = Astro.props;
-const linkedSkills = getLinkedSkills(person.id);
+const linkedTagIds = getLinkedTagIds();
+const tagGroups = groupTagsByCategory(person.tagIds);
 ---
 
 <div class="person-card" style={`--person-color: var(--${person.id}-color)`}>
@@ -16,25 +17,13 @@ const linkedSkills = getLinkedSkills(person.id);
 	<p class="role">{person.role}</p>
 	<div class="skill-groups">
 		{
-			person.skillGroups.map((group) => (
+			tagGroups.map((group) => (
 				<div class="skill-group">
 					<h4>{group.category}</h4>
 					<div class="tag-row">
-						{group.skills.map((skill) =>
-							linkedSkills.has(skill) ? (
-								<button
-									type="button"
-									class="tag tag--linked"
-									data-person={person.id}
-									data-skill={slugify(skill)}
-									aria-pressed="false"
-								>
-									{skill}
-								</button>
-							) : (
-								<span class="tag">{skill}</span>
-							),
-						)}
+						{group.tags.map((tag) => (
+							<Tag label={tag.label} linked={linkedTagIds.has(tag.id)} tagId={tag.id} />
+						))}
 					</div>
 				</div>
 			))
@@ -96,50 +85,6 @@ const linkedSkills = getLinkedSkills(person.id);
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.4rem;
-	}
-
-	.tag {
-		font-size: 0.75rem;
-		padding: 0.25rem 0.6rem;
-		border-radius: 999px;
-		background: var(--accent-soft);
-		color: var(--accent-3);
-		border: 1px solid rgba(255, 122, 0, 0.3);
-		white-space: nowrap;
-	}
-
-	button.tag {
-		font-family: inherit;
-		cursor: pointer;
-		text-decoration: underline dotted rgba(255, 209, 102, 0.5);
-		text-underline-offset: 3px;
-		transition:
-			opacity 0.2s ease,
-			transform 0.2s ease,
-			box-shadow 0.2s ease,
-			background 0.2s ease;
-	}
-
-	button.tag:hover {
-		background: var(--accent-3);
-		color: var(--bg);
-	}
-
-	button.tag:focus-visible {
-		outline: 2px solid var(--accent-3);
-		outline-offset: 2px;
-	}
-
-	button.tag[aria-pressed='true'] {
-		background: var(--accent-3);
-		color: var(--bg);
-		text-decoration: none;
-		transform: scale(1.05);
-		box-shadow: 0 0 12px 2px var(--accent-soft);
-	}
-
-	:global(body.filter-active) button.tag:not([aria-pressed='true']) {
-		opacity: 0.45;
 	}
 
 	.stat-line {

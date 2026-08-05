@@ -5,12 +5,6 @@
 
 export type PersonId = 'mitko' | 'adam';
 
-export interface SkillGroup {
-	/** A well-known category, e.g. "AI", "Unreal", "UI", "Gameplay". */
-	category: string;
-	skills: string[];
-}
-
 export interface Person {
 	id: PersonId;
 	name: string;
@@ -20,7 +14,8 @@ export interface Person {
 	education: string;
 	linkedin: string;
 	email?: string;
-	skillGroups: SkillGroup[];
+	/** Ordered list of WorkTag ids (see data/tags.ts) — grouped by category for display, in first-occurrence order. */
+	tagIds: string[];
 	hobbies?: string[];
 }
 
@@ -32,14 +27,25 @@ export const people: Person[] = [
 		since: 2009,
 		education: 'MSc Computer Engineering, BUTE',
 		linkedin: 'https://www.linkedin.com/in/mitko-prodanov-920b55b7/',
-		skillGroups: [
-			{ category: 'Languages', skills: ['C', 'C++', 'C#'] },
-			{ category: 'Unreal', skills: ['Gameplay Ability System (GAS)'] },
-			{ category: 'Engines', skills: ['Unity', 'Lumberyard'] },
-			{ category: 'AI', skills: ['Gameplay AI', 'Crowd Simulation & Pathfinding', 'TensorFlow / Deep Learning'] },
-			{ category: 'Gameplay', skills: ['Abilities & Status Effects', 'Tech Trees & Progression'] },
-			{ category: 'Graphics', skills: ['Shader Programming (HLSL/GLSL/Cg)', 'OpenGL', 'DirectX'] },
-			{ category: 'Practices', skills: ['Mobile Development', 'SOLID / Clean Code', 'Agile'] },
+		tagIds: [
+			'c',
+			'cpp',
+			'csharp',
+			'gas',
+			'unity',
+			'lumberyard',
+			'gameplay-ai',
+			'crowd-sim-pathfinding',
+			'tensorflow-dl',
+			'abilities-status-effects',
+			'tech-trees-progression',
+			'shader-programming',
+			'opengl',
+			'directx',
+			'mobile-dev',
+			'solid-clean-code',
+			'agile',
+			'qubit-spring-1st-place',
 		],
 		hobbies: [
 			'Paragliding — both solo and as a tandem pilot',
@@ -55,12 +61,7 @@ export const people: Person[] = [
 		since: 2004,
 		education: 'BSc Business Informatics, Corvinus',
 		linkedin: 'https://linkedin.com/in/adam-nemeshazi',
-		skillGroups: [
-			{ category: 'Design', skills: ['Systems & Level Design', 'Encounter Design'] },
-			{ category: 'UI', skills: ['UI/UX Design'] },
-			{ category: 'Unreal', skills: ['UE Blueprint'] },
-			{ category: 'Process', skills: ['Agile/Scrum'] },
-		],
+		tagIds: ['systems-level-design', 'encounter-design', 'ui-ux-design', 'ue-blueprint', 'agile-scrum'],
 	},
 ];
 

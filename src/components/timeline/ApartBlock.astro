@@ -2,19 +2,24 @@
 import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
 import type { CompanyDef } from '../../data/timeline';
-import { DOT_COLUMN_PX, TRACK_GAP_PX } from './layout';
-import { slugify } from '../../lib/slug';
+import ExperienceCard from './ExperienceCard.astro';
 
 interface Props {
 	mitko: CompanyDef[];
 	adam: CompanyDef[];
+	/** This track's first/last company is the same real employer as the entry immediately above/below the fork or merge bounding this apart block (see data/timeline.ts) — style that seam as one continuing entity. */
+	mitkoContinuesAbove?: boolean;
+	mitkoContinuesBelow?: boolean;
+	adamContinuesAbove?: boolean;
+	adamContinuesBelow?: boolean;
 }
 
-const { mitko, adam } = Astro.props;
+const { mitko, adam, mitkoContinuesAbove = false, mitkoContinuesBelow = false, adamContinuesAbove = false, adamContinuesBelow = false } =
+	Astro.props;
 
 const sides = [
-	{ person: 'mitko' as PersonId, side: 'left' as const, companies: mitko },
-	{ person: 'adam' as PersonId, side: 'right' as const, companies: adam },
+	{ person: 'mitko' as PersonId, side: 'left' as const, companies: mitko, continuesAbove: mitkoContinuesAbove, continuesBelow: mitkoContinuesBelow },
+	{ person: 'adam' as PersonId, side: 'right' as const, companies: adam, continuesAbove: adamContinuesAbove, continuesBelow: adamContinuesBelow },
 ];
 
 const tracks = await Promise.all(
@@ -28,7 +33,13 @@ const tracks = await Promise.all(
 								const entry = await getEntry('experiences', ref.slug);
 								if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 								const { Content } = await render(entry);
-								return { person: getPerson(ref.person), Content, skills: (ref.skills ?? []).map(slugify) };
+								return {
+									person: getPerson(ref.person),
+									Content,
+									tagIds: ref.tagIds ?? [],
+									link: entry.data.link,
+									previewImage: entry.data.previewImage,
+								};
 							}),
 						);
 						return { project, cards };
@@ -42,7 +53,7 @@ const tracks = await Promise.all(
 );
 ---
 
-<div class="apart" style={`--dot-col: ${DOT_COLUMN_PX}px; --track-gap: ${TRACK_GAP_PX}px`}>
+<div class="apart">
 	{
 		tracks.map((track) => (
 			<div
@@ -51,32 +62,49 @@ const tracks = await Promise.all(
 					'under-mentor': track.companies.length > 0 && track.companies.every((c) => c.company.underMentor === true),
 				}}
 			>
-				{track.companies.map(({ company, projects }) => (
-					<div class="track-company">
+				{track.companies.map(({ company, projects }, companyIndex) => (
+					<div
+						class="track-company"
+						class:list={{
+							'continues-above': companyIndex === 0 && track.continuesAbove,
+							'continues-below': companyIndex === track.companies.length - 1 && track.continuesBelow,
+						}}
+					>
 						<div class="track-header">
 							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-							<p class="track-dates">{company.dateRange}</p>
+							<p class="track-dates">
+								{company.dateRange}
+								{companyIndex === 0 && track.continuesAbove && <span class="continued-tag">continued</span>}
+							</p>
 						</div>
-						<div class="track-grid">
-							<div class="thread-line" aria-hidden="true" />
+						<div class="track-projects">
 							{projects.map(({ project, cards }) => (
-								<div class="track-row">
-									<div class="node">
-										<span class="dot" class:list={{ emphasized: company.underMentor === true }} />
-										{project.name && <h5 class="node-label">{project.name}</h5>}
+								<div class="track-row" class:list={{ 'track-row--boxed': Boolean(project.name) }}>
+									{
+										project.name && (
+											<div class="node">
+												<span class="dot" class:list={{ emphasized: company.underMentor === true }} />
+												<div class="node-text">
+													<h5 class="node-label">{project.name}</h5>
+													{project.info && <p class="node-info">{project.info}</p>}
+												</div>
+											</div>
+										)
+									}
+									<div class="cards">
+										{cards.map((card) => (
+											<ExperienceCard
+												personId={card.person.id}
+												tagIds={card.tagIds}
+												color={company.underMentor ? 'var(--accent-3)' : `var(--${card.person.id}-color)`}
+												side={track.side}
+												link={card.link}
+												previewImage={card.previewImage}
+											>
+												<card.Content />
+											</ExperienceCard>
+										))}
 									</div>
-									{cards.map((card) => (
-										<div
-											class="card"
-											data-person={card.person.id}
-											data-skills={card.skills.join(' ')}
-											style={`--person-color: ${
-												company.underMentor ? 'var(--accent-3)' : `var(--${card.person.id}-color)`
-											}`}
-										>
-											<card.Content />
-										</div>
-									))}
 								</div>
 							))}
 						</div>
@@ -92,7 +120,7 @@ const tracks = await Promise.all(
 		width: 100%;
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		column-gap: var(--track-gap);
+		column-gap: 2rem;
 	}
 
 	.track {
@@ -116,6 +144,23 @@ const tracks = await Promise.all(
 		z-index: -1;
 	}
 
+	.track-company {
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		background: var(--bg-alt);
+		padding: 1.25rem 1rem 1.5rem;
+	}
+
+	.track-company.continues-above {
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.track-company.continues-below {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+
 	.track-header {
 		text-align: center;
 		padding: 0.5rem 0 0.5rem;
@@ -136,135 +181,92 @@ const tracks = await Promise.all(
 
 	.track-dates {
 		margin: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
 		font-size: 0.72rem;
 		color: var(--fg-muted);
 	}
 
-	.track-grid {
-		position: relative;
-		display: grid;
-		row-gap: 2rem;
+	.continued-tag {
+		font-size: 0.62rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--accent-3);
+		border: 1px solid var(--accent-3);
+		border-radius: 999px;
+		padding: 0.08rem 0.4rem;
 	}
 
-	.track-left .track-grid {
-		grid-template-columns: 1fr var(--dot-col);
-	}
-
-	.track-right .track-grid {
-		grid-template-columns: var(--dot-col) 1fr;
+	.track-projects {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
 	}
 
 	.track-row {
-		display: contents;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
 	}
 
-	/* Same trick as CompanyBlock's thread-line: absolutely positioned so it
-	   renders behind the dot column instead of occupying it as a real grid
-	   item (which would block auto-placement of the per-row dots/cards). */
-	.thread-line {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 2px;
-		background: var(--border);
+	.track-row--boxed {
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--bg);
+		padding: 1rem;
 	}
 
-	.track-left .thread-line {
-		left: calc(100% - (var(--dot-col) / 2));
-		transform: translateX(-50%);
-	}
-
-	.track-right .thread-line {
-		left: calc(var(--dot-col) / 2);
-		transform: translateX(-50%);
+	.cards {
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
 	}
 
 	.node {
-		position: relative;
-		z-index: 1;
 		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.track-left .node {
-		grid-column: 2;
-	}
-
-	.track-right .node {
-		grid-column: 1;
+		align-items: flex-start;
+		gap: 0.6rem;
 	}
 
 	.dot {
-		width: 12px;
-		height: 12px;
+		flex-shrink: 0;
+		margin-top: 0.4rem;
+		width: 10px;
+		height: 10px;
 		border-radius: 50%;
 		background: var(--accent);
-		box-shadow:
-			0 0 0 4px var(--bg-alt),
-			0 0 12px var(--accent-soft);
+		box-shadow: 0 0 10px var(--accent-soft);
 	}
 
 	.dot.emphasized {
 		background: var(--accent-3);
-		box-shadow:
-			0 0 0 4px var(--bg-alt),
-			0 0 16px 4px var(--accent-soft);
+		box-shadow: 0 0 12px 3px var(--accent-soft);
+	}
+
+	.node-text {
+		min-width: 0;
 	}
 
 	.node-label {
 		margin: 0;
-		text-align: center;
 		font-size: 0.9rem;
 		font-weight: 600;
 		color: var(--fg);
 	}
 
-	.card {
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 14px;
-		padding: 1rem 1.15rem;
-	}
-
-	.track-left .card {
-		grid-column: 1;
-		border-right: 2px solid var(--person-color, var(--accent));
-	}
-
-	.track-right .card {
-		grid-column: 2;
-		border-left: 2px solid var(--person-color, var(--accent));
-	}
-
-	.card :global(p) {
-		font-size: 0.85rem;
-		line-height: 1.5;
-		color: var(--fg);
-		margin: 0;
+	.node-info {
+		margin: 0.3rem 0 0;
+		font-size: 0.78rem;
+		line-height: 1.4;
+		color: var(--fg-muted);
 	}
 
 	@media (max-width: 900px) {
 		.apart {
 			grid-template-columns: 1fr;
 			row-gap: 2.5rem;
-		}
-
-		.track-left .track-grid,
-		.track-right .track-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.thread-line {
-			display: none;
-		}
-
-		.track-left .node,
-		.track-right .node,
-		.track-left .card,
-		.track-right .card {
-			grid-column: 1;
 		}
 	}
 </style>

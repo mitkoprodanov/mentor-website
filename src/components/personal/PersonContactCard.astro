@@ -1,5 +1,6 @@
 ---
 import type { Person } from '../../data/people';
+import ExternalLink from '../common/ExternalLink.astro';
 
 interface Props {
 	person: Person;
@@ -10,8 +11,14 @@ const { person } = Astro.props;
 
 <div class="contact-card" style={`--person-color: var(--${person.id}-color)`}>
 	<h4>{person.name}</h4>
-	<a href={person.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a>
-	{person.email && <a href={`mailto:${person.email}`}>{person.email}</a>}
+	<ExternalLink href={person.linkedin}>LinkedIn</ExternalLink>
+	{
+		person.email && (
+			<ExternalLink href={`mailto:${person.email}`} external={false}>
+				{person.email}
+			</ExternalLink>
+		)
+	}
 </div>
 
 <style>
@@ -32,14 +39,8 @@ const { person } = Astro.props;
 		font-size: 1rem;
 	}
 
-	.contact-card a {
-		color: var(--accent);
-		text-decoration: none;
+	.contact-card :global(.external-link) {
+		align-self: center;
 		font-size: 0.9rem;
-		word-break: break-word;
-	}
-
-	.contact-card a:hover {
-		text-decoration: underline;
 	}
 </style>

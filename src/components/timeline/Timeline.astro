@@ -7,8 +7,8 @@ import ForkConnector from './ForkConnector.astro';
 import MentorContainer from './MentorContainer.astro';
 
 type Node =
-	| { type: 'connector'; direction: 'split' | 'merge' }
-	| { type: 'entry'; entry: TimelineEntry };
+	| { type: 'connector'; direction: 'split' | 'merge'; idx: number }
+	| { type: 'entry'; entry: TimelineEntry; idx: number };
 
 function entryHasMentor(entry: TimelineEntry): boolean {
 	if (entry.kind === 'together') return entry.company.underMentor === true;
@@ -22,9 +22,72 @@ const nodes: Node[] = [];
 timeline.forEach((entry, index) => {
 	const previous = timeline[index - 1];
 	if (previous && previous.kind !== entry.kind) {
-		nodes.push({ type: 'connector', direction: entry.kind === 'apart' ? 'split' : 'merge' });
+		nodes.push({ type: 'connector', direction: entry.kind === 'apart' ? 'split' : 'merge', idx: nodes.length });
 	}
-	nodes.push({ type: 'entry', entry });
+	nodes.push({ type: 'entry', entry, idx: nodes.length });
+});
+
+/**
+ * Some real employers appear as two separate CompanyDef objects because the
+ * fork/merge boundary falls mid-employment (see the big comment in
+ * data/timeline.ts — Black Hole Entertainment, Primal Game Studio). Detect
+ * those same-name pairs across a connector so the two boxes can be styled as
+ * one continuing entity instead of two unrelated companies that happen to
+ * touch.
+ */
+interface Continuation {
+	togetherAbove?: boolean;
+	togetherBelow?: boolean;
+	mitkoAbove?: boolean;
+	mitkoBelow?: boolean;
+	adamAbove?: boolean;
+	adamBelow?: boolean;
+}
+
+function edgeCompanyNames(entry: TimelineEntry, edge: 'start' | 'end'): { mitko?: string; adam?: string; together?: string } {
+	if (entry.kind === 'together') return { together: entry.company.name };
+	const mitkoCo = edge === 'start' ? entry.mitko[0] : entry.mitko[entry.mitko.length - 1];
+	const adamCo = edge === 'start' ? entry.adam[0] : entry.adam[entry.adam.length - 1];
+	return { mitko: mitkoCo?.name, adam: adamCo?.name };
+}
+
+const continuations: Continuation[] = nodes.map(() => ({}));
+const connectorHighlight: (('left' | 'right') | null)[] = nodes.map(() => null);
+
+nodes.forEach((node, i) => {
+	if (node.type !== 'connector') return;
+	const prev = nodes[i - 1];
+	const next = nodes[i + 1];
+	if (!prev || prev.type !== 'entry' || !next || next.type !== 'entry') return;
+
+	const prevNames = edgeCompanyNames(prev.entry, 'end');
+	const nextNames = edgeCompanyNames(next.entry, 'start');
+
+	if (prev.entry.kind === 'together' && next.entry.kind === 'apart') {
+		if (prevNames.together && prevNames.together === nextNames.mitko) {
+			continuations[prev.idx].togetherBelow = true;
+			continuations[next.idx].mitkoAbove = true;
+			connectorHighlight[i] = 'left';
+		}
+		if (prevNames.together && prevNames.together === nextNames.adam) {
+			continuations[prev.idx].togetherBelow = true;
+			continuations[next.idx].adamAbove = true;
+			connectorHighlight[i] = 'right';
+		}
+	}
+
+	if (prev.entry.kind === 'apart' && next.entry.kind === 'together') {
+		if (prevNames.mitko && prevNames.mitko === nextNames.together) {
+			continuations[prev.idx].mitkoBelow = true;
+			continuations[next.idx].togetherAbove = true;
+			connectorHighlight[i] = 'left';
+		}
+		if (prevNames.adam && prevNames.adam === nextNames.together) {
+			continuations[prev.idx].adamBelow = true;
+			continuations[next.idx].togetherAbove = true;
+			connectorHighlight[i] = 'right';
+		}
+	}
 });
 
 // The Mentor Game Studio container wraps everything from the fork right
@@ -57,11 +120,22 @@ const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 		{
 			before.map((node) =>
 				node.type === 'connector' ? (
-					<ForkConnector direction={node.direction} />
+					<ForkConnector direction={node.direction} highlight={connectorHighlight[node.idx]} />
 				) : node.entry.kind === 'together' ? (
-					<CompanyBlock company={node.entry.company} />
+					<CompanyBlock
+						company={node.entry.company}
+						continuesAbove={continuations[node.idx].togetherAbove}
+						continuesBelow={continuations[node.idx].togetherBelow}
+					/>
 				) : (
-					<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
+					<ApartBlock
+						mitko={node.entry.mitko}
+						adam={node.entry.adam}
+						mitkoContinuesAbove={continuations[node.idx].mitkoAbove}
+						mitkoContinuesBelow={continuations[node.idx].mitkoBelow}
+						adamContinuesAbove={continuations[node.idx].adamAbove}
+						adamContinuesBelow={continuations[node.idx].adamBelow}
+					/>
 				),
 			)
 		}
@@ -70,11 +144,22 @@ const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 				<MentorContainer label={MENTOR_ERA.label} dateRange={MENTOR_ERA.dateRange}>
 					{contained.map((node) =>
 						node.type === 'connector' ? (
-							<ForkConnector direction={node.direction} />
+							<ForkConnector direction={node.direction} highlight={connectorHighlight[node.idx]} />
 						) : node.entry.kind === 'together' ? (
-							<CompanyBlock company={node.entry.company} />
+							<CompanyBlock
+								company={node.entry.company}
+								continuesAbove={continuations[node.idx].togetherAbove}
+								continuesBelow={continuations[node.idx].togetherBelow}
+							/>
 						) : (
-							<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
+							<ApartBlock
+								mitko={node.entry.mitko}
+								adam={node.entry.adam}
+								mitkoContinuesAbove={continuations[node.idx].mitkoAbove}
+								mitkoContinuesBelow={continuations[node.idx].mitkoBelow}
+								adamContinuesAbove={continuations[node.idx].adamAbove}
+								adamContinuesBelow={continuations[node.idx].adamBelow}
+							/>
 						),
 					)}
 				</MentorContainer>
@@ -83,11 +168,22 @@ const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 		{
 			after.map((node) =>
 				node.type === 'connector' ? (
-					<ForkConnector direction={node.direction} />
+					<ForkConnector direction={node.direction} highlight={connectorHighlight[node.idx]} />
 				) : node.entry.kind === 'together' ? (
-					<CompanyBlock company={node.entry.company} />
+					<CompanyBlock
+						company={node.entry.company}
+						continuesAbove={continuations[node.idx].togetherAbove}
+						continuesBelow={continuations[node.idx].togetherBelow}
+					/>
 				) : (
-					<ApartBlock mitko={node.entry.mitko} adam={node.entry.adam} />
+					<ApartBlock
+						mitko={node.entry.mitko}
+						adam={node.entry.adam}
+						mitkoContinuesAbove={continuations[node.idx].mitkoAbove}
+						mitkoContinuesBelow={continuations[node.idx].mitkoBelow}
+						adamContinuesAbove={continuations[node.idx].adamAbove}
+						adamContinuesBelow={continuations[node.idx].adamBelow}
+					/>
 				),
 			)
 		}
@@ -173,6 +269,8 @@ const after = containerStart >= 0 ? nodes.slice(containerEnd + 1) : [];
 
 	:global(.card),
 	:global(.node),
+	:global(.project-row),
+	:global(.track-row),
 	:global(.company),
 	:global(.track-company),
 	:global(.apart),

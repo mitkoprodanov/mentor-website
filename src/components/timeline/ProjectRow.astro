@@ -2,7 +2,7 @@
 import { getEntry, render } from 'astro:content';
 import { getPerson, COLUMN } from '../../data/people';
 import type { ProjectDef } from '../../data/timeline';
-import { slugify } from '../../lib/slug';
+import ExperienceCard from './ExperienceCard.astro';
 
 interface Props {
 	project: ProjectDef;
@@ -16,44 +16,73 @@ const cards = await Promise.all(
 		const entry = await getEntry('experiences', ref.slug);
 		if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 		const { Content } = await render(entry);
-		return { person: getPerson(ref.person), Content, skills: (ref.skills ?? []).map(slugify) };
+		return {
+			person: getPerson(ref.person),
+			Content,
+			tagIds: ref.tagIds ?? [],
+			link: entry.data.link,
+			previewImage: entry.data.previewImage,
+		};
 	}),
 );
 
 const leftCard = cards.find((c) => COLUMN[c.person.id] === 'left');
 const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
+const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 ---
 
-<div class="project-row">
-	<div class="col col-left">
-		{
-			leftCard && (
-				<div
-					class="card"
-					data-person={leftCard.person.id}
-					data-skills={leftCard.skills.join(' ')}
-					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${leftCard.person.id}-color)`}`}
-				>
-					<leftCard.Content />
+<div class="project-row" class:list={{ 'project-row--boxed': Boolean(project.name) }}>
+	{
+		project.name && (
+			<div class="node">
+				<span class="dot" class:list={{ emphasized }} />
+				<div class="node-text">
+					<h5 class="node-label">{project.name}</h5>
+					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
-			)
-		}
-	</div>
-	<div class="col col-center node">
-		<span class="dot" class:list={{ emphasized }}></span>
-		{project.name && <h5 class="node-label">{project.name}</h5>}
-	</div>
-	<div class="col col-right">
+			</div>
+		)
+	}
+	<div class="experience-row" class:list={{ 'experience-row--single': Boolean(singleCard) }}>
 		{
-			rightCard && (
-				<div
-					class="card"
-					data-person={rightCard.person.id}
-					data-skills={rightCard.skills.join(' ')}
-					style={`--person-color: ${emphasized ? 'var(--accent-3)' : `var(--${rightCard.person.id}-color)`}`}
+			singleCard ? (
+				<ExperienceCard
+					personId={singleCard.person.id}
+					tagIds={singleCard.tagIds}
+					color={emphasized ? 'var(--accent-3)' : `var(--${singleCard.person.id}-color)`}
+					side={COLUMN[singleCard.person.id]}
+					link={singleCard.link}
+					previewImage={singleCard.previewImage}
 				>
-					<rightCard.Content />
-				</div>
+					<singleCard.Content />
+				</ExperienceCard>
+			) : (
+				<Fragment>
+					{leftCard && (
+						<ExperienceCard
+							personId={leftCard.person.id}
+							tagIds={leftCard.tagIds}
+							color={emphasized ? 'var(--accent-3)' : `var(--${leftCard.person.id}-color)`}
+							side="left"
+							link={leftCard.link}
+							previewImage={leftCard.previewImage}
+						>
+							<leftCard.Content />
+						</ExperienceCard>
+					)}
+					{rightCard && (
+						<ExperienceCard
+							personId={rightCard.person.id}
+							tagIds={rightCard.tagIds}
+							color={emphasized ? 'var(--accent-3)' : `var(--${rightCard.person.id}-color)`}
+							side="right"
+							link={rightCard.link}
+							previewImage={rightCard.previewImage}
+						>
+							<rightCard.Content />
+						</ExperienceCard>
+					)}
+				</Fragment>
 			)
 		}
 	</div>
@@ -61,90 +90,70 @@ const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 
 <style>
 	.project-row {
-		display: contents;
-	}
-
-	.col {
-		min-width: 0;
-	}
-
-	.col-left {
-		justify-self: end;
-		width: 100%;
-	}
-
-	.col-right {
-		justify-self: start;
-		width: 100%;
-	}
-
-	.col-center {
-		position: relative;
-		z-index: 1;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		padding-top: 0.35rem;
+		gap: 1rem;
+	}
+
+	.project-row--boxed {
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		background: var(--bg);
+		padding: 1.25rem;
+	}
+
+	.node {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
 	}
 
 	.dot {
-		width: 12px;
-		height: 12px;
+		flex-shrink: 0;
+		margin-top: 0.4rem;
+		width: 10px;
+		height: 10px;
 		border-radius: 50%;
 		background: var(--accent);
-		box-shadow:
-			0 0 0 4px var(--bg-alt),
-			0 0 12px var(--accent-soft);
+		box-shadow: 0 0 10px var(--accent-soft);
 	}
 
 	.dot.emphasized {
 		background: var(--accent-3);
-		box-shadow:
-			0 0 0 4px var(--bg-alt),
-			0 0 16px 4px var(--accent-soft);
+		box-shadow: 0 0 12px 3px var(--accent-soft);
+	}
+
+	.node-text {
+		min-width: 0;
 	}
 
 	.node-label {
 		margin: 0;
-		text-align: center;
-		font-size: 0.95rem;
+		font-size: 1rem;
 		font-weight: 600;
 		color: var(--fg);
 	}
 
-	.card {
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 14px;
-		padding: 1.1rem 1.25rem;
+	.node-info {
+		margin: 0.3rem 0 0;
+		font-size: 0.82rem;
+		line-height: 1.4;
+		color: var(--fg-muted);
 	}
 
-	.col-left .card {
-		border-right: 2px solid var(--person-color, var(--accent));
+	.experience-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.25rem;
 	}
 
-	.col-right .card {
-		border-left: 2px solid var(--person-color, var(--accent));
-	}
-
-	.card :global(p) {
-		font-size: 0.88rem;
-		line-height: 1.5;
-		color: var(--fg);
-		margin: 0;
+	.experience-row--single {
+		grid-template-columns: 1fr;
 	}
 
 	@media (max-width: 900px) {
-		.col-left,
-		.col-right {
-			justify-self: stretch;
-			width: 100%;
-		}
-
-		.col-left .card {
-			border-right: none;
-			border-left: 2px solid var(--person-color, var(--accent));
+		.experience-row {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

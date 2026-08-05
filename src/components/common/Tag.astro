@@ -1,0 +1,67 @@
+---
+interface Props {
+	label: string;
+	/** Renders as a clickable filter button instead of a plain, non-interactive label. */
+	linked?: boolean;
+	/** The WorkTag id — read by tagFilter.client.ts. Required when `linked` is true. */
+	tagId?: string;
+}
+
+const { label, linked = false, tagId } = Astro.props;
+---
+
+{
+	linked ? (
+		<button type="button" class="tag tag--linked" data-tag-id={tagId} aria-pressed="false">
+			{label}
+		</button>
+	) : (
+		<span class="tag">{label}</span>
+	)
+}
+
+<style>
+	.tag {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 999px;
+		background: var(--accent-soft);
+		color: var(--accent-3);
+		border: 1px solid rgba(255, 122, 0, 0.3);
+		white-space: nowrap;
+	}
+
+	button.tag {
+		font-family: inherit;
+		cursor: pointer;
+		text-decoration: underline dotted rgba(255, 209, 102, 0.5);
+		text-underline-offset: 3px;
+		transition:
+			opacity 0.2s ease,
+			transform 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+
+	button.tag:hover {
+		background: var(--accent-3);
+		color: var(--bg);
+	}
+
+	button.tag:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	button.tag[aria-pressed='true'] {
+		background: var(--accent-3);
+		color: var(--bg);
+		text-decoration: none;
+		transform: scale(1.05);
+		box-shadow: 0 0 12px 2px var(--accent-soft);
+	}
+
+	:global(body.filter-active) button.tag:not([aria-pressed='true']) {
+		opacity: 0.45;
+	}
+</style>

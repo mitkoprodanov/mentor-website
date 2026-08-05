@@ -1,0 +1,68 @@
+---
+interface Props {
+	href: string;
+	/** Adds target="_blank" rel="noopener noreferrer" — default true, set false for mailto:/in-page links. */
+	external?: boolean;
+	class?: string;
+}
+
+const { href, external = true, class: className } = Astro.props;
+---
+
+<a
+	href={href}
+	class:list={['external-link', className]}
+	target={external ? '_blank' : undefined}
+	rel={external ? 'noopener noreferrer' : undefined}
+>
+	<span class="external-link-label"><slot /></span>
+	<span class="external-link-icon" aria-hidden="true">↗</span>
+</a>
+
+<style>
+	.external-link {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.3em;
+		color: var(--accent-3);
+		font-weight: 600;
+		text-decoration: none;
+		position: relative;
+		word-break: break-word;
+	}
+
+	.external-link-label {
+		position: relative;
+	}
+
+	.external-link-label::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 100%;
+		bottom: -2px;
+		height: 1px;
+		background: currentColor;
+		transition: right 0.2s ease;
+	}
+
+	.external-link:hover .external-link-label::after,
+	.external-link:focus-visible .external-link-label::after {
+		right: 0;
+	}
+
+	.external-link-icon {
+		font-size: 0.85em;
+		transition: transform 0.2s ease;
+	}
+
+	.external-link:hover .external-link-icon,
+	.external-link:focus-visible .external-link-icon {
+		transform: translate(2px, -2px);
+	}
+
+	.external-link:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 3px;
+	}
+</style>
