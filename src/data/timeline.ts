@@ -100,12 +100,12 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'exigo',
 						name: 'Armies of Exigo',
-						info: 'RTS campaign & multiplayer level design, plus contributions to the proprietary script editor.',
+						info: 'RTS campaign & multiplayer level design, contributions to the proprietary script editor.',
 						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['systems-level-design'] }],
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
-						name: 'Warhammer: Mark of Chaos',
+						name: 'Warhammer: Mark of Chaos & Battle March',
 						info: 'RTS campaign & multiplayer maps, including the siege game mode.',
 						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', tagIds: ['systems-level-design'] }],
 					},
@@ -173,7 +173,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'beasts-of-brawlia',
 					name: 'Beasts of Brawlia',
-					info: 'Arena brawler born from an in-house pitch contest.',
+					info: 'Fun-oriented arena brawler born from an in-house pitch contest.',
 					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
 				},
 				{

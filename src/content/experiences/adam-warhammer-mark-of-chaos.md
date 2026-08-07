@@ -4,4 +4,5 @@ project: warhammer-mark-of-chaos
 category: content
 ---
 
-Created dozens of single-player & multiplayer maps, including scripted campaign maps, and designed the siege game mode alongside an AI programmer.
+During the development of the game and its expansion, created dozens of complex scripted single-player campaign scenarios and multiplayer  maps. Co-designed the siege game mode in partnership with an AI programmer.
+

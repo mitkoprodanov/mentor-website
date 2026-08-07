@@ -4,4 +4,4 @@ project: lol-universe
 category: content
 ---
 
-5 years collaborating directly with Riot Games designers on those same products.
+Collaborated with Riot Games for 5 years as a Product Owner on supporting products within the League of Legends universe.

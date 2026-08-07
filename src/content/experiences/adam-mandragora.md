@@ -4,4 +4,4 @@ project: mandragora
 category: content
 ---
 
-Final 2 years of the project — UI/UX, enemy & boss encounters, player abilities, and talent tree systems.
+Contributed to UI/UX design, enemy and boss encounters, player abilities, and talent tree systems during the final 2 years.
