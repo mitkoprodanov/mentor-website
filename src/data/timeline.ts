@@ -149,7 +149,7 @@ export const timeline: TimelineEntry[] = [
 							slug: 'mitko-supernova',
 							tagIds: ['gameplay-ai', 'crowd-sim-pathfinding', 'abilities-status-effects', 'tech-trees-progression'],
 						},
-						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-level-design'] },
+						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-level-design', 'tech-trees-progression'] },
 					],
 				},
 				{

@@ -11,8 +11,9 @@
  * the active tag → its row's `.node` (dot + label) hides if none of that
  * row's cards remain → a `.company`/`.track-company` hides if it has no
  * visible rows → a whole `.track` (one side of an ApartBlock) hides if all
- * its companies are gone, collapsing the `.apart` grid to one column if only
- * one side survives → a `.mentor-container` hides if it's left empty.
+ * its companies are gone (the other track just keeps its own column — the
+ * `.apart` grid always stays two columns, whichever side is/isn't visible)
+ * → a `.mentor-container` hides if it's left empty.
  *
  * Projects collapse is flat: a `.project-card` hides if it doesn't match.
  */
@@ -94,15 +95,6 @@ function computeHiddenProjectsSet(root: HTMLElement, filter: Filter): Set<Elemen
 		if (!matchesTags(card, filter)) toHide.add(card);
 	}
 	return toHide;
-}
-
-function updateApartSingleModifier(root: HTMLElement, toHide: Set<Element>) {
-	const aparts = Array.from(root.querySelectorAll<HTMLElement>('.apart'));
-	for (const apart of aparts) {
-		const tracksIn = Array.from(apart.querySelectorAll<HTMLElement>(':scope > .track'));
-		const visible = tracksIn.filter((t) => !toHide.has(t));
-		apart.classList.toggle('apart--single', visible.length === 1);
-	}
 }
 
 function flipStayersAndRevealEnterers(staying: HTMLElement[], beforeRects: Map<HTMLElement, DOMRect>, entering: HTMLElement[]) {
@@ -211,7 +203,6 @@ function applyTimelineFilter(root: HTMLElement, filter: Filter) {
 		computeHidden: computeHiddenTimelineSet,
 		flipSelector: TIMELINE_FLIP_SELECTOR,
 		animatedSelector: TIMELINE_FLIP_SELECTOR,
-		onApplied: (toHide) => updateApartSingleModifier(root, toHide),
 	});
 }
 

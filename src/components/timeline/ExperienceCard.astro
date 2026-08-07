@@ -46,11 +46,21 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 		padding: 1.1rem 1.25rem;
 	}
 
+	/* Pinned to their own column explicitly — not just left-to-right DOM
+	   order — so that when a shared project's two cards sit side by side in
+	   ProjectRow's 2-column .experience-row grid and the tag filter hides
+	   one of them (display:none removes it from grid flow), the surviving
+	   card stays in its own person's column instead of CSS Grid's default
+	   auto-placement sliding it into the now-empty first column. Harmless
+	   outside a grid context (e.g. ApartBlock's flex .cards list), where
+	   grid-column has no effect. */
 	.card--left {
+		grid-column: 1;
 		border-right: 2px solid var(--person-color, var(--accent));
 	}
 
 	.card--right {
+		grid-column: 2;
 		border-left: 2px solid var(--person-color, var(--accent));
 	}
 
@@ -136,6 +146,14 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 	}
 
 	@media (max-width: 900px) {
+		/* ProjectRow's .experience-row collapses to a single column here, so
+		   the explicit column pin above would otherwise force a phantom
+		   second column back into existence — let cards stack naturally. */
+		.card--left,
+		.card--right {
+			grid-column: auto;
+		}
+
 		.card--left {
 			border-right: none;
 			border-left: 2px solid var(--person-color, var(--accent));
