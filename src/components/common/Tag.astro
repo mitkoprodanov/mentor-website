@@ -28,7 +28,12 @@ const { label, linked = false, tagId } = Astro.props;
 		background: var(--accent-soft);
 		color: var(--accent-3);
 		border: 1px solid rgba(255, 122, 0, 0.3);
-		white-space: nowrap;
+		/* Long labels (e.g. award names) wrap onto multiple lines inside the
+		   pill instead of forcing it wider than its container — max-width
+		   keeps the pill itself from ever exceeding the row it sits in. */
+		max-width: 100%;
+		white-space: normal;
+		overflow-wrap: break-word;
 	}
 
 	button.tag {

@@ -96,8 +96,10 @@ import Section from '../Section.astro';
 
 	/* Reveal sequence, replayed by heroReveal.client.ts whenever the hero
 	   scrolls into view (including on first load): the logo fades/scales
-	   in, a light shine sweeps once across it, then the tagline and vision
-	   line fade up in turn. */
+	   in, then as the light shine starts sweeping across it, the tagline
+	   and vision line start fading up right alongside it (staggered
+	   200ms apart from each other), rather than waiting for the shine to
+	   finish first. */
 	.hero-content.is-revealed .hero-logo {
 		animation: hero-logo-fade-in 1250ms cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
@@ -107,11 +109,11 @@ import Section from '../Section.astro';
 	}
 
 	.hero-content.is-revealed .tagline {
-		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 1800ms both;
+		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 1400ms both;
 	}
 
 	.hero-content.is-revealed .vision {
-		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 2000ms both;
+		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 1600ms both;
 	}
 
 	@keyframes hero-logo-fade-in {

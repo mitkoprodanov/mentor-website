@@ -1,21 +1,23 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
-import type { CompanyDef } from '../../data/timeline';
-import { splitYears } from './dates';
+import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
 
 interface Props {
 	mitko: CompanyDef[];
 	adam: CompanyDef[];
-	/** This track's first/last company is the same real employer as the entry immediately above/below the fork or merge bounding this apart block (see data/timeline.ts) — style that seam as one continuing entity. */
+	/** This track's first/last company is the same real employer as the entry immediately above/below the fork or merge bounding this apart block (see data/timeline.ts) — a TrackConnector bridges the gap, and this box's own touching edge is squared off flush so the two read as one continuous card. */
 	mitkoContinuesAbove?: boolean;
 	mitkoContinuesBelow?: boolean;
 	adamContinuesAbove?: boolean;
 	adamContinuesBelow?: boolean;
-	/** When this apart block opens the Mentor Game Studio era, its label/dates head Mitko's (left) mentor column — placed inside the column so the other track stays free to connect straight up to the shared company above (see Timeline.astro). */
-	mentorLabel?: string;
-	mentorDates?: string;
+	/** Set only on the entry that opens the Mentor Game Studio era — heads
+	 * the "Mentor Game Studio" / date-range label at the top of whichever
+	 * track is wholly under the Mentor banner here (see .track.under-mentor
+	 * below; currently always Mitko's, since Ádám's Mentor-era work — if
+	 * any — lives in its own separate entry, see data/timeline.ts). */
+	showMentorHeader?: boolean;
 }
 
 const {
@@ -25,8 +27,7 @@ const {
 	mitkoContinuesBelow = false,
 	adamContinuesAbove = false,
 	adamContinuesBelow = false,
-	mentorLabel,
-	mentorDates,
+	showMentorHeader = false,
 } = Astro.props;
 
 const sides = [
@@ -67,58 +68,64 @@ const tracks = await Promise.all(
 
 <div class="apart">
 	{
-		tracks.map((track) => (
+		tracks.map((track) => {
+			const underMentor = track.companies.length > 0 && track.companies.every((c) => c.company.underMentor === true);
+			return (
 			<div
 				class:list={[
 					'track',
 					`track-${track.side}`,
 					{
-						'under-mentor': track.companies.length > 0 && track.companies.every((c) => c.company.underMentor === true),
+						'under-mentor': underMentor,
 						/* A track that continues up from the shared company above stays
 						   top-aligned so it meets that seam; any other short track sinks
 						   to the bottom of the fork, next to whatever follows it (e.g.
-						   Ericsson dropping down toward Black Hole). */
+						   Ericsson dropping down toward Black Hole). A track can also be
+						   structurally empty (e.g. Ádám's side of the Mandragora-only
+						   entry, or Mitko's side of the Mentor-only entry) — it just
+						   renders nothing and takes no space, leaving the other track in
+						   its own proper column against the plain page background. */
 						'align-top': track.continuesAbove,
+						/* When this track is its own enclosed envelope, the envelope
+						   itself — not the individual card inside it — is what visually
+						   flows into the neighbour via a TrackConnector, so it's the
+						   envelope's own edge that squares off here (see the individual
+						   track-company below, which stays a normal, fully-rounded,
+						   self-contained card in that case). */
+						'continues-above': underMentor && track.continuesAbove,
+						'continues-below': underMentor && track.continuesBelow,
 					},
 				]}
 			>
-				{track.person === 'mitko' && mentorLabel && (
-					<div class="mentor-track-label">
-						<span class="mentor-track-name">{mentorLabel}</span>
-						{mentorDates && <span class="mentor-track-dates">{mentorDates}</span>}
+				{underMentor && showMentorHeader && track.person === 'mitko' && (
+					<div class="mentor-heading">
+						<span class="mentor-dates">{MENTOR_ERA.dateRange}</span>
+						<span class="mentor-name">{MENTOR_ERA.label}</span>
 					</div>
 				)}
-				{track.companies.map(({ company, projects }, companyIndex) => {
-					const { start, end } = splitYears(company.dateRange);
-					// Show the join year unless this card flows straight out of the
-					// same employer above (that transition year already sits on the
-					// card above); likewise the leave year at the bottom.
-					const showJoin = !(companyIndex === 0 && track.continuesAbove);
-					const showLeave = !(companyIndex === track.companies.length - 1 && track.continuesBelow);
-					const yearSide = track.side === 'left' ? 'year--left' : 'year--right';
-					return (
+				{track.companies.map(({ company, projects }, companyIndex) => (
 					<div
 						class="track-company"
 						class:list={{
 							emphasized: company.underMentor === true,
-							/* Edge seams (first/last company in the track) merge only when
-							   they're the same real employer as the entry outside this
-							   ApartBlock (see Timeline.astro). Internal seams — consecutive
-							   companies within the same track — are always merged: they're
-							   sequential employment for the same person by construction, so
-							   they read as one continuous run rather than separate cards. */
-							'continues-above': companyIndex === 0 && track.continuesAbove,
-							'merged-above': companyIndex > 0,
-							'continues-below': companyIndex === track.companies.length - 1 && track.continuesBelow,
-							'merged-below': companyIndex < track.companies.length - 1,
+							/* Each company is always its own separate, fully-rounded,
+							   self-contained box — the name/date header always shows, and
+							   consecutive companies within the same track get their own
+							   normal spacing rather than being fused into one continuous
+							   card. The edge seam into a TrackConnector (first/last company,
+							   matching the entry outside this ApartBlock — see
+							   Timeline.astro) only squares this individual card off when
+							   there's no enclosing envelope to do it instead (see
+							   under-mentor above) — an under-mentor track's envelope is what
+							   flows into the connector, not the card sitting inside it. */
+							'continues-above': !underMentor && companyIndex === 0 && track.continuesAbove,
+							'continues-below': !underMentor && companyIndex === track.companies.length - 1 && track.continuesBelow,
 						}}
 					>
-						{showJoin && (
-							<div class={`track-header track-header--${track.side}`}>
-								<span class="track-year">{start}</span>
-								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-							</div>
-						)}
+						<div class={`track-header track-header--${track.side}`}>
+							<span class="track-year">{company.dateRange}</span>
+							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+						</div>
 						<div class="track-projects">
 							{projects.map(({ project, cards }) => (
 								<div class="track-row" class:list={{ 'track-row--boxed': Boolean(project.name) }}>
@@ -138,7 +145,7 @@ const tracks = await Promise.all(
 											<ExperienceCard
 												personId={card.person.id}
 												tagIds={card.tagIds}
-												color={company.underMentor ? 'var(--mentor)' : `var(--${card.person.id}-color)`}
+												color={`var(--${card.person.id}-color)`}
 												side={track.side}
 												link={card.link}
 												previewImage={card.previewImage}
@@ -150,12 +157,11 @@ const tracks = await Promise.all(
 								</div>
 							))}
 						</div>
-						{showLeave && <span class={`track-year track-year--bottom ${yearSide}`}>{end}</span>}
 					</div>
-					);
-				})}
+				))}
 			</div>
-		))
+			);
+		})
 	}
 </div>
 
@@ -183,28 +189,62 @@ const tracks = await Promise.all(
 		justify-content: flex-start;
 	}
 
-	/* Heads Mitko's mentor column (see `mentorLabel` prop). Living inside the
-	   left column — rather than as a full-width banner above the fork — is
-	   what lets the right column run straight up into the shared company
-	   above without the label interrupting that seam. */
-	.mentor-track-label {
+	/* A track that's wholly under the Mentor Game Studio banner (every
+	   company in it) gets its own enclosing envelope, confined to just this
+	   column — the other person's column (e.g. Ádám's Primal Game Studio/
+	   Mandragora, sharing this same row) stays plain page background rather
+	   than sharing one full-width tinted box, since they're not part of
+	   Mentor Game Studio during this stretch. .apart's grid stretches both
+	   tracks to the row's full height by default, so this always top-aligns
+	   regardless of continuesAbove — a headed, enveloped section should
+	   start from its own top, not wherever flex-end's default would land it
+	   — which is what keeps its date level with whatever's sharing its row. */
+	.track.under-mentor {
+		justify-content: flex-start;
+		background: var(--mentor-bg);
+		border: 1px solid var(--mentor-border);
+		border-radius: 24px;
+		padding: 1rem 1.5rem 1.5rem;
+	}
+
+	/* Edge seam into a TrackConnector (see Timeline.astro): the envelope is
+	   a single column with nothing on the other side to preserve, so — like
+	   ApartBlock's plain track-company boxes, unlike CompanyBlock's shared
+	   full-width box — the whole touching border/corner can safely come
+	   off, leaving a fully open edge for the connector to fill. The
+	   individual card(s) inside stay untouched, fully rounded and closed. */
+	.track.under-mentor.continues-above {
+		border-top: none;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.track.under-mentor.continues-below {
+		border-bottom: none;
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+
+	.mentor-heading {
 		display: flex;
 		flex-direction: column;
 		gap: 0.1rem;
-		padding: 0.15rem 0 0.35rem;
+		padding: 0 0 0.25rem;
 	}
 
-	.mentor-track-name {
-		font-size: 0.9rem;
-		font-weight: 700;
+	.mentor-name {
 		text-transform: uppercase;
-		letter-spacing: 0.18em;
+		letter-spacing: 0.16em;
+		font-size: 0.85rem;
+		font-weight: 700;
 		color: var(--mentor);
-		text-shadow: 0 0 16px var(--mentor-soft);
+		text-shadow: 0 0 14px var(--mentor-soft);
 	}
 
-	.mentor-track-dates {
+	.mentor-dates {
 		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.05em;
 		color: var(--fg-muted);
 	}
 
@@ -215,16 +255,17 @@ const tracks = await Promise.all(
 		padding: 1rem 1rem 1.25rem;
 	}
 
-	/* Mentor-era stints fill with the lighter, warm-tinted panel — the region
-	   is carried by the card background, not only the rail beside it. */
+	/* Mentor-era stints fill with the lighter, warm-tinted panel too, on top
+	   of the enclosing .track.under-mentor envelope — the region reads as
+	   its own studio from both the envelope and each card inside it. */
 	.track-company.emphasized {
 		background: var(--mentor-bg);
 		border-color: var(--mentor-border);
 	}
 
-	/* Join year (with the name) at the top, leave year at the bottom, aligned
-	   to this person's own side. Suppressed where a card flows straight out of
-	   the same employer (see showJoin/showLeave). */
+	/* Date range (with the name) at the top, aligned to this person's own
+	   side — every company always shows its own, even ones that flow
+	   straight out of the box above via a TrackConnector. */
 	.track-year {
 		display: block;
 		font-size: 0.7rem;
@@ -233,44 +274,17 @@ const tracks = await Promise.all(
 		color: var(--fg-muted);
 	}
 
-	.year--left {
-		text-align: left;
-	}
-
-	.year--right {
-		text-align: right;
-	}
-
-	.track-year--bottom {
-		margin-top: 0.6rem;
-	}
-
-	/* Continuation seam: pulled flush against the box above (cancelling the
-	   outer .timeline row gap) with the shared edge's radius and border
-	   removed, so this track-company reads as one continuous card with the
-	   box it continues from — only on the side that actually continues,
-	   leaving the other track's normal spacing untouched. */
+	/* Edge seam into a TrackConnector (see Timeline.astro): this box is a
+	   single column with nothing on the other side to preserve, so — unlike
+	   CompanyBlock's full-width box — the whole touching border/corner can
+	   safely come off, leaving a fully open edge for the connector to fill. */
 	.track-company.continues-above {
-		margin-top: -2rem;
-	}
-
-	/* Internal seam: this company directly follows another company in the
-	   same track (sequential employment for the same person) — always
-	   pulled flush against it, cancelling .track's own internal gap instead
-	   of the outer .timeline gap. */
-	.track-company.merged-above {
-		margin-top: -1.5rem;
-	}
-
-	.track-company.continues-above,
-	.track-company.merged-above {
 		border-top: none;
 		border-top-left-radius: 0;
 		border-top-right-radius: 0;
 	}
 
-	.track-company.continues-below,
-	.track-company.merged-below {
+	.track-company.continues-below {
 		border-bottom: none;
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
@@ -343,8 +357,8 @@ const tracks = await Promise.all(
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-		background: var(--accent);
-		box-shadow: 0 0 10px var(--accent-soft);
+		background: var(--project-dot);
+		box-shadow: 0 0 10px var(--project-dot-soft);
 	}
 
 	.dot.emphasized {

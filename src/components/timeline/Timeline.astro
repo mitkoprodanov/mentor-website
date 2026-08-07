@@ -1,9 +1,10 @@
 ---
 import Section from '../Section.astro';
-import { timeline, MENTOR_ERA, type TimelineEntry } from '../../data/timeline';
+import { timeline, type TimelineEntry } from '../../data/timeline';
 import type { Continuation } from './continuation';
 import TimelineNode from './TimelineNode.astro';
 import MentorContainer from './MentorContainer.astro';
+import TrackConnector from './TrackConnector.astro';
 
 function entryHasMentor(entry: TimelineEntry): boolean {
 	if (entry.kind === 'together') return entry.company.underMentor === true;
@@ -14,10 +15,10 @@ function entryHasMentor(entry: TimelineEntry): boolean {
  * Some real employers appear as two separate CompanyDef objects because the
  * fork/merge boundary falls mid-employment (see the big comment in
  * data/timeline.ts — Black Hole Entertainment, Primal Game Studio). Detect
- * those same-name pairs across consecutive entries so the two boxes can be
- * pulled flush together and styled as one continuing card instead of two
- * unrelated companies that happen to sit next to each other. See
- * ./continuation.ts for the shape produced here.
+ * those same-name pairs across consecutive entries so the box that continues
+ * can stay top-aligned in its fork row, skip a redundant join/leave-year
+ * label, and get a TrackConnector bridging it to the box across the seam —
+ * see ./continuation.ts for the shape produced here.
  */
 function edgeCompanyNames(entry: TimelineEntry, edge: 'start' | 'end'): { mitko?: string; adam?: string; together?: string } {
 	if (entry.kind === 'together') return { together: entry.company.name };
@@ -44,16 +45,12 @@ timeline.forEach((entry, i) => {
 	const currNames = edgeCompanyNames(entry, 'start');
 
 	// Fork (shared company → two tracks): whichever track keeps the same
-	// employer as the box above runs straight up into it. Square only that
-	// side's shared corner, leaving the box closed over the track that
-	// actually diverges.
+	// employer as the box above runs straight up into it.
 	if (prev.kind === 'together' && entry.kind === 'apart') {
 		if (prevNames.together && prevNames.together === currNames.mitko) {
-			continuations[i - 1].togetherBelowLeft = true;
 			continuations[i].mitkoAbove = true;
 		}
 		if (prevNames.together && prevNames.together === currNames.adam) {
-			continuations[i - 1].togetherBelowRight = true;
 			continuations[i].adamAbove = true;
 		}
 	}
@@ -63,11 +60,9 @@ timeline.forEach((entry, i) => {
 	if (prev.kind === 'apart' && entry.kind === 'together') {
 		if (prevNames.mitko && prevNames.mitko === currNames.together) {
 			continuations[i - 1].mitkoBelow = true;
-			continuations[i].togetherAbove = true;
 		}
 		if (prevNames.adam && prevNames.adam === currNames.together) {
 			continuations[i - 1].adamBelow = true;
-			continuations[i].togetherAbove = true;
 		}
 	}
 });
@@ -76,33 +71,29 @@ timeline.forEach((entry, i) => {
 // straight into the reunion (Together Again) even though that box is a
 // different legal entity than Mitko's last solo-era employer — a seam plain
 // name-matching won't catch. Force it: Mitko's mentor column flows down into
-// Together Again on the left, while Ádám's side stays open above it (he is
-// rejoining, not continuing).
+// Together Again (a TrackConnector bridges them; see the markup below).
 if (containerStart >= 0 && timeline[containerEnd]?.kind === 'together' && timeline[containerEnd - 1]?.kind === 'apart') {
 	continuations[containerEnd - 1].mitkoBelow = true;
-	continuations[containerEnd].togetherAboveLeft = true;
 }
 
-// For each `together` card, work out who is newly joining vs continuing the
-// same employer (top), and who is leaving vs continuing on (bottom) — from the
-// adjacent apart entry's edge company on each track. Drives whether the name +
-// join year / the leave year sit on one person's side or stay centered.
+// Mirror each apart entry's mitkoAbove/mitkoBelow/adamAbove/adamBelow onto
+// the together entry on the other side of that same seam, as a squared
+// corner (see continuation.ts) — CompanyBlock only ever gets a single
+// corner's radius zeroed, since (unlike ApartBlock's single-column boxes)
+// there's no side of its full-width box that can be left completely alone.
 timeline.forEach((entry, i) => {
 	if (entry.kind !== 'together') return;
-	const name = entry.company.name;
 	const prev = timeline[i - 1];
 	const next = timeline[i + 1];
-	const mitkoContinuesFromPrev = prev?.kind === 'apart' && prev.mitko[prev.mitko.length - 1]?.name === name;
-	const adamContinuesFromPrev = prev?.kind === 'apart' && prev.adam[prev.adam.length - 1]?.name === name;
-	const mitkoContinuesToNext = next?.kind === 'apart' && next.mitko[0]?.name === name;
-	const adamContinuesToNext = next?.kind === 'apart' && next.adam[0]?.name === name;
-	continuations[i].mitkoJoins = !mitkoContinuesFromPrev;
-	continuations[i].adamJoins = !adamContinuesFromPrev;
-	continuations[i].mitkoLeaves = Boolean(next) && !mitkoContinuesToNext;
-	continuations[i].adamLeaves = Boolean(next) && !adamContinuesToNext;
+	if (prev?.kind === 'apart') {
+		if (continuations[i - 1].mitkoBelow) continuations[i].squareTopLeft = true;
+		if (continuations[i - 1].adamBelow) continuations[i].squareTopRight = true;
+	}
+	if (next?.kind === 'apart') {
+		if (continuations[i + 1]?.mitkoAbove) continuations[i].squareBottomLeft = true;
+		if (continuations[i + 1]?.adamAbove) continuations[i].squareBottomRight = true;
+	}
 });
-
-const mentorLabelIdx = containerStart >= 0 && timeline[containerStart]?.kind === 'apart' ? containerStart : -1;
 
 function withIdx(entries: TimelineEntry[], offset: number) {
 	return entries.map((entry, i) => ({ entry, idx: offset + i }));
@@ -111,6 +102,43 @@ function withIdx(entries: TimelineEntry[], offset: number) {
 const before = containerStart >= 0 ? withIdx(timeline.slice(0, containerStart), 0) : withIdx(timeline, 0);
 const contained = containerStart >= 0 ? withIdx(timeline.slice(containerStart, containerEnd + 1), containerStart) : [];
 const after = containerStart >= 0 ? withIdx(timeline.slice(containerEnd + 1), containerEnd + 1) : [];
+
+// The entry that opens the Mentor Game Studio era heads its "Mentor Game
+// Studio" / date-range label (see ApartBlock's showMentorHeader).
+const mentorLabelIdx = containerStart >= 0 && timeline[containerStart]?.kind === 'apart' ? containerStart : -1;
+
+/**
+ * Flattens a run of entries into render items, inserting a TrackConnector
+ * wherever a continuation flag says one box flows straight into the next —
+ * before a node if *it* continues from what's above it, after a node if
+ * what continues is flowing into whatever's *next*. Kept generic (rather
+ * than hardcoding specific boundary indexes) so it works the same whether
+ * the pair happens to straddle the before/MentorContainer split or not.
+ */
+type RenderItem = { kind: 'node'; entry: TimelineEntry; idx: number } | { kind: 'connector'; side: 'left' | 'right'; emphasized: boolean };
+
+function isEmphasized(entry: TimelineEntry, side: 'left' | 'right'): boolean {
+	if (entry.kind === 'together') return entry.company.underMentor === true;
+	const companies = side === 'left' ? entry.mitko : entry.adam;
+	return companies.some((c) => c.underMentor === true);
+}
+
+function buildRenderList(items: { entry: TimelineEntry; idx: number }[]): RenderItem[] {
+	const out: RenderItem[] = [];
+	for (const { entry, idx } of items) {
+		const c = continuations[idx];
+		if (c.mitkoAbove) out.push({ kind: 'connector', side: 'left', emphasized: isEmphasized(entry, 'left') });
+		if (c.adamAbove) out.push({ kind: 'connector', side: 'right', emphasized: isEmphasized(entry, 'right') });
+		out.push({ kind: 'node', entry, idx });
+		if (c.mitkoBelow) out.push({ kind: 'connector', side: 'left', emphasized: isEmphasized(entry, 'left') });
+		if (c.adamBelow) out.push({ kind: 'connector', side: 'right', emphasized: isEmphasized(entry, 'right') });
+	}
+	return out;
+}
+
+const beforeItems = buildRenderList(before);
+const containedItems = buildRenderList(contained);
+const afterItems = buildRenderList(after);
 ---
 
 <Section id="timeline" title="Timeline" compact>
@@ -120,38 +148,27 @@ const after = containerStart >= 0 ? withIdx(timeline.slice(containerEnd + 1), co
 	</div>
 	<div class="timeline">
 		{
-			before.map(({ entry, idx }) => (
-				<TimelineNode
-					entry={entry}
-					continuation={continuations[idx]}
-					mentorLabel={idx === mentorLabelIdx ? MENTOR_ERA.label : undefined}
-					mentorDates={idx === mentorLabelIdx ? MENTOR_ERA.dateRange : undefined}
-				/>
-			))
+			beforeItems.map((item) =>
+				item.kind === 'node' ? <TimelineNode entry={item.entry} continuation={continuations[item.idx]} /> : <TrackConnector side={item.side} emphasized={item.emphasized} />,
+			)
 		}
 		{
-			contained.length > 0 && (
+			containedItems.length > 0 && (
 				<MentorContainer>
-					{contained.map(({ entry, idx }) => (
-						<TimelineNode
-							entry={entry}
-							continuation={continuations[idx]}
-							mentorLabel={idx === mentorLabelIdx ? MENTOR_ERA.label : undefined}
-							mentorDates={idx === mentorLabelIdx ? MENTOR_ERA.dateRange : undefined}
-						/>
-					))}
+					{containedItems.map((item) =>
+						item.kind === 'node' ? (
+							<TimelineNode entry={item.entry} continuation={continuations[item.idx]} showMentorHeader={item.idx === mentorLabelIdx} />
+						) : (
+							<TrackConnector side={item.side} emphasized={item.emphasized} />
+						),
+					)}
 				</MentorContainer>
 			)
 		}
 		{
-			after.map(({ entry, idx }) => (
-				<TimelineNode
-					entry={entry}
-					continuation={continuations[idx]}
-					mentorLabel={idx === mentorLabelIdx ? MENTOR_ERA.label : undefined}
-					mentorDates={idx === mentorLabelIdx ? MENTOR_ERA.dateRange : undefined}
-				/>
-			))
+			afterItems.map((item) =>
+				item.kind === 'node' ? <TimelineNode entry={item.entry} continuation={continuations[item.idx]} /> : <TrackConnector side={item.side} emphasized={item.emphasized} />,
+			)
 		}
 	</div>
 </Section>

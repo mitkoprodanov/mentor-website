@@ -1,0 +1,72 @@
+---
+/**
+ * A flush, radius-less bridge filling the row-gap between two boxes that
+ * are the same continuing employer/era on just one column — e.g. Primal
+ * Game Studio flowing down into Ádám's Mandragora box, or Mitko's last
+ * Mentor-era company flowing down into Together Again. Rendered as its own
+ * element, sitting between the two boxes, each of which squares off just
+ * its own touching corner(s) to meet it flush (see continuation.ts /
+ * CompanyBlock's squareTopLeft/squareTopRight/squareBottomLeft/
+ * squareBottomRight props and ApartBlock's continues-above/continues-below)
+ * so the box, connector, and next box read as one seamless card down that
+ * one column, while the other column (which doesn't continue) keeps its
+ * normal rounded corners and spacing.
+ */
+interface Props {
+	/** Which column this bridges — left = Mitko, right = Ádám. */
+	side: 'left' | 'right';
+	/** Use the Mentor-era warm tint instead of the plain card colors, to match emphasized neighbours. */
+	emphasized?: boolean;
+}
+
+const { side, emphasized = false } = Astro.props;
+---
+
+<div class="track-connector" class:list={{ emphasized }} aria-hidden="true">
+	<div class:list={['track-connector-fill', `track-connector-fill--${side}`]} />
+</div>
+
+<style>
+	/* Mirrors .apart's grid exactly so the filled column lines up with the
+	   real track below/above it. Negative margin on both sides cancels the
+	   .timeline/.mentor-content row-gap (2rem) this sits inside, so the
+	   fill sits flush against both neighbours instead of floating in the
+	   middle of the gap. */
+	.track-connector {
+		width: 100%;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		column-gap: 2rem;
+		height: 2rem;
+		margin: -2rem 0;
+		pointer-events: none;
+	}
+
+	.track-connector-fill {
+		border-left: 1px solid var(--border);
+		border-right: 1px solid var(--border);
+		background: var(--bg-alt);
+	}
+
+	.track-connector.emphasized .track-connector-fill {
+		border-left-color: var(--mentor-border);
+		border-right-color: var(--mentor-border);
+		background: var(--mentor-bg);
+	}
+
+	.track-connector-fill--left {
+		grid-column: 1;
+	}
+
+	.track-connector-fill--right {
+		grid-column: 2;
+	}
+
+	@media (max-width: 900px) {
+		/* .apart collapses to a single column here, so a two-column bridge
+		   no longer lines up with anything — just let the normal gap show. */
+		.track-connector {
+			display: none;
+		}
+	}
+</style>

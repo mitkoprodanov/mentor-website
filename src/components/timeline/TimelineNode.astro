@@ -7,28 +7,21 @@ import ApartBlock from './ApartBlock.astro';
 interface Props {
 	entry: TimelineEntry;
 	continuation: Continuation;
-	/** Set only on the entry that opens the Mentor Game Studio era — heads Mitko's mentor column (see ApartBlock). */
-	mentorLabel?: string;
-	mentorDates?: string;
+	/** Set only on the entry that opens the Mentor Game Studio era — see ApartBlock's `showMentorHeader`. */
+	showMentorHeader?: boolean;
 }
 
-const { entry, continuation, mentorLabel, mentorDates } = Astro.props;
+const { entry, continuation, showMentorHeader = false } = Astro.props;
 ---
 
 {
 	entry.kind === 'together' ? (
 		<CompanyBlock
 			company={entry.company}
-			continuesAbove={continuation.togetherAbove}
-			continuesBelow={continuation.togetherBelow}
-			continuesAboveLeft={continuation.togetherAboveLeft}
-			continuesAboveRight={continuation.togetherAboveRight}
-			continuesBelowLeft={continuation.togetherBelowLeft}
-			continuesBelowRight={continuation.togetherBelowRight}
-			mitkoJoins={continuation.mitkoJoins}
-			adamJoins={continuation.adamJoins}
-			mitkoLeaves={continuation.mitkoLeaves}
-			adamLeaves={continuation.adamLeaves}
+			squareTopLeft={continuation.squareTopLeft}
+			squareTopRight={continuation.squareTopRight}
+			squareBottomLeft={continuation.squareBottomLeft}
+			squareBottomRight={continuation.squareBottomRight}
 		/>
 	) : (
 		<ApartBlock
@@ -38,8 +31,7 @@ const { entry, continuation, mentorLabel, mentorDates } = Astro.props;
 			mitkoContinuesBelow={continuation.mitkoBelow}
 			adamContinuesAbove={continuation.adamAbove}
 			adamContinuesBelow={continuation.adamBelow}
-			mentorLabel={mentorLabel}
-			mentorDates={mentorDates}
+			showMentorHeader={showMentorHeader}
 		/>
 	)
 }

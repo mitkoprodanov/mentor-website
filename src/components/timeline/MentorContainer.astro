@@ -1,10 +1,15 @@
 ---
 /**
- * Wraps the Mentor Game Studio era (Mitko's solo-era mentor work through the
- * reunion) so it stays one group for the tag-filter cascade. The era now reads
- * purely from its cards' warm-tinted backgrounds — there's no rail — and its
- * label heads Mitko's column inside the first entry (see ApartBlock
- * `mentorLabel`).
+ * Groups the Mentor Game Studio era's entries (Mitko's solo-era mentor work
+ * through the reunion) so they stay one unit for the tag-filter cascade —
+ * purely structural, no visible styling of its own. The era's actual "box"
+ * identity comes from its contents: Mitko's under-mentor track gets its own
+ * enclosing envelope confined to his column (see ApartBlock.astro's
+ * `.track.under-mentor`, headed by the "Mentor Game Studio" / date label),
+ * and the reunion (Together Again) is a full-width `company.emphasized` box
+ * (see CompanyBlock.astro) once both of them are back together — Ádám's
+ * side stays plain background for everything in between, since he isn't
+ * part of Mentor Game Studio until that point.
  */
 ---
 

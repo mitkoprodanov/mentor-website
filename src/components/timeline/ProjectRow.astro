@@ -57,7 +57,7 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 				<ExperienceCard
 					personId={singleCard.person.id}
 					tagIds={singleCard.tagIds}
-					color={emphasized ? 'var(--mentor)' : `var(--${singleCard.person.id}-color)`}
+					color={`var(--${singleCard.person.id}-color)`}
 					side={COLUMN[singleCard.person.id]}
 					link={singleCard.link}
 					previewImage={singleCard.previewImage}
@@ -70,7 +70,7 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 						<ExperienceCard
 							personId={leftCard.person.id}
 							tagIds={leftCard.tagIds}
-							color={emphasized ? 'var(--mentor)' : `var(--${leftCard.person.id}-color)`}
+							color={`var(--${leftCard.person.id}-color)`}
 							side="left"
 							link={leftCard.link}
 							previewImage={leftCard.previewImage}
@@ -82,7 +82,7 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 						<ExperienceCard
 							personId={rightCard.person.id}
 							tagIds={rightCard.tagIds}
-							color={emphasized ? 'var(--mentor)' : `var(--${rightCard.person.id}-color)`}
+							color={`var(--${rightCard.person.id}-color)`}
 							side="right"
 							link={rightCard.link}
 							previewImage={rightCard.previewImage}
@@ -125,8 +125,8 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 		width: 10px;
 		height: 10px;
 		border-radius: 50%;
-		background: var(--accent);
-		box-shadow: 0 0 10px var(--accent-soft);
+		background: var(--project-dot);
+		box-shadow: 0 0 10px var(--project-dot-soft);
 	}
 
 	.dot.emphasized {

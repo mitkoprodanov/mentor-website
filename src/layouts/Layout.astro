@@ -52,6 +52,13 @@ const {
 		/* Per-person accent, used to color-code the timeline thread and skill tags. */
 		--mitko-color: var(--accent);
 		--adam-color: var(--accent-3);
+
+		/* Generic timeline project marker (the small dot beside a project
+		   name) — deliberately outside the warm orange/yellow person-accent
+		   family, so it reads as "just a project marker" and never gets
+		   mistaken for either person's color. */
+		--project-dot: #ef4444;
+		--project-dot-soft: rgba(239, 68, 68, 0.25);
 	}
 
 	* {
