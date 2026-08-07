@@ -204,7 +204,7 @@ export const timeline: TimelineEntry[] = [
 				id: 'imagic-labs',
 				name: 'Imagic Labs',
 				dateRange: '2025',
-				underMentor: false,
+				underMentor: true,
 				projects: [
 					{
 						id: 'imagic-labs-project',

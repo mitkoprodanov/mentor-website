@@ -29,9 +29,17 @@ const cards = await Promise.all(
 const leftCard = cards.find((c) => COLUMN[c.person.id] === 'left');
 const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
+const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 ---
 
-<div class="project-row" class:list={{ 'project-row--boxed': Boolean(project.name) }}>
+<div
+	class="project-row"
+	class:list={{
+		'project-row--boxed': Boolean(project.name),
+		'project-row--solo-left': singleSide === 'left',
+		'project-row--solo-right': singleSide === 'right',
+	}}
+>
 	{
 		project.name && (
 			<div class="node">
@@ -43,13 +51,13 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 			</div>
 		)
 	}
-	<div class="experience-row" class:list={{ 'experience-row--single': Boolean(singleCard) }}>
+	<div class="experience-row">
 		{
 			singleCard ? (
 				<ExperienceCard
 					personId={singleCard.person.id}
 					tagIds={singleCard.tagIds}
-					color={emphasized ? 'var(--accent-3)' : `var(--${singleCard.person.id}-color)`}
+					color={emphasized ? 'var(--mentor)' : `var(--${singleCard.person.id}-color)`}
 					side={COLUMN[singleCard.person.id]}
 					link={singleCard.link}
 					previewImage={singleCard.previewImage}
@@ -62,7 +70,7 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 						<ExperienceCard
 							personId={leftCard.person.id}
 							tagIds={leftCard.tagIds}
-							color={emphasized ? 'var(--accent-3)' : `var(--${leftCard.person.id}-color)`}
+							color={emphasized ? 'var(--mentor)' : `var(--${leftCard.person.id}-color)`}
 							side="left"
 							link={leftCard.link}
 							previewImage={leftCard.previewImage}
@@ -74,7 +82,7 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 						<ExperienceCard
 							personId={rightCard.person.id}
 							tagIds={rightCard.tagIds}
-							color={emphasized ? 'var(--accent-3)' : `var(--${rightCard.person.id}-color)`}
+							color={emphasized ? 'var(--mentor)' : `var(--${rightCard.person.id}-color)`}
 							side="right"
 							link={rightCard.link}
 							previewImage={rightCard.previewImage}
@@ -89,7 +97,10 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 </div>
 
 <style>
+	/* A grid item of the parent .company-projects grid. Full-width by default;
+	   solo projects narrow to a single column (see the modifiers below). */
 	.project-row {
+		grid-column: 1 / -1;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -119,8 +130,8 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 	}
 
 	.dot.emphasized {
-		background: var(--accent-3);
-		box-shadow: 0 0 12px 3px var(--accent-soft);
+		background: var(--mentor);
+		box-shadow: 0 0 12px 3px var(--mentor-soft);
 	}
 
 	.node-text {
@@ -147,13 +158,33 @@ const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 		gap: 1.25rem;
 	}
 
-	.experience-row--single {
+	/* A solo project belongs to one person — the whole box (node + card) sits
+	   in just that person's column of the grid, so the empty half makes it
+	   unmistakable this was one person's work. Two opposite-side solo projects
+	   from the same period then pack side by side in one grid row. */
+	.project-row--solo-left {
+		grid-column: 1;
+	}
+
+	.project-row--solo-right {
+		grid-column: 2;
+	}
+
+	.project-row--solo-left .experience-row,
+	.project-row--solo-right .experience-row {
 		grid-template-columns: 1fr;
 	}
 
 	@media (max-width: 900px) {
 		.experience-row {
 			grid-template-columns: 1fr;
+		}
+
+		/* On narrow screens the grid is a single column, so solo projects span
+		   it like everything else. */
+		.project-row--solo-left,
+		.project-row--solo-right {
+			grid-column: 1 / -1;
 		}
 	}
 </style>

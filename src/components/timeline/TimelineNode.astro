@@ -1,0 +1,45 @@
+---
+import type { TimelineEntry } from '../../data/timeline';
+import type { Continuation } from './continuation';
+import CompanyBlock from './CompanyBlock.astro';
+import ApartBlock from './ApartBlock.astro';
+
+interface Props {
+	entry: TimelineEntry;
+	continuation: Continuation;
+	/** Set only on the entry that opens the Mentor Game Studio era — heads Mitko's mentor column (see ApartBlock). */
+	mentorLabel?: string;
+	mentorDates?: string;
+}
+
+const { entry, continuation, mentorLabel, mentorDates } = Astro.props;
+---
+
+{
+	entry.kind === 'together' ? (
+		<CompanyBlock
+			company={entry.company}
+			continuesAbove={continuation.togetherAbove}
+			continuesBelow={continuation.togetherBelow}
+			continuesAboveLeft={continuation.togetherAboveLeft}
+			continuesAboveRight={continuation.togetherAboveRight}
+			continuesBelowLeft={continuation.togetherBelowLeft}
+			continuesBelowRight={continuation.togetherBelowRight}
+			mitkoJoins={continuation.mitkoJoins}
+			adamJoins={continuation.adamJoins}
+			mitkoLeaves={continuation.mitkoLeaves}
+			adamLeaves={continuation.adamLeaves}
+		/>
+	) : (
+		<ApartBlock
+			mitko={entry.mitko}
+			adam={entry.adam}
+			mitkoContinuesAbove={continuation.mitkoAbove}
+			mitkoContinuesBelow={continuation.mitkoBelow}
+			adamContinuesAbove={continuation.adamAbove}
+			adamContinuesBelow={continuation.adamBelow}
+			mentorLabel={mentorLabel}
+			mentorDates={mentorDates}
+		/>
+	)
+}

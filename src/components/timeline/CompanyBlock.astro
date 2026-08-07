@@ -1,5 +1,6 @@
 ---
 import type { CompanyDef } from '../../data/timeline';
+import { splitYears } from './dates';
 import ProjectRow from './ProjectRow.astro';
 
 interface Props {
@@ -7,23 +8,69 @@ interface Props {
 	/** This company is the same real employer as the entry immediately above/below a fork or merge (see data/timeline.ts) — style the seam as one continuing entity rather than two unrelated companies. */
 	continuesAbove?: boolean;
 	continuesBelow?: boolean;
+	/** Only one column of the box above/below continues into this one — flatten just that corner and (for the `above` variants) pull flush, leaving the other corner rounded over the gap where the tracks diverge. Left = Mitko, right = Ádám. See Timeline.astro (Primal → Ádám staying on; Together Again merging up out of the Mentor column). */
+	continuesAboveLeft?: boolean;
+	continuesAboveRight?: boolean;
+	continuesBelowLeft?: boolean;
+	continuesBelowRight?: boolean;
+	/** Who newly joins here (name + join year on their side) and who leaves (leave year on their side); a shared join/leave stays centered. See Timeline.astro. */
+	mitkoJoins?: boolean;
+	adamJoins?: boolean;
+	mitkoLeaves?: boolean;
+	adamLeaves?: boolean;
 }
 
-const { company, continuesAbove = false, continuesBelow = false } = Astro.props;
+const {
+	company,
+	continuesAbove = false,
+	continuesBelow = false,
+	continuesAboveLeft = false,
+	continuesAboveRight = false,
+	continuesBelowLeft = false,
+	continuesBelowRight = false,
+	mitkoJoins = true,
+	adamJoins = true,
+	mitkoLeaves = false,
+	adamLeaves = false,
+} = Astro.props;
 const emphasized = company.underMentor === true;
+const { start, end } = splitYears(company.dateRange);
+
+// The name + join year sit on the joining person's side; a shared join (both
+// arriving together) stays centered. Left = Mitko, right = Ádám.
+const joinSide = mitkoJoins && adamJoins ? 'center' : mitkoJoins ? 'left' : adamJoins ? 'right' : 'center';
+const anyLeave = mitkoLeaves || adamLeaves;
 ---
 
-<div class="company" class:list={{ 'continues-above': continuesAbove, 'continues-below': continuesBelow }}>
-	<div class="company-header">
+<div
+	class="company"
+	class:list={{
+		emphasized,
+		'continues-above': continuesAbove,
+		'continues-below': continuesBelow,
+		'continues-above-left': continuesAboveLeft,
+		'continues-above-right': continuesAboveRight,
+		'continues-below-left': continuesBelowLeft,
+		'continues-below-right': continuesBelowRight,
+	}}
+>
+	<div class:list={['company-header', `company-header--${joinSide}`]}>
+		<span class="company-year">{start}</span>
 		<h3 class:list={{ emphasized }}>{company.name}</h3>
-		<p class="company-dates">
-			{company.dateRange}
-			{continuesAbove && <span class="continued-tag">continued</span>}
-		</p>
 	</div>
 	<div class="company-projects">
 		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} />)}
 	</div>
+	{
+		anyLeave ? (
+			<div class="company-foot">
+				{mitkoLeaves && <span class="company-year company-year--left">{end}</span>}
+				{adamLeaves && <span class="company-year company-year--right">{end}</span>}
+			</div>
+		) : (
+			<span class="company-year company-year--foot-center">{end}</span>
+		)
+	}
 </div>
 
 <style>
@@ -32,26 +79,92 @@ const emphasized = company.underMentor === true;
 		border: 1px solid var(--border);
 		border-radius: 20px;
 		background: var(--bg-alt);
-		padding: 1.5rem 1.5rem 2rem;
+		padding: 1.25rem 1.5rem 1.5rem;
 	}
 
+	/* The Mentor era fills its cards with a lighter, warm-tinted panel so the
+	   whole region reads as its own studio — carried by the background, not
+	   only the rail beside it. */
+	.company.emphasized {
+		background: var(--mentor-bg);
+		border-color: var(--mentor-border);
+	}
+
+	/* Join year (with the name) at the top, leave year at the bottom — placed
+	   on the joining/leaving person's side, or centered when it's shared. */
+	.company-year {
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.05em;
+		color: var(--fg-muted);
+	}
+
+	/* Continuation seam: pulled flush against the box above/below (cancelling
+	   .timeline's row gap) with the shared edge's radius and border removed,
+	   so the two boxes read as one continuous card instead of two that
+	   happen to touch. */
 	.company.continues-above {
+		margin-top: -2rem;
+		border-top: none;
 		border-top-left-radius: 0;
 		border-top-right-radius: 0;
 	}
 
 	.company.continues-below {
+		border-bottom: none;
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
 	}
 
+	/* Partial seams — only one column of this full-width box continues into
+	   the neighbour, so only that corner is squared/pulled flush; the other
+	   corner stays rounded over the gap where the tracks diverge. */
+	.company.continues-above-left,
+	.company.continues-above-right {
+		margin-top: -2rem;
+		border-top: none;
+	}
+
+	.company.continues-above-left {
+		border-top-left-radius: 0;
+	}
+
+	.company.continues-above-right {
+		border-top-right-radius: 0;
+	}
+
+	.company.continues-below-left {
+		border-bottom-left-radius: 0;
+	}
+
+	.company.continues-below-right {
+		border-bottom-right-radius: 0;
+	}
+
 	.company-header {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		padding: 0.25rem 0 1.5rem;
+	}
+
+	.company-header--center {
+		align-items: center;
 		text-align: center;
-		padding: 0.5rem 0 1.75rem;
+	}
+
+	.company-header--left {
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.company-header--right {
+		align-items: flex-end;
+		text-align: right;
 	}
 
 	.company-header h3 {
-		margin: 0 0 0.15rem;
+		margin: 0;
 		text-transform: uppercase;
 		letter-spacing: 0.15em;
 		font-size: 0.85rem;
@@ -59,33 +172,42 @@ const emphasized = company.underMentor === true;
 	}
 
 	.company-header h3.emphasized {
-		color: var(--accent-3);
-		text-shadow: 0 0 12px var(--accent-soft);
+		color: var(--mentor);
+		text-shadow: 0 0 14px var(--mentor-soft);
 	}
 
-	.company-dates {
-		margin: 0;
+	/* Leave years sit on the leaving person's side (left span at the start,
+	   right span pushed to the end); a shared/ongoing end stays centered. */
+	.company-foot {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		font-size: 0.75rem;
-		color: var(--fg-muted);
+		margin-top: 0.85rem;
 	}
 
-	.continued-tag {
-		font-size: 0.65rem;
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: var(--accent-3);
-		border: 1px solid var(--accent-3);
-		border-radius: 999px;
-		padding: 0.1rem 0.45rem;
+	.company-year--right {
+		margin-left: auto;
 	}
 
+	.company-year--foot-center {
+		display: block;
+		margin-top: 0.85rem;
+		text-align: center;
+	}
+
+	/* Two-column grid so a solo project can sit in just its person's column,
+	   and two opposite-side solo projects from the same period pack side by
+	   side (grid-auto-flow: dense), top-aligned. Full-width projects span
+	   both columns. */
 	.company-projects {
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		align-items: start;
+		grid-auto-flow: dense;
+		gap: 1.5rem 1.25rem;
+	}
+
+	@media (max-width: 900px) {
+		.company-projects {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

@@ -12,9 +12,7 @@
  * row's cards remain → a `.company`/`.track-company` hides if it has no
  * visible rows → a whole `.track` (one side of an ApartBlock) hides if all
  * its companies are gone, collapsing the `.apart` grid to one column if only
- * one side survives → a `.mentor-container` hides if it's left empty → every
- * `.fork-connector` hides outright whenever any filter is active (fork/join
- * curves add nothing once the timeline is filtered down).
+ * one side survives → a `.mentor-container` hides if it's left empty.
  *
  * Projects collapse is flat: a `.project-card` hides if it doesn't match.
  */
@@ -22,7 +20,6 @@
 type Filter = string | null;
 
 const TIMELINE_FLIP_SELECTOR = '.card, .node, .project-row, .track-row, .company, .track-company, .apart, .mentor-container';
-const TIMELINE_ANIMATED_SELECTOR = `${TIMELINE_FLIP_SELECTOR}, .fork-connector`;
 const PROJECTS_SELECTOR = '.project-card';
 
 const EXIT_MS = 200;
@@ -34,16 +31,6 @@ let currentFilter: Filter = null;
 
 function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function findNeighbor(start: Element, prop: 'previousElementSibling' | 'nextElementSibling', root: Element): Element | null {
-	let node: Element | null = start;
-	while (node && node !== root) {
-		const sibling = node[prop];
-		if (sibling) return sibling;
-		node = node.parentElement;
-	}
-	return null;
 }
 
 function matchesTags(el: HTMLElement, filter: Filter): boolean {
@@ -95,21 +82,6 @@ function computeHiddenTimelineSet(root: HTMLElement, filter: Filter): Set<Elemen
 		const entries = content ? Array.from(content.children).filter((c) => c.classList.contains('company') || c.classList.contains('apart')) : [];
 		const visible = entries.filter((e) => !toHide.has(e));
 		if (entries.length > 0 && visible.length === 0) toHide.add(mentor);
-	}
-
-	// Fork/join curves add no value once anything is filtered — hide them
-	// outright rather than only when a DOM-adjacent block is fully empty.
-	const connectors = Array.from(root.querySelectorAll<HTMLElement>('.fork-connector'));
-	for (const connector of connectors) {
-		if (filter !== null) {
-			toHide.add(connector);
-			continue;
-		}
-		const prev = findNeighbor(connector, 'previousElementSibling', root);
-		const next = findNeighbor(connector, 'nextElementSibling', root);
-		const prevEmpty = prev ? toHide.has(prev) : false;
-		const nextEmpty = next ? toHide.has(next) : false;
-		if (prevEmpty || nextEmpty) toHide.add(connector);
 	}
 
 	return toHide;
@@ -238,7 +210,7 @@ function applyTimelineFilter(root: HTMLElement, filter: Filter) {
 	applyFilter(root, filter, {
 		computeHidden: computeHiddenTimelineSet,
 		flipSelector: TIMELINE_FLIP_SELECTOR,
-		animatedSelector: TIMELINE_ANIMATED_SELECTOR,
+		animatedSelector: TIMELINE_FLIP_SELECTOR,
 		onApplied: (toHide) => updateApartSingleModifier(root, toHide),
 	});
 }

@@ -38,6 +38,17 @@ const {
 		--accent-soft: rgba(255, 122, 0, 0.15);
 		--border: rgba(255, 255, 255, 0.08);
 
+		/* Mentor Game Studio — the studio itself, "us". Its own hero color,
+		   stronger and more saturated than either person's accent so the
+		   Mentor era clearly reads as the most important thread. */
+		--mentor: #ffb703;
+		--mentor-strong: #ffc633;
+		--mentor-soft: rgba(255, 183, 3, 0.22);
+		/* Lighter, warm-tinted panel that fills Mentor-era cards so the era
+		   reads as its own region — not just the glowing rail beside it. */
+		--mentor-bg: color-mix(in oklab, var(--mentor) 12%, var(--bg-alt));
+		--mentor-border: color-mix(in oklab, var(--mentor) 45%, var(--border));
+
 		/* Per-person accent, used to color-code the timeline thread and skill tags. */
 		--mitko-color: var(--accent);
 		--adam-color: var(--accent-3);
