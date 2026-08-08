@@ -13,8 +13,6 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 ---
 
 <div class="person-card" style={`--person-color: var(--${person.id}-color)`}>
-	<h3>{person.name}</h3>
-	<p class="role">{person.role}</p>
 	<div class="skill-groups">
 		{
 			tagGroups.map((group) => (
@@ -49,21 +47,9 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 	.person-card {
 		background: var(--bg);
 		border: 1px solid var(--border);
-		border-top: 3px solid var(--person-color);
 		border-radius: 16px;
-		padding: 1.75rem;
+		padding: 1.25rem 1.75rem 1.75rem;
 		text-align: left;
-	}
-
-	.person-card h3 {
-		margin: 0 0 0.15rem;
-		font-size: 1.2rem;
-	}
-
-	.role {
-		color: var(--person-color);
-		margin: 0 0 1.25rem;
-		font-size: 0.9rem;
 	}
 
 	.skill-groups {

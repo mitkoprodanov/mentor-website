@@ -1,0 +1,40 @@
+---
+import type { Person } from '../../data/people';
+
+interface Props {
+	person: Person;
+}
+
+const { person } = Astro.props;
+---
+
+<div class="person-header" style={`--person-color: var(--${person.id}-color)`}>
+	<h3>{person.name}</h3>
+	<p class="role">{person.role}</p>
+</div>
+
+<style>
+	.person-header {
+		flex-shrink: 0;
+		border-top: 3px solid var(--person-color);
+		/* Rounds the accent line into the same curved-top style as
+		   PersonContactCard's border-top — only the top corners, since this
+		   sits flush above the scrollable card below with no bottom edge of
+		   its own. */
+		border-radius: 16px 16px 0 0;
+		background: var(--bg);
+		padding: 1.25rem 1.75rem 1rem;
+		text-align: left;
+	}
+
+	.person-header h3 {
+		margin: 0 0 0.15rem;
+		font-size: 1.2rem;
+	}
+
+	.role {
+		color: var(--person-color);
+		margin: 0;
+		font-size: 0.9rem;
+	}
+</style>

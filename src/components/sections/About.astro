@@ -42,6 +42,19 @@ import Section from '../Section.astro';
 		text-align: center;
 	}
 
+	/* Extra room below the (vertically centered) hero content, on top of
+	   Section.astro's base 4rem — so the tagline/vision line have scrolled
+	   well out of view by the time the Timeline's first entry appears,
+	   instead of the two overlapping in the viewport. Targets the #about id
+	   (also set by Section.astro) rather than the .about class: Section's
+	   own `padding: 4rem 1.5rem` shorthand has equal specificity to a
+	   class-only selector here, and — evidently — lands later in the
+	   compiled cascade, so a same-specificity override was silently losing
+	   to it. An id selector unambiguously outranks it either way. */
+	:global(#about) {
+		padding-bottom: calc(4rem + 50vh);
+	}
+
 	.hero-content h1 {
 		position: relative;
 		margin: 0;
@@ -175,7 +188,12 @@ import Section from '../Section.astro';
 
 	.scroll-cue {
 		position: absolute;
-		bottom: 2rem;
+		/* Anchored to the viewport height, not `bottom` (which now measures
+		   from .about's much-taller bottom edge, thanks to #about's extra
+		   padding-bottom above) — this keeps it visible near the bottom of
+		   the first screen without scrolling, while that extra gap still
+		   grows the section underneath it as intended. */
+		top: calc(80vh - 3.5rem);
 		text-decoration: none;
 		font-size: 1.5rem;
 		color: var(--fg-muted);

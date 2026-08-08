@@ -7,14 +7,6 @@ import { projects } from '../../data/projects';
 {
 	projects.length > 0 && (
 		<Section id="projects" title="Projects" compact>
-			<div class="filter-chip" id="projects-filter-chip" hidden>
-				<span>
-					Filtered by: <strong id="projects-filter-chip-tag" />
-				</span>
-				<button type="button" id="projects-filter-chip-clear" aria-label="Clear filter">
-					✕
-				</button>
-			</div>
 			<div class="projects">
 				{projects.map((project) => (
 					<ProjectCard project={project} />
@@ -31,57 +23,5 @@ import { projects } from '../../data/projects';
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-	}
-
-	.filter-chip {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin: 0 auto 1.5rem;
-		padding: 0.4rem 0.5rem 0.4rem 0.9rem;
-		border-radius: 999px;
-		border: 1px solid var(--accent-3);
-		background: var(--bg);
-		box-shadow: 0 0 16px 2px var(--accent-soft);
-		font-size: 0.85rem;
-		color: var(--fg);
-		width: fit-content;
-		transition:
-			opacity 220ms ease,
-			transform 220ms ease;
-	}
-
-	.filter-chip[hidden] {
-		display: flex;
-		opacity: 0;
-		transform: translateY(-10px);
-		pointer-events: none;
-	}
-
-	.filter-chip:not([hidden]) {
-		opacity: 1;
-		transform: translateY(0);
-	}
-
-	.filter-chip strong {
-		color: var(--accent-3);
-	}
-
-	.filter-chip button {
-		font-family: inherit;
-		font-size: 0.85rem;
-		line-height: 1;
-		width: 1.6rem;
-		height: 1.6rem;
-		border-radius: 50%;
-		border: none;
-		background: var(--accent-soft);
-		color: var(--accent-3);
-		cursor: pointer;
-	}
-
-	.filter-chip button:hover {
-		background: var(--accent-3);
-		color: var(--bg);
 	}
 </style>

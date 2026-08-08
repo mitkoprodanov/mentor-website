@@ -250,7 +250,6 @@ function setFilter(filter: Filter) {
 	setTagPressedState(filter);
 
 	updateChip('timeline-filter-chip', 'timeline-filter-chip-skill', filter);
-	updateChip('projects-filter-chip', 'projects-filter-chip-tag', filter);
 
 	if (filter && projectsRoot) {
 		const hasMatchingProject = Array.from(projectsRoot.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`)).some((card) =>
@@ -274,7 +273,7 @@ function init() {
 			return;
 		}
 
-		if (target.closest('#timeline-filter-chip-clear') || target.closest('#projects-filter-chip-clear')) {
+		if (target.closest('#timeline-filter-chip-clear')) {
 			setFilter(null);
 		}
 	});
