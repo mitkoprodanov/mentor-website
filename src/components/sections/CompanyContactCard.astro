@@ -3,7 +3,7 @@ import { STUDIO_CONTACT } from '../../data/contact';
 import ExternalLink from '../common/ExternalLink.astro';
 ---
 
-<div id="contact" class="company-card">
+<div class="company-card">
 	<h3 class="brand-heading">{STUDIO_CONTACT.name}</h3>
 	<p class="contact-lead">Let's talk about your project.</p>
 	<div class="contact-links">
@@ -17,7 +17,9 @@ import ExternalLink from '../common/ExternalLink.astro';
 <style>
 	.company-card {
 		background: var(--bg-alt);
-		border: 2px solid var(--accent-3);
+		/* Matches the project-marker dot color (see --project-dot in
+		   Layout.astro), e.g. the one before Armies of Exigo. */
+		border: 2px solid var(--project-dot);
 		border-radius: 24px;
 		padding: 3.5rem 3rem;
 		text-align: center;
@@ -27,8 +29,8 @@ import ExternalLink from '../common/ExternalLink.astro';
 		gap: 1rem;
 		max-width: 720px;
 		width: 100%;
-		margin: 4rem auto 0;
-		box-shadow: 0 0 32px 4px var(--accent-soft);
+		margin: 0 auto;
+		box-shadow: 0 0 32px 4px var(--project-dot-soft);
 	}
 
 	.company-card h3 {

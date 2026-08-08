@@ -8,12 +8,26 @@
  *    column, which varies with viewport width. Its column (left empty on
  *    purpose — see the .astro file) still participates in the grid
  *    normally, so its rect is exactly the slot the panel should occupy;
- *    this just copies that rect's left/width onto the fixed panel.
- * 2. Visibility — the panel becomes active (fixed, visible) once the
- *    Timeline's first entry has scrolled into view (not just the section
- *    starting to appear — its title/filter chip coming into view isn't
- *    enough) and stays active for the rest of the page, only deactivating
- *    again if scrolled back above that point, near the top.
+ *    this copies that rect's left/width onto the fixed panel — only on
+ *    load/resize, since it never changes mid-scroll and re-measuring it on
+ *    every scroll tick was pure wasted work (see updateHeights below).
+ * 2. Visibility — the panel becomes active (fixed, visible, fading in) once
+ *    the Timeline's first entry has scrolled into view (not just the
+ *    section starting to appear — its title/filter chip coming into view
+ *    isn't enough). Deactivates again near the top if scrolled back above
+ *    that point. At the *bottom*, instead of a hard cutoff, its max-height
+ *    is continuously shrunk to keep its own bottom edge just above that
+ *    side's actual PersonContactCard (in the separate Contact section) as
+ *    it scrolls up from below — clipping from the bottom as that specific
+ *    card approaches, rather than a generic Timeline/Projects boundary
+ *    (which could shrink it before or after the card the overlap is
+ *    actually with) or letting it float on top of that card. This is the
+ *    scroll-driven part, so it runs directly on the scroll event with no
+ *    requestAnimationFrame throttle — modern browsers already coalesce
+ *    scroll dispatch to frame timing, so an extra rAF hop here only adds a
+ *    frame of lag for work this cheap; all rects are read up front before
+ *    any style is written, so there's no read/write layout thrashing
+ *    either.
  * 3. Scroll mirroring — the browser already routes wheel/trackpad
  *    scrolling to whichever scrollable element (.side-panel-scroll) the
  *    cursor is over natively; this just replays the same scrollTop on the
@@ -28,58 +42,96 @@ const DESKTOP = window.matchMedia('(min-width: 901px)');
 interface PanelPair {
 	column: HTMLElement;
 	panel: HTMLElement;
+	/** That side's own PersonContactCard in the Contact section — the panel
+	 * shrinks to keep clear of this specific element as it rises into view. */
+	endTrigger: HTMLElement | null;
 }
 
-function getPanelPair(columnSelector: string): PanelPair | null {
+function getPanelPair(columnSelector: string, endTriggerSelector: string): PanelPair | null {
 	const column = document.querySelector<HTMLElement>(columnSelector);
 	const panel = column?.querySelector<HTMLElement>('.side-panel') ?? null;
 	if (!column || !panel) return null;
-	return { column, panel };
+	const endTrigger = document.querySelector<HTMLElement>(endTriggerSelector);
+	return { column, panel, endTrigger };
 }
 
-const left = getPanelPair('.scrolly-col--left');
-const right = getPanelPair('.scrolly-col--right');
+// Mitko's contact card is the first child of #contact's grid, Ádám's the
+// last — see Contact.astro.
+const left = getPanelPair('.scrolly-col--left', '#contact .contact-grid > :first-child');
+const right = getPanelPair('.scrolly-col--right', '#contact .contact-grid > :last-child');
 const pairs = [left, right].filter((p): p is PanelPair => p !== null);
 
 // The Timeline's very first entry (currently Black Hole Entertainment for
-// Ádám / Ericsson Hungary for Mitko) — the panels' visibility trigger, kept
-// separate from `column` (still just used for left/width positioning
-// below), since the column itself starts well above this (behind the
-// section title and filter chip).
+// Ádám / Ericsson Hungary for Mitko) — the panels' visibility trigger.
 const firstTimelineEntry = document.querySelector<HTMLElement>('#timeline .timeline > :first-child');
 
-function updatePanel({ column, panel }: PanelPair): void {
-	if (!DESKTOP.matches) return;
-
-	const rect = column.getBoundingClientRect();
-	panel.style.left = `${rect.left}px`;
-	panel.style.width = `${rect.width}px`;
-
-	// Active from the moment the first entry has scrolled into view onward —
-	// not just while it's still on screen — so the panels stay up for the
-	// rest of the Timeline/Projects/contact scroll and only disappear again
-	// if scrolled back above it, near the top.
-	const triggerRect = firstTimelineEntry?.getBoundingClientRect() ?? rect;
-	const active = triggerRect.top < window.innerHeight;
-	panel.classList.toggle('is-active', active);
+function remToPx(rem: number): number {
+	return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
 }
 
-let queued = false;
+// Matches .side-panel's own `top: 6rem` in the .astro file.
+const PANEL_TOP = remToPx(6);
+const GAP = 5;
 
-function scheduleUpdate(): void {
-	if (queued) return;
-	queued = true;
-	requestAnimationFrame(() => {
-		queued = false;
-		pairs.forEach(updatePanel);
+function updatePositions(): void {
+	if (!DESKTOP.matches) return;
+	// Read every rect before writing any style, so a write never forces a
+	// synchronous layout recalculation the next read has to pay for.
+	const rects = pairs.map(({ column }) => column.getBoundingClientRect());
+	pairs.forEach(({ panel }, i) => {
+		panel.style.left = `${rects[i].left}px`;
+		panel.style.width = `${rects[i].width}px`;
+	});
+}
+
+function updateHeights(): void {
+	if (!DESKTOP.matches) return;
+
+	const startRect = firstTimelineEntry?.getBoundingClientRect();
+	const reachedStart = startRect ? startRect.top < window.innerHeight : true;
+
+	if (!reachedStart) {
+		pairs.forEach(({ panel }) => {
+			panel.classList.remove('is-active');
+			panel.style.maxHeight = '';
+		});
+		return;
+	}
+
+	const fullHeight = window.innerHeight - remToPx(8);
+	// Read first...
+	const endRects = pairs.map(({ endTrigger }) => endTrigger?.getBoundingClientRect());
+	// ...then write.
+	pairs.forEach(({ panel }, i) => {
+		const endRect = endRects[i];
+		const available = endRect ? endRect.top - PANEL_TOP - GAP : fullHeight;
+		const height = Math.max(0, Math.min(fullHeight, available));
+		panel.classList.add('is-active');
+		panel.style.maxHeight = `${height}px`;
 	});
 }
 
 if (pairs.length > 0) {
-	scheduleUpdate();
-	window.addEventListener('scroll', scheduleUpdate, { passive: true });
-	window.addEventListener('resize', scheduleUpdate);
-	DESKTOP.addEventListener('change', scheduleUpdate);
+	updatePositions();
+	updateHeights();
+
+	window.addEventListener('scroll', updateHeights, { passive: true });
+
+	let resizeQueued = false;
+	window.addEventListener('resize', () => {
+		if (resizeQueued) return;
+		resizeQueued = true;
+		requestAnimationFrame(() => {
+			resizeQueued = false;
+			updatePositions();
+			updateHeights();
+		});
+	});
+
+	DESKTOP.addEventListener('change', () => {
+		updatePositions();
+		updateHeights();
+	});
 }
 
 if (left && right) {

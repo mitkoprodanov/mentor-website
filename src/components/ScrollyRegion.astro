@@ -7,15 +7,15 @@
  * bleeds into the page either (see syncSidePanels.client.ts, which also
  * positions it over its reserved grid column and mirrors its scroll to the
  * other side, so both panels always move together). Its name/role header
- * stays put while only the skills/hobbies/contact info beneath it scrolls.
+ * stays put while only the skills/hobbies beneath it scroll. Contact info
+ * (both people's and the studio's) lives in its own separate Contact
+ * section instead — see sections/Contact.astro.
  */
 import { getPerson } from '../data/people';
 import PersonHeader from './personal/PersonHeader.astro';
 import PersonCard from './personal/PersonCard.astro';
-import PersonContactCard from './personal/PersonContactCard.astro';
 import Timeline from './timeline/Timeline.astro';
 import Projects from './sections/Projects.astro';
-import CompanyContactCard from './sections/CompanyContactCard.astro';
 
 const mitko = getPerson('mitko');
 const adam = getPerson('adam');
@@ -28,9 +28,6 @@ const adam = getPerson('adam');
 				<PersonHeader person={mitko} />
 				<div class="side-panel-scroll">
 					<PersonCard person={mitko} />
-					<div class="person-contact">
-						<PersonContactCard person={mitko} />
-					</div>
 				</div>
 			</div>
 		</div>
@@ -38,7 +35,6 @@ const adam = getPerson('adam');
 		<div class="scrolly-col scrolly-col--center">
 			<Timeline />
 			<Projects />
-			<CompanyContactCard />
 		</div>
 
 		<div class="scrolly-col scrolly-col--right">
@@ -46,9 +42,6 @@ const adam = getPerson('adam');
 				<PersonHeader person={adam} />
 				<div class="side-panel-scroll">
 					<PersonCard person={adam} />
-					<div class="person-contact">
-						<PersonContactCard person={adam} />
-					</div>
 				</div>
 			</div>
 		</div>
@@ -84,10 +77,15 @@ const adam = getPerson('adam');
 	.side-panel {
 		position: fixed;
 		top: 6rem;
+		/* Fallback/initial value — syncSidePanels.client.ts overrides this
+		   inline with a scroll-driven value once active, continuously
+		   shrinking it from the bottom as Timeline/Projects content runs
+		   out, so it never floats over the Contact section's own cards. */
 		max-height: calc(100vh - 8rem);
+		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-		gap: 0.85rem;
+		gap: 0.4rem;
 		opacity: 0;
 		pointer-events: none;
 		transition: opacity 200ms ease;
@@ -98,7 +96,7 @@ const adam = getPerson('adam');
 		pointer-events: auto;
 	}
 
-	/* Only the card + contact info scroll — the name/role header above stays
+	/* Only the skill/hobby card scrolls — the name/role header above stays
 	   put, and this scrolls independently of the page (overscroll-behavior:
 	   contain stops it from handing scroll off to the page once it hits its
 	   own top/bottom, per its own bounded height above). Scrollbar hidden
@@ -115,10 +113,6 @@ const adam = getPerson('adam');
 
 	.side-panel-scroll::-webkit-scrollbar {
 		display: none;
-	}
-
-	.person-contact {
-		margin-top: 1.25rem;
 	}
 
 	@media (max-width: 900px) {

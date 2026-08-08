@@ -201,6 +201,9 @@ const tracks = await Promise.all(
 	   — which is what keeps its date level with whatever's sharing its row. */
 	.track.under-mentor {
 		justify-content: flex-start;
+		/* Nudges the whole envelope down a bit from the very top of the row,
+		   off of being perfectly flush with Ádám's side. */
+		margin-top: 3rem;
 		background: var(--mentor-bg);
 		border: 1px solid var(--mentor-border);
 		border-radius: 24px;
@@ -277,11 +280,22 @@ const tracks = await Promise.all(
 	/* Edge seam into a TrackConnector (see Timeline.astro): this box is a
 	   single column with nothing on the other side to preserve, so — unlike
 	   CompanyBlock's full-width box — the whole touching border/corner can
-	   safely come off, leaving a fully open edge for the connector to fill. */
+	   safely come off, leaving a fully open edge for the connector to fill.
+	   With no border-top framing it anymore, the box's normal top padding
+	   reads as extra empty space above the date/name (e.g. Primal Game
+	   Studio flowing into Ádám's Mandragora box) — trimmed down here to sit
+	   closer to how a normal, fully-framed box like Together Again reads. */
 	.track-company.continues-above {
 		border-top: none;
 		border-top-left-radius: 0;
 		border-top-right-radius: 0;
+		padding-top: 0;
+	}
+
+	/* .track-header's own top padding stacks on top of the box's — trimmed
+	   too so the date/name sit right near the top of a continues-above box. */
+	.track-company.continues-above .track-header {
+		padding-top: 0;
 	}
 
 	.track-company.continues-below {

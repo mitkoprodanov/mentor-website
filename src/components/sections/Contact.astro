@@ -1,0 +1,48 @@
+---
+/**
+ * Its own dedicated section — like Timeline, headed by a "Contact" title —
+ * rather than living inside ScrollyRegion's Timeline/Personal grid. Mitko's
+ * and Ádám's contact cards sit on either side of the studio's own, mirroring
+ * the Timeline's side-panel layout but as plain, statically-flowing content
+ * (no fixed/sticky/independently-scrolling behaviour needed here — it's
+ * short, and reached by scrolling normally or the "Contact" nav link).
+ */
+import Section from '../Section.astro';
+import { getPerson } from '../../data/people';
+import PersonContactCard from '../personal/PersonContactCard.astro';
+import CompanyContactCard from './CompanyContactCard.astro';
+
+const mitko = getPerson('mitko');
+const adam = getPerson('adam');
+---
+
+<Section id="contact" title="Contact" compact>
+	<div class="contact-grid">
+		<PersonContactCard person={mitko} />
+		<CompanyContactCard />
+		<PersonContactCard person={adam} />
+	</div>
+</Section>
+
+<style>
+	/* Matches ScrollyRegion.astro's .scrolly-grid column widths exactly, so
+	   Mitko's and Ádám's contact cards here line up with the fixed side
+	   panels above instead of being a slightly different width/position. */
+	.contact-grid {
+		display: grid;
+		grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
+		column-gap: 2rem;
+		align-items: center;
+		max-width: 1600px;
+		width: 100%;
+		margin: 0 auto;
+	}
+
+	@media (max-width: 900px) {
+		.contact-grid {
+			grid-template-columns: 1fr;
+			row-gap: 1.5rem;
+			max-width: 480px;
+		}
+	}
+</style>
