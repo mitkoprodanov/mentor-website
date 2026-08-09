@@ -7,9 +7,17 @@
  * bleeds into the page either (see syncSidePanels.client.ts, which also
  * positions it over its reserved grid column and mirrors its scroll to the
  * other side, so both panels always move together). Its name/role header
- * stays put while only the skills/hobbies beneath it scroll. Contact info
- * (both people's and the studio's) lives in its own separate Contact
- * section instead — see sections/Contact.astro.
+ * stays put while only the skills/hobbies beneath it scroll — until
+ * Contact's own placeholder starts scrolling into view from below (well
+ * before the page's true end), at which point the header animates down to
+ * dock directly onto a second, always-present copy of itself sitting
+ * inside Contact's fixed overlay — scrolling back up even slightly
+ * reverses it. Contact info (both people's and the studio's) lives in its
+ * own separate Contact section instead — see sections/Contact.astro. Its
+ * z-index here is explicitly higher than that overlay's: without it,
+ * DOM order alone would put the overlay (declared after this component)
+ * on top, hiding the very header that's supposed to be sliding down onto
+ * it.
  */
 import { getPerson } from '../data/people';
 import PersonHeader from './personal/PersonHeader.astro';
@@ -76,11 +84,14 @@ const adam = getPerson('adam');
 	   reserved slot, so the column itself renders empty. */
 	.side-panel {
 		position: fixed;
+		/* Resting values — syncSidePanels.client.ts overrides both inline,
+		   but only ever in an on/off pair: full resting size, or docked
+		   (top pulled down to the Contact section's matching header,
+		   max-height clamped to just its own header's height so the
+		   skills/hobbies beneath disappear). Never anything in between —
+		   see the .astro file. The transition here is what turns that
+		   instant state flip into a smooth slide/shrink. */
 		top: 6rem;
-		/* Fallback/initial value — syncSidePanels.client.ts overrides this
-		   inline with a scroll-driven value once active, continuously
-		   shrinking it from the bottom as Timeline/Projects content runs
-		   out, so it never floats over the Contact section's own cards. */
 		max-height: calc(100vh - 8rem);
 		overflow: hidden;
 		display: flex;
@@ -88,7 +99,17 @@ const adam = getPerson('adam');
 		gap: 0.4rem;
 		opacity: 0;
 		pointer-events: none;
-		transition: opacity 200ms ease;
+		/* Above .contact-overlay's own z-index (5) — see the file-level
+		   comment above. Below the navbar's (10), which never needs to be
+		   covered by this. */
+		z-index: 6;
+		/* top/max-height duration matches .contact-overlay's own
+		   --contact-reveal-duration (see Contact.astro) — this header's
+		   slide and that overlay's fade/slide are meant to land together. */
+		transition:
+			opacity 200ms ease,
+			top 800ms cubic-bezier(0.22, 1, 0.36, 1),
+			max-height 800ms cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	.side-panel.is-active {

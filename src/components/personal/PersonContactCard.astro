@@ -10,7 +10,6 @@ const { person } = Astro.props;
 ---
 
 <div class="contact-card" style={`--person-color: var(--${person.id}-color)`}>
-	<h4>{person.name}</h4>
 	<ExternalLink href={person.linkedin}>LinkedIn</ExternalLink>
 	{
 		person.email && (
@@ -22,25 +21,58 @@ const { person } = Astro.props;
 </div>
 
 <style>
+	/* No name here — a PersonHeader.astro sits directly above this, both in
+	   the Contact section (see Contact.astro) and in the fixed side panel
+	   while it's still visible, so repeating it would be redundant. Same
+	   look as that header — plain background, single thick accent border,
+	   rounded only on the edge that faces away from it — just mirrored:
+	   the accent border and rounding are on the bottom here instead of the
+	   top, since this card sits below the header rather than above it. */
 	.contact-card {
-		background: var(--bg-alt);
-		border: 1px solid var(--border);
-		border-top: 3px solid var(--person-color);
-		border-radius: 16px;
-		padding: 1.25rem 1.5rem;
+		background: var(--bg);
+		border-bottom: 3px solid var(--person-color);
+		border-radius: 0 0 16px 16px;
+		padding: 0.5rem 1.75rem 1.25rem;
 		text-align: center;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.contact-card h4 {
-		margin: 0 0 0.15rem;
-		font-size: 1rem;
+		gap: 0.6rem;
 	}
 
 	.contact-card :global(.external-link) {
 		align-self: center;
-		font-size: 0.9rem;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	/* Desktop only — parked fully below the viewport (not just nudged down)
+	   until syncSidePanels.client.ts adds .is-revealed, which only happens
+	   once the page hits its true scroll end (see updateDock there).
+	   Otherwise, as an ordinary in-flow element, it would just quietly
+	   scroll up into view like everything else well before that point.
+	   `100vh` rather than a fixed px amount guarantees it starts off-screen
+	   below no matter where its resting spot ends up sitting in the
+	   viewport. The header above it (see PersonHeader.astro/Contact.astro)
+	   doesn't need this same treatment — it's covered instead, the whole
+	   time, by the fixed side panel's own header sitting on top of it,
+	   which is what's actually seen coming down to meet this — this card
+	   is the other half of that motion, sliding up from outside the screen
+	   to meet it in turn, so the two halves read as converging on the seam
+	   between them from opposite directions. Duration matches the fixed
+	   panel's own docking transition (see ScrollyRegion.astro) so both
+	   halves arrive together. */
+	@media (min-width: 901px) {
+		.contact-card {
+			opacity: 0;
+			transform: translateY(100vh);
+			transition:
+				opacity 500ms ease,
+				transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+		}
+
+		.contact-card.is-revealed {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 </style>

@@ -8,33 +8,75 @@
  *    column, which varies with viewport width. Its column (left empty on
  *    purpose — see the .astro file) still participates in the grid
  *    normally, so its rect is exactly the slot the panel should occupy;
- *    this copies that rect's left/width onto the fixed panel — only on
- *    load/resize, since it never changes mid-scroll and re-measuring it on
- *    every scroll tick was pure wasted work (see updateHeights below).
+ *    this copies that rect's left/width onto the fixed panel.
  * 2. Visibility — the panel becomes active (fixed, visible, fading in) once
  *    the Timeline's first entry has scrolled into view (not just the
  *    section starting to appear — its title/filter chip coming into view
  *    isn't enough). Deactivates again near the top if scrolled back above
- *    that point. At the *bottom*, instead of a hard cutoff, its max-height
- *    is continuously shrunk to keep its own bottom edge just above that
- *    side's actual PersonContactCard (in the separate Contact section) as
- *    it scrolls up from below — clipping from the bottom as that specific
- *    card approaches, rather than a generic Timeline/Projects boundary
- *    (which could shrink it before or after the card the overlap is
- *    actually with) or letting it float on top of that card. This is the
- *    scroll-driven part, so it runs directly on the scroll event with no
- *    requestAnimationFrame throttle — modern browsers already coalesce
- *    scroll dispatch to frame timing, so an extra rAF hop here only adds a
- *    frame of lag for work this cheap; all rects are read up front before
- *    any style is written, so there's no read/write layout thrashing
- *    either.
- * 3. Scroll mirroring — the browser already routes wheel/trackpad
+ *    that point.
+ * 3. The dock — a two-state flip, not a gradual scroll-linked slide,
+ *    triggered exactly at the page's true scroll limit (not merely close
+ *    to it) so that by the time it fires there's nowhere left to scroll —
+ *    the scrollbar is already at the bottom, not just visually near it
+ *    with room left to keep scrolling underneath the (now-covering)
+ *    overlay without anything changing. At that point:
+ *      - `.contact-overlay` (see Contact.astro) fades into view — a
+ *        `position: fixed`, full-viewport, opaque panel holding the
+ *        "Contact" title and both contact cards, completely immune to
+ *        further scrolling since it isn't in document flow at all. No
+ *        scroll clamping needed to hold it in place, and nothing is left
+ *        showing behind it to separately animate away — its own opaque
+ *        background covers that.
+ *      - The fixed panel animates from its resting size/position down onto
+ *        the position of the (permanently invisible — see Contact.astro)
+ *        header sitting inside the overlay, directly above that side's
+ *        contact card — landing exactly on it and simply staying there,
+ *        tags/hobbies clipped away in the same motion. There's
+ *        deliberately no second header ever shown inside the overlay
+ *        itself, and so nothing to reveal or time: the fixed panel's own
+ *        header is the only one that ever exists on screen, continuously
+ *        visible for its entire slide from resting spot to landing spot.
+ *    Scrolling back up even slightly undoes this — the panel's own CSS
+ *    transition (`top`/`max-height`, see the .astro file) handles the
+ *    reverse slide the same way.
+ *
+ *    Reading the header's position to land on (see updateDock below) is
+ *    deliberately not a direct getBoundingClientRect() reading taken at
+ *    face value. .contact-overlay animates its own reveal by transitioning
+ *    `top` (from fully off-screen below to its resting position, see
+ *    Contact.astro) — and a getBoundingClientRect() taken on it, or on
+ *    anything inside it, immediately after toggling the class that starts
+ *    that transition, isn't guaranteed to reflect the transition's target
+ *    value in every browser; some report the pre-transition value until an
+ *    actual render has happened, however synchronous the read looks in
+ *    the code. Earlier versions here tried "solving" that by forcing the
+ *    overlay's animated property to its resting value right before
+ *    measuring, which turned out to silently not work at all — the fixed
+ *    panel's header kept landing roughly a full viewport-height too far
+ *    down (genuinely off-screen) no matter how the reveal *timing* got
+ *    adjusted, because the timing was never the actual bug.
+ *
+ *    The fix that's actually robust to this: never trust the overlay's
+ *    own absolute measured position. The header's position *relative to*
+ *    the overlay it's inside is unaffected — that internal offset comes
+ *    entirely from ordinary, non-animated layout — so this reads that
+ *    relative offset and adds it to the overlay's target resting position,
+ *    which is computed directly from its own CSS custom properties
+ *    (`--contact-reveal-feather`) and the viewport height rather than
+ *    measured off the (potentially not-yet-settled) element at all.
+ * 4. Scroll mirroring — the browser already routes wheel/trackpad
  *    scrolling to whichever scrollable element (.side-panel-scroll) the
  *    cursor is over natively; this just replays the same scrollTop on the
  *    other side's scroll area, so both panels always move together
  *    regardless of which one was actually scrolled. overscroll-behavior:
  *    contain (in CSS) stops either one from handing scroll off to the page
  *    once it hits its own top/bottom.
+ *
+ * All rect reads happen before any style write within a given update, so
+ * there's no read/write layout thrashing; the scroll-driven update runs
+ * directly on the scroll event with no requestAnimationFrame throttle,
+ * since modern browsers already coalesce scroll dispatch to frame timing
+ * and this work is cheap enough not to need it.
  */
 
 const DESKTOP = window.matchMedia('(min-width: 901px)');
@@ -42,36 +84,58 @@ const DESKTOP = window.matchMedia('(min-width: 901px)');
 interface PanelPair {
 	column: HTMLElement;
 	panel: HTMLElement;
-	/** That side's own PersonContactCard in the Contact section — the panel
-	 * shrinks to keep clear of this specific element as it rises into view. */
-	endTrigger: HTMLElement | null;
+	header: HTMLElement | null;
+	/** That side's own permanently-invisible header inside .contact-overlay
+	 * — purely a layout/measurement anchor (see the file-level comment
+	 * above); the fixed panel's own header lands on its position and stays,
+	 * this one is never itself shown. */
+	dockTarget: HTMLElement | null;
+	/** The LinkedIn/email card directly below dockTarget — parked out of
+	 * sight (see PersonContactCard.astro) until the dock triggers, so it
+	 * doesn't just quietly appear alongside the rest of the overlay. */
+	contactCard: HTMLElement | null;
 }
 
-function getPanelPair(columnSelector: string, endTriggerSelector: string): PanelPair | null {
+function getPanelPair(columnSelector: string, contactPersonSelector: string): PanelPair | null {
 	const column = document.querySelector<HTMLElement>(columnSelector);
 	const panel = column?.querySelector<HTMLElement>('.side-panel') ?? null;
 	if (!column || !panel) return null;
-	const endTrigger = document.querySelector<HTMLElement>(endTriggerSelector);
-	return { column, panel, endTrigger };
+	const header = panel.querySelector<HTMLElement>('.person-header');
+	const contactPerson = document.querySelector<HTMLElement>(contactPersonSelector);
+	const dockTarget = contactPerson?.querySelector<HTMLElement>('.person-header') ?? null;
+	const contactCard = contactPerson?.querySelector<HTMLElement>('.contact-card') ?? null;
+	return { column, panel, header, dockTarget, contactCard };
 }
 
-// Mitko's contact card is the first child of #contact's grid, Ádám's the
-// last — see Contact.astro.
-const left = getPanelPair('.scrolly-col--left', '#contact .contact-grid > :first-child');
-const right = getPanelPair('.scrolly-col--right', '#contact .contact-grid > :last-child');
+// Mitko's contact group is the first child of the overlay's grid, Ádám's
+// the last — see Contact.astro.
+const left = getPanelPair('.scrolly-col--left', '#contact-overlay .contact-grid > :first-child');
+const right = getPanelPair('.scrolly-col--right', '#contact-overlay .contact-grid > :last-child');
 const pairs = [left, right].filter((p): p is PanelPair => p !== null);
+
+const contactOverlay = document.getElementById('contact-overlay');
 
 // The Timeline's very first entry (currently Black Hole Entertainment for
 // Ádám / Ericsson Hungary for Mitko) — the panels' visibility trigger.
 const firstTimelineEntry = document.querySelector<HTMLElement>('#timeline .timeline > :first-child');
 
-function remToPx(rem: number): number {
-	return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
-}
+// Small tolerance for the fractional-pixel rounding some browsers produce
+// right at the scroll limit — not a gradual approach zone.
+const AT_BOTTOM_TOLERANCE = 1.5;
 
-// Matches .side-panel's own `top: 6rem` in the .astro file.
-const PANEL_TOP = remToPx(6);
-const GAP = 5;
+/**
+ * .contact-overlay's own resting `top` once revealed, computed directly
+ * from its --contact-reveal-feather custom property rather than measured
+ * off the element — see the file-level comment above for why measuring it
+ * mid-transition can't be trusted. Matches Contact.astro's
+ * `.contact-overlay.is-revealed { top: calc(-1 * var(--contact-reveal-feather)); }`
+ * exactly; if that formula ever changes there, it needs to change here too.
+ */
+function getOverlayRestingTop(): number {
+	if (!contactOverlay) return 0;
+	const feather = parseFloat(getComputedStyle(contactOverlay).getPropertyValue('--contact-reveal-feather')) || 0;
+	return -feather;
+}
 
 function updatePositions(): void {
 	if (!DESKTOP.matches) return;
@@ -84,38 +148,100 @@ function updatePositions(): void {
 	});
 }
 
-function updateHeights(): void {
+// Whether the previous call left things docked — see the `force` param on
+// updateDock below for why this matters.
+let wasAtBottom = false;
+
+/**
+ * `force`: recompute and re-apply everything regardless of whether the
+ * docked/not-docked state actually changed. Scroll events (the common
+ * case, firing many times a second while scrolling) omit this, since
+ * nothing here is scroll-position-dependent once docked — .contact-overlay
+ * is `position: fixed`, so its own layout never moves once settled.
+ * Recomputing anyway, every single scroll tick, while already stably
+ * docked, was a real bug in an earlier version: unnecessary repeated style
+ * writes read as the panels/cards jittering while scrolling rather than
+ * staying put. Resize and the desktop/mobile breakpoint flip do pass
+ * `force`, since geometry can genuinely change there even without a
+ * docked/undocked transition.
+ */
+function updateDock(force = false): void {
 	if (!DESKTOP.matches) return;
 
 	const startRect = firstTimelineEntry?.getBoundingClientRect();
 	const reachedStart = startRect ? startRect.top < window.innerHeight : true;
 
+	// Basic visibility always reflects reachedStart immediately, every
+	// call — cheap, idempotent, and not part of the "skip if nothing
+	// changed" optimization below. That optimization is specifically about
+	// the docking logic further down (panel top/max-height) being
+	// expensive and jitter-prone to redo every scroll tick; gating this
+	// too would mean scrolling back up without ever having reached the
+	// dock (wasAtBottom already false) skips hiding the panel entirely,
+	// since "false → false" looks like no change even though
+	// reachedStart itself just flipped.
+	pairs.forEach(({ panel }) => panel.classList.toggle('is-active', reachedStart));
+
 	if (!reachedStart) {
-		pairs.forEach(({ panel }) => {
-			panel.classList.remove('is-active');
-			panel.style.maxHeight = '';
-		});
+		if (force || wasAtBottom) {
+			pairs.forEach(({ panel, contactCard }) => {
+				panel.classList.remove('is-docked');
+				panel.style.top = '';
+				panel.style.maxHeight = '';
+				contactCard?.classList.remove('is-revealed');
+			});
+			contactOverlay?.classList.remove('is-revealed');
+		}
+		wasAtBottom = false;
 		return;
 	}
 
-	const fullHeight = window.innerHeight - remToPx(8);
-	// Read first...
-	const endRects = pairs.map(({ endTrigger }) => endTrigger?.getBoundingClientRect());
+	const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+	const atBottom = window.scrollY >= maxScroll - AT_BOTTOM_TOLERANCE;
+
+	if (!force && atBottom === wasAtBottom) return;
+	wasAtBottom = atBottom;
+
+	contactOverlay?.classList.toggle('is-revealed', atBottom);
+
+	// Read first — dockTarget's position AND the overlay's own, so the
+	// relative offset between them (immune to the overlay's own position
+	// not being trustworthy mid-transition — see the file-level comment
+	// above) can be computed below.
+	const overlayRect = contactOverlay?.getBoundingClientRect();
+	const dockRects = pairs.map(({ dockTarget }) => dockTarget?.getBoundingClientRect());
+	const overlayRestingTop = getOverlayRestingTop();
 	// ...then write.
-	pairs.forEach(({ panel }, i) => {
-		const endRect = endRects[i];
-		const available = endRect ? endRect.top - PANEL_TOP - GAP : fullHeight;
-		const height = Math.max(0, Math.min(fullHeight, available));
-		panel.classList.add('is-active');
-		panel.style.maxHeight = `${height}px`;
+	pairs.forEach(({ panel, header, contactCard }, i) => {
+		const dockRect = dockRects[i];
+		if (atBottom && dockRect && overlayRect) {
+			// Land exactly on the (permanently invisible) header's position
+			// waiting in the overlay, and just stay there — see the
+			// file-level comment above for why nothing else needs revealing.
+			const relativeOffset = dockRect.top - overlayRect.top;
+			const headerHeight = header?.getBoundingClientRect().height ?? dockRect.height;
+			panel.classList.add('is-docked');
+			panel.style.top = `${overlayRestingTop + relativeOffset}px`;
+			panel.style.maxHeight = `${headerHeight}px`;
+			contactCard?.classList.add('is-revealed');
+		} else {
+			panel.classList.remove('is-docked');
+			panel.style.top = '';
+			panel.style.maxHeight = '';
+			contactCard?.classList.remove('is-revealed');
+		}
 	});
 }
 
 if (pairs.length > 0) {
 	updatePositions();
-	updateHeights();
+	updateDock(true);
 
-	window.addEventListener('scroll', updateHeights, { passive: true });
+	// Plain `updateDock` (not wrapped) would receive the scroll Event as
+	// its `force` argument — truthy, so `force` would always evaluate to
+	// true and defeat the whole point of that parameter. Force is only
+	// ever meant to come from resize/breakpoint handlers below.
+	window.addEventListener('scroll', () => updateDock(), { passive: true });
 
 	let resizeQueued = false;
 	window.addEventListener('resize', () => {
@@ -124,13 +250,13 @@ if (pairs.length > 0) {
 		requestAnimationFrame(() => {
 			resizeQueued = false;
 			updatePositions();
-			updateHeights();
+			updateDock(true);
 		});
 	});
 
 	DESKTOP.addEventListener('change', () => {
 		updatePositions();
-		updateHeights();
+		updateDock(true);
 	});
 }
 
