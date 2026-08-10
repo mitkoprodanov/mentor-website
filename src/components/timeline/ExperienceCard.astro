@@ -44,6 +44,12 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 		border: 1px solid var(--border);
 		border-radius: 14px;
 		padding: 1.1rem 1.25rem;
+		/* Grid contexts (ProjectRow's .experience-row) ignore this; flex
+		   contexts (ApartBlock's .cards) use it to grow and fill a company
+		   box that syncApartHeights.client.ts stretched taller than this
+		   card's own natural content — see the chain of flex:1 in
+		   ApartBlock.astro's .track-projects/.track-row/.cards. */
+		flex: 1;
 	}
 
 	/* Pinned to their own column explicitly — not just left-to-right DOM

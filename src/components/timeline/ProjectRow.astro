@@ -38,8 +38,26 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 		'project-row--boxed': Boolean(project.name),
 		'project-row--solo-left': singleSide === 'left',
 		'project-row--solo-right': singleSide === 'right',
+		'project-row--tall': Boolean(project.rowSpan),
+		'project-row--square-bottom-right': Boolean(project.squareBottomRight),
+		'project-row--bridge-left': Boolean(project.bridgeLeft),
 	}}
+	style={project.rowSpan ? `grid-row: span ${project.rowSpan};` : undefined}
 >
+	{
+		project.bridgeLeft && (
+			// The concave step at this fill's top-left (see the comment on
+			// .project-row--square-bottom-right below) needs a corner that
+			// curves down from the rowSpan neighbor's edge above, then bends
+			// into the flat fill below — exact enough that plain CSS
+			// border-radius corner tricks kept landing on the wrong curve.
+			// Drawn directly as an arc instead of approximated.
+			<svg class="bridge-curve" viewBox="0 0 20 16" preserveAspectRatio="none" aria-hidden="true">
+				<path class="bridge-curve-fill" d="M 0 0 A 16 16 0 0 0 16 16 L 0 16 Z" />
+				<path class="bridge-curve-stroke" d="M 0 0 A 16 16 0 0 0 16 16 L 20 16" />
+			</svg>
+		)
+	}
 	{
 		project.name && (
 			<div class="node">
@@ -175,16 +193,138 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 		grid-template-columns: 1fr;
 	}
 
+	/* .company-projects (the parent grid) aligns items to the start of
+	   their cell by default, so a row-spanning card (see ProjectDef.rowSpan)
+	   would otherwise only be as tall as its own content and leave the rest
+	   of its spanned cell empty instead of visually reaching the row it's
+	   meant to run alongside. Stretching this item to the cell's full
+	   height, then growing .experience-row to fill the remaining space
+	   below the node label, lets the card itself (a grid item of
+	   .experience-row, `align-items` there defaulting to stretch too) fill
+	   that height in turn. */
+	.project-row--tall {
+		align-self: stretch;
+	}
+
+	.project-row--tall .experience-row {
+		flex: 1;
+	}
+
+	/* Drops the corner radius *and* the border line on the side touching a
+	   `bridgeLeft` neighbor's fill (below) — trying to keep that line and
+	   paint over it from the adjoining element was fighting sub-pixel
+	   rounding (the two boxes' independently-laid-out edges don't land on
+	   the exact same fractional pixel, so a hairline kept showing through).
+	   Dropping the line outright removes it at the source instead. Above
+	   the join, where this box sits beside "Beasts of Brawlia" (not
+	   bridged), the gap there now reads with only that box's own left
+	   border, not a doubled line — a harmless, arguably cleaner change
+	   since there's nothing on this side to draw a border against anymore. */
+	.project-row--square-bottom-right.project-row--boxed {
+		border-bottom-right-radius: 0;
+		border-right: none;
+	}
+
+	/* Joins this box to a taller rowSpan card beside it in the other
+	   column: squares off this side's corners, drops the border line that
+	   side (see the comment above), and fills the column gap between them
+	   with a continuation of this box's own background so the pair reads
+	   as one connected shape with no vertical seam anywhere in the join.
+	   Assumes this box's own height already reaches the same bottom edge
+	   as its `squareBottomRight` partner (see ProjectDef.bridgeLeft). */
+	.project-row--bridge-left {
+		position: relative;
+	}
+
+	.project-row--bridge-left.project-row--boxed {
+		border-top-left-radius: 0;
+		border-bottom-left-radius: 0;
+		border-left: none;
+	}
+
+	.project-row--bridge-left.project-row--boxed::before {
+		content: '';
+		position: absolute;
+		/* An absolutely positioned child is offset from its containing
+		   block's *padding* edge, not its border edge — since this box is
+		   border-box with a 1px border, top/bottom: 0 would sit 1px inside
+		   the box's own border line, kinking the seam where the two borders
+		   are meant to run flush as one straight line. -1px cancels that. */
+		top: -1px;
+		bottom: -1px;
+		left: -1.25rem;
+		width: 1.25rem;
+		background: var(--bg);
+		border-bottom: 1px solid var(--border);
+		/* No border-top here — the curve's own SVG stroke (above) draws the
+		   whole top line, arc included, so this fill doesn't also draw a
+		   second, plain straight one underneath it. Two independently laid
+		   out elements (an SVG path and a CSS border) rarely land on the
+		   exact same fractional pixel, so relying on one to fully hide the
+		   other left a hairline of the straight line poking out past the
+		   curve — the same lesson as the border-right/border-left removal
+		   below. */
+	}
+
+	/* The concave step (see the comment on .project-row--square-bottom-right
+	   above) sits right at this fill's top-left corner, where the rowSpan
+	   neighbor's own edge keeps going straight up, unbridged, above where
+	   this fill starts. This arc (see the SVG in the markup above) rounds
+	   *that* transition: it comes down from the neighbor's edge above,
+	   then bends right into the fill's flat top border below — sitting
+	   flush on top of the fill's left end. */
+	.bridge-curve {
+		position: absolute;
+		top: calc(-1px - 16px);
+		left: -1.25rem;
+		width: 1.25rem;
+		height: 16px;
+		overflow: visible;
+	}
+
+	.bridge-curve-fill {
+		fill: var(--bg);
+		stroke: none;
+	}
+
+	.bridge-curve-stroke {
+		fill: none;
+		stroke: var(--border);
+		stroke-width: 1px;
+		vector-effect: non-scaling-stroke;
+	}
+
 	@media (max-width: 900px) {
 		.experience-row {
 			grid-template-columns: 1fr;
 		}
 
 		/* On narrow screens the grid is a single column, so solo projects span
-		   it like everything else. */
+		   it like everything else, and a row-spanning card (see
+		   ProjectDef.rowSpan) has nothing on the side to run tall alongside —
+		   the inline `grid-row` from rowSpan is overridden back to normal. */
 		.project-row--solo-left,
 		.project-row--solo-right {
 			grid-column: 1 / -1;
+			grid-row: auto !important;
+		}
+
+		/* The two boxes stack full-width instead of sitting side by side, so
+		   there's no column gap left to bridge — drop the fill and let both
+		   corners round, and both border lines draw, normally again. */
+		.project-row--bridge-left.project-row--boxed::before {
+			display: none;
+		}
+
+		.bridge-curve {
+			display: none;
+		}
+
+		.project-row--bridge-left.project-row--boxed,
+		.project-row--square-bottom-right.project-row--boxed {
+			border-radius: 16px;
+			border-left: 1px solid var(--border);
+			border-right: 1px solid var(--border);
 		}
 	}
 </style>

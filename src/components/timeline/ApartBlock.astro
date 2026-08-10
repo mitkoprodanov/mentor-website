@@ -106,6 +106,11 @@ const tracks = await Promise.all(
 				{track.companies.map(({ company, projects }, companyIndex) => (
 					<div
 						class="track-company"
+						data-company-id={company.id}
+						data-stretch-to-middle-of={company.stretchToMiddleOf}
+						data-stretch-near-top-of={company.stretchNearTopOf?.id}
+						data-stretch-gap={company.stretchNearTopOf?.gap}
+						data-align-bottom-to={company.alignBottomTo}
 						class:list={{
 							emphasized: company.underMentor === true,
 							/* Each company is always its own separate, fully-rounded,
@@ -128,7 +133,19 @@ const tracks = await Promise.all(
 						</div>
 						<div class="track-projects">
 							{projects.map(({ project, cards }) => (
-								<div class="track-row" class:list={{ 'track-row--boxed': Boolean(project.name) }}>
+								<div
+								class="track-row"
+								class:list={{
+									'track-row--boxed': Boolean(project.name),
+									/* A boxed row that's the one being stretched (see
+									   CompanyDef.stretchToMiddleOf/stretchNearTopOf/
+									   alignBottomTo) has its own bottom padding stacking on
+									   top of .track-company's, leaving noticeably more dead
+									   space below the card than an unboxed company's single
+									   layer of padding — see .track-row--fill-stretch below. */
+									'track-row--fill-stretch': Boolean(company.stretchToMiddleOf || company.stretchNearTopOf || company.alignBottomTo),
+								}}
+							>
 									{
 										project.name && (
 											<div class="node">
@@ -252,6 +269,8 @@ const tracks = await Promise.all(
 	}
 
 	.track-company {
+		display: flex;
+		flex-direction: column;
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		background: var(--bg-alt);
@@ -334,15 +353,26 @@ const tracks = await Promise.all(
 		text-shadow: 0 0 14px var(--mentor-soft);
 	}
 
+	/* A company stretched taller than its own content by
+	   syncApartHeights.client.ts (see CompanyDef.stretchToMiddleOf) would
+	   otherwise just leave that extra height as blank space below its
+	   content, inside .track-company's own border — flex:1 the whole way
+	   down this chain (.track-projects → .track-row → .cards → .card, the
+	   last of those in ExperienceCard.astro) lets the actual card grow to
+	   fill it instead. A no-op for every other, naturally-sized company:
+	   flex-grow only has anything to distribute when a min-height above it
+	   actually created leftover space. */
 	.track-projects {
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 		gap: 1.25rem;
 	}
 
 	.track-row {
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 		gap: 0.85rem;
 	}
 
@@ -353,9 +383,19 @@ const tracks = await Promise.all(
 		padding: 1rem;
 	}
 
+	/* Drops just the bottom padding a stretched row would otherwise stack on
+	   top of .track-company's own bottom padding below it — matching the
+	   single layer of padding an unboxed company (no project name, like
+	   Mitko's Imagic Labs) ends up with, so a stretched box's card sits the
+	   same distance from its own border as any other company's does. */
+	.track-row--fill-stretch.track-row--boxed {
+		padding-bottom: 0;
+	}
+
 	.cards {
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 		gap: 0.85rem;
 	}
 
@@ -405,3 +445,7 @@ const tracks = await Promise.all(
 		}
 	}
 </style>
+
+<script>
+	import '../../scripts/syncApartHeights.client';
+</script>
