@@ -143,7 +143,7 @@ const afterItems = buildRenderList(after);
 
 <Section id="timeline" title="Timeline" compact>
 	<div class="filter-chip" id="timeline-filter-chip" hidden>
-		<span class="filter-chip-label">Filtered by: <strong id="timeline-filter-chip-skill"></strong></span>
+		<span class="filter-chip-label">Highlighting: <strong id="timeline-filter-chip-skill"></strong></span>
 		<button type="button" class="filter-chip-clear" id="timeline-filter-chip-clear" aria-label="Clear filter">✕</button>
 	</div>
 	<div class="timeline">
@@ -229,38 +229,63 @@ const afterItems = buildRenderList(after);
 		color: var(--bg);
 	}
 
-	/* Filter-collapse transition states — global because they target elements
-	   rendered by CompanyBlock/ApartBlock/ProjectRow/MentorContainer, not just
-	   direct children here. Driven by src/scripts/timelineFilter.client.ts. */
-	:global(.tf-hidden) {
-		display: none !important;
+	/* Tag-filter highlight states — global because they target elements
+	   rendered by CompanyBlock/ApartBlock/ProjectRow/ExperienceCard/
+	   ProjectCard, not just direct children here. Driven by
+	   src/scripts/tagFilter.client.ts, which never hides or reflows
+	   anything: a click just dims everything that doesn't match and rings
+	   everything that does, so the timeline/projects layout never jumps
+	   around while filtering. */
+	:global(.tf-dim) {
+		opacity: 0.32;
+		filter: saturate(0.5);
 	}
 
-	:global(.tf-leaving) {
-		opacity: 0 !important;
-		transform: scale(0.92) !important;
-		transition:
-			opacity 200ms cubic-bezier(0.4, 0, 1, 1),
-			transform 200ms cubic-bezier(0.4, 0, 1, 1) !important;
-		pointer-events: none;
+	/* Rings in that card's own person color (--person-color: set per-card —
+	   ExperienceCard.astro for the timeline, ProjectCard.astro for a
+	   single-person project) rather than one fixed accent, so a highlighted
+	   match visibly reads as "Ádám's work" (yellow) or "Mitko's" (orange) at
+	   a glance, matching the color already used for that person everywhere
+	   else on the page. color-mix() for the soft outer glow instead of a
+	   second hardcoded "-soft" variable per person — this only needs to
+	   dilute whatever --person-color already resolved to, not know its
+	   value. A joint project with no single person falls back to the
+	   general accent (see ProjectCard.astro). 2px ring, not 1px — matching
+	   the weight of the same-color border-left/border-right ExperienceCard
+	   already draws on one edge of every card (see .card--left/.card--right
+	   there), so the highlight reads as that same accent thickening around
+	   the whole card rather than a thinner, mismatched outline next to it. */
+	:global(.tf-match) {
+		box-shadow:
+			0 0 0 2px var(--person-color, var(--accent-3)),
+			0 0 22px 2px color-mix(in srgb, var(--person-color, var(--accent-3)) 20%, transparent);
 	}
 
-	:global(.tf-enter-from) {
-		opacity: 0;
-		transform: scale(0.92);
+	/* The ring above already carries the same person color all the way
+	   around — the card's own accent border on its inner edge (see
+	   ExperienceCard.astro's .card--left/.card--right) is now redundant
+	   right where the two sit closest together, so it fades out rather than
+	   double up with the ring at that edge. Fades back in the instant the
+	   match state does (same transition, see below), not left permanently
+	   off — it's the plain resting look for every card, filtered or not. */
+	:global(.card--left.tf-match) {
+		border-right-color: transparent;
+	}
+
+	:global(.card--right.tf-match) {
+		border-left-color: transparent;
 	}
 
 	:global(.card),
+	:global(.project-card),
 	:global(.node),
-	:global(.project-row),
-	:global(.track-row),
-	:global(.company),
-	:global(.track-company),
-	:global(.apart),
-	:global(.mentor-container) {
+	:global(.company-header),
+	:global(.track-header) {
 		transition:
-			opacity 260ms ease,
-			transform 260ms ease;
+			opacity 300ms ease,
+			filter 300ms ease,
+			box-shadow 300ms ease,
+			border-color 300ms ease;
 	}
 
 	.timeline {

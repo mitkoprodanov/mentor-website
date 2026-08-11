@@ -1,217 +1,64 @@
 /**
  * Single-select WorkTag filter shared by the Timeline and the Projects
- * section. Clicking any linked tag (on a PersonCard or a ProjectCard)
- * collapses whichever of those two sections contain a match down to just
- * the matching entries — everything else fades out first, then the
- * survivors slide smoothly into their new positions (the FLIP technique:
- * record rects before the DOM mutation, then invert-and-play the delta as
- * a transform).
+ * section. Clicking any linked tag highlights every matching card and dims
+ * everything else — nothing hides, nothing reflows. Previously this
+ * collapsed non-matching content out of the layout entirely (FLIP-animated
+ * back together on clear); that made a stronger filter but obscured how
+ * a skill fits into the surrounding timeline, so a click now just draws
+ * the eye instead of rearranging the page.
  *
- * Timeline collapse cascades bottom-up: a `.card` hides if it doesn't match
- * the active tag → its row's `.node` (dot + label) hides if none of that
- * row's cards remain → a `.company`/`.track-company` hides if it has no
- * visible rows → a whole `.track` (one side of an ApartBlock) hides if all
- * its companies are gone (the other track just keeps its own column — the
- * `.apart` grid always stays two columns, whichever side is/isn't visible)
- * → a `.mentor-container` hides if it's left empty.
+ * Only `.card`/`.project-card` actually carry `data-tags` (the person-level
+ * unit of "was this skill used here"). Two structural levels above that,
+ * un-taggable in their own right, dim in step with their content instead
+ * of staying bright over an all-dimmed section:
+ *  - a project/track row's `.node` (dot + name + info) dims once every card
+ *    in that row is dimmed;
+ *  - a company's header dims once every card in that company is dimmed.
+ * Both are siblings of the cards they key off, not ancestors of them, so
+ * their own `opacity` never compounds with a card's.
  *
- * Projects collapse is flat: a `.project-card` hides if it doesn't match.
+ * Also dispatches a `worktagfilter` CustomEvent (detail: the active filter
+ * or null) on every change, for syncSidePanels.client.ts to key its "keep
+ * both side panels open while a filter is active" behavior off of.
+ *
+ * If none of the matches for a newly-picked filter are already on screen,
+ * scrolls to the first one — the Timeline's first matching card if there is
+ * one, otherwise the Projects section if a project matches instead (see
+ * revealMatch). Skipped whenever a match is already visible, so picking a
+ * different tag while looking at a stretch of matches doesn't yank the page
+ * around for no reason.
  */
 
 type Filter = string | null;
 
-const TIMELINE_FLIP_SELECTOR = '.card, .node, .project-row, .track-row, .company, .track-company, .apart, .mentor-container';
-const PROJECTS_SELECTOR = '.project-card';
-
-const EXIT_MS = 200;
-const EXIT_STAGGER_MS = 18;
-const EXIT_STAGGER_CAP = 6;
-const FLIP_MS = 380;
+const CARD_SELECTOR = '.card[data-tags], .project-card[data-tags]';
 
 let currentFilter: Filter = null;
-
-function prefersReducedMotion(): boolean {
-	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 function matchesTags(el: HTMLElement, filter: Filter): boolean {
 	return filter === null || (el.dataset.tags ?? '').split(' ').includes(filter);
 }
 
-function computeHiddenTimelineSet(root: HTMLElement, filter: Filter): Set<Element> {
-	const toHide = new Set<Element>();
-	const emptyRows = new Set<Element>();
-
-	const cards = Array.from(root.querySelectorAll<HTMLElement>('.card[data-tags]'));
+function applyHighlight(filter: Filter) {
+	const cards = Array.from(document.querySelectorAll<HTMLElement>(CARD_SELECTOR));
 	for (const card of cards) {
-		if (!matchesTags(card, filter)) toHide.add(card);
+		const match = matchesTags(card, filter);
+		card.classList.toggle('tf-match', filter !== null && match);
+		card.classList.toggle('tf-dim', filter !== null && !match);
 	}
 
-	const rows = Array.from(root.querySelectorAll<HTMLElement>('.project-row, .track-row'));
-	for (const row of rows) {
-		const rowCards = Array.from(row.querySelectorAll<HTMLElement>('.card'));
-		if (rowCards.length > 0 && rowCards.every((c) => toHide.has(c))) {
-			emptyRows.add(row);
-			toHide.add(row);
-			const node = row.querySelector('.node');
-			if (node) toHide.add(node);
+	function dimIfAllCardsDim(containers: HTMLElement[], headerSelector: string) {
+		for (const container of containers) {
+			const header = container.querySelector<HTMLElement>(headerSelector);
+			if (!header) continue;
+			const cardsIn = Array.from(container.querySelectorAll<HTMLElement>('.card[data-tags]'));
+			const allDim = filter !== null && cardsIn.length > 0 && cardsIn.every((c) => !matchesTags(c, filter));
+			header.classList.toggle('tf-dim', allDim);
 		}
 	}
 
-	const companies = Array.from(root.querySelectorAll<HTMLElement>('.company, .track-company'));
-	for (const company of companies) {
-		const rowsIn = Array.from(company.querySelectorAll<HTMLElement>('.project-row, .track-row'));
-		if (rowsIn.length > 0 && rowsIn.every((r) => emptyRows.has(r))) toHide.add(company);
-	}
-
-	const tracks = Array.from(root.querySelectorAll<HTMLElement>('.track'));
-	for (const track of tracks) {
-		const companiesIn = Array.from(track.querySelectorAll<HTMLElement>(':scope > .track-company'));
-		if (companiesIn.length > 0 && companiesIn.every((c) => toHide.has(c))) toHide.add(track);
-	}
-
-	const aparts = Array.from(root.querySelectorAll<HTMLElement>('.apart'));
-	for (const apart of aparts) {
-		const tracksIn = Array.from(apart.querySelectorAll<HTMLElement>(':scope > .track'));
-		const visible = tracksIn.filter((t) => !toHide.has(t));
-		if (tracksIn.length > 0 && visible.length === 0) toHide.add(apart);
-	}
-
-	const mentors = Array.from(root.querySelectorAll<HTMLElement>('.mentor-container'));
-	for (const mentor of mentors) {
-		const content = mentor.querySelector<HTMLElement>('.mentor-content');
-		const entries = content ? Array.from(content.children).filter((c) => c.classList.contains('company') || c.classList.contains('apart')) : [];
-		const visible = entries.filter((e) => !toHide.has(e));
-		if (entries.length > 0 && visible.length === 0) toHide.add(mentor);
-	}
-
-	return toHide;
-}
-
-function computeHiddenProjectsSet(root: HTMLElement, filter: Filter): Set<Element> {
-	const toHide = new Set<Element>();
-	const cards = Array.from(root.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`));
-	for (const card of cards) {
-		if (!matchesTags(card, filter)) toHide.add(card);
-	}
-	return toHide;
-}
-
-function flipStayersAndRevealEnterers(staying: HTMLElement[], beforeRects: Map<HTMLElement, DOMRect>, entering: HTMLElement[]) {
-	requestAnimationFrame(() => {
-		staying.forEach((el) => {
-			const before = beforeRects.get(el);
-			if (!before) return;
-			const after = el.getBoundingClientRect();
-			const dx = before.left - after.left;
-			const dy = before.top - after.top;
-			if (dx || dy) {
-				el.style.transition = 'none';
-				el.style.transform = `translate(${dx}px, ${dy}px)`;
-				void el.offsetWidth;
-			}
-		});
-
-		requestAnimationFrame(() => {
-			staying.forEach((el) => {
-				if (!beforeRects.has(el)) return;
-				el.style.transition = `transform ${FLIP_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-				el.style.transform = '';
-			});
-			entering.forEach((el) => el.classList.remove('tf-enter-from'));
-
-			window.setTimeout(() => {
-				staying.forEach((el) => {
-					el.style.transition = '';
-				});
-			}, FLIP_MS + 50);
-		});
-	});
-}
-
-function applyFilter(
-	root: HTMLElement,
-	filter: Filter,
-	opts: {
-		computeHidden: (root: HTMLElement, filter: Filter) => Set<Element>;
-		flipSelector: string;
-		animatedSelector: string;
-		onApplied?: (toHide: Set<Element>) => void;
-	},
-) {
-	const toHide = opts.computeHidden(root, filter);
-	const animated = Array.from(root.querySelectorAll<HTMLElement>(opts.animatedSelector));
-
-	if (prefersReducedMotion()) {
-		animated.forEach((el) => el.classList.toggle('tf-hidden', toHide.has(el)));
-		opts.onApplied?.(toHide);
-		return;
-	}
-
-	const leaving: HTMLElement[] = [];
-	const entering: HTMLElement[] = [];
-	const staying: HTMLElement[] = [];
-
-	for (const el of animated) {
-		const wasHidden = el.classList.contains('tf-hidden');
-		const willHide = toHide.has(el);
-		if (!wasHidden && willHide) leaving.push(el);
-		else if (wasHidden && !willHide) entering.push(el);
-		else if (!wasHidden && !willHide) staying.push(el);
-	}
-
-	const beforeRects = new Map<HTMLElement, DOMRect>();
-	staying.filter((el) => el.matches(opts.flipSelector)).forEach((el) => beforeRects.set(el, el.getBoundingClientRect()));
-
-	if (leaving.length === 0) {
-		entering.forEach((el) => {
-			el.classList.remove('tf-hidden');
-			el.classList.add('tf-enter-from');
-		});
-		opts.onApplied?.(toHide);
-		flipStayersAndRevealEnterers(staying, beforeRects, entering);
-		return;
-	}
-
-	leaving.forEach((el, i) => {
-		const delay = Math.min(i, EXIT_STAGGER_CAP) * EXIT_STAGGER_MS;
-		el.style.transitionDelay = `${delay}ms`;
-		el.classList.add('tf-leaving');
-	});
-	const maxStagger = Math.min(leaving.length - 1, EXIT_STAGGER_CAP) * EXIT_STAGGER_MS;
-
-	window.setTimeout(
-		() => {
-			leaving.forEach((el) => {
-				el.classList.remove('tf-leaving');
-				el.classList.add('tf-hidden');
-				el.style.transitionDelay = '';
-			});
-			entering.forEach((el) => {
-				el.classList.remove('tf-hidden');
-				el.classList.add('tf-enter-from');
-			});
-			opts.onApplied?.(toHide);
-			flipStayersAndRevealEnterers(staying, beforeRects, entering);
-		},
-		EXIT_MS + maxStagger,
-	);
-}
-
-function applyTimelineFilter(root: HTMLElement, filter: Filter) {
-	applyFilter(root, filter, {
-		computeHidden: computeHiddenTimelineSet,
-		flipSelector: TIMELINE_FLIP_SELECTOR,
-		animatedSelector: TIMELINE_FLIP_SELECTOR,
-	});
-}
-
-function applyProjectsFilter(root: HTMLElement, filter: Filter) {
-	applyFilter(root, filter, {
-		computeHidden: computeHiddenProjectsSet,
-		flipSelector: PROJECTS_SELECTOR,
-		animatedSelector: PROJECTS_SELECTOR,
-	});
+	dimIfAllCardsDim(Array.from(document.querySelectorAll<HTMLElement>('.project-row, .track-row')), '.node');
+	dimIfAllCardsDim(Array.from(document.querySelectorAll<HTMLElement>('.company, .track-company')), '.company-header, .track-header');
 }
 
 function setTagPressedState(filter: Filter) {
@@ -237,28 +84,70 @@ function updateChip(chipId: string, labelId: string, filter: Filter) {
 	}
 }
 
+function prefersReducedMotion(): boolean {
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Fully contained, not just some overlap with the viewport — a match
+// that's cut off along any edge still triggers the scroll below, same as
+// one that's not on screen at all. The fixed navbar covers the strip right
+// at the top of the viewport (y: 0 to its own height), so a card whose top
+// edge only clears y=0 can still be sitting *behind* it — the effective top
+// edge for "visible" is the navbar's own bottom, not the viewport's.
+function isFullyInViewport(el: HTMLElement): boolean {
+	const rect = el.getBoundingClientRect();
+	const navbar = document.querySelector<HTMLElement>('.navbar');
+	const topInset = navbar ? navbar.getBoundingClientRect().bottom : 0;
+	return rect.top >= topInset && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+}
+
+function revealMatch(filter: string) {
+	// A Timeline match takes priority when a tag matches both — it's the
+	// primary content, and the more specific "first matching card" scroll
+	// (below) also just reads better there than Projects' plainer "scroll
+	// to the section" fallback.
+	// Scope each branch of CARD_SELECTOR to #timeline individually —
+	// `` `#timeline ${CARD_SELECTOR}` `` would silently only scope the
+	// first one, since a comma inside an interpolated selector starts a
+	// whole new, unscoped compound selector rather than joining onto the
+	// prefix. Moot in practice today (only ExperienceCard's `.card` actually
+	// lives inside #timeline; ProjectCard's are always elsewhere and just
+	// happen to carry a `.card` class too), but relying on that coincidence
+	// would leave a trap for whenever it stops being true.
+	const timelineMatches = Array.from(document.querySelectorAll<HTMLElement>('#timeline .card[data-tags], #timeline .project-card[data-tags]')).filter((card) =>
+		matchesTags(card, filter),
+	);
+	if (timelineMatches.length > 0) {
+		if (!timelineMatches.some(isFullyInViewport)) {
+			timelineMatches[0].scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+		}
+		return;
+	}
+
+	const projectsRoot = document.getElementById('projects');
+	if (!projectsRoot) return;
+	const hasMatchingProject = Array.from(projectsRoot.querySelectorAll<HTMLElement>('.project-card[data-tags]')).some((card) => matchesTags(card, filter));
+	if (hasMatchingProject) {
+		projectsRoot.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+	}
+}
+
 function setFilter(filter: Filter) {
 	currentFilter = filter;
 
-	const timelineRoot = document.getElementById('timeline');
-	if (timelineRoot) applyTimelineFilter(timelineRoot, filter);
-
-	const projectsRoot = document.getElementById('projects');
-	if (projectsRoot) applyProjectsFilter(projectsRoot, filter);
+	applyHighlight(filter);
 
 	document.body.classList.toggle('filter-active', filter !== null);
 	setTagPressedState(filter);
 
+	// syncSidePanels.client.ts keeps both side panels open (not just
+	// hover-revealed) for as long as a filter is active — see the listener
+	// there for why.
+	window.dispatchEvent(new CustomEvent<Filter>('worktagfilter', { detail: filter }));
+
 	updateChip('timeline-filter-chip', 'timeline-filter-chip-skill', filter);
 
-	if (filter && projectsRoot) {
-		const hasMatchingProject = Array.from(projectsRoot.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`)).some((card) =>
-			(card.dataset.tags ?? '').split(' ').includes(filter),
-		);
-		if (hasMatchingProject) {
-			projectsRoot.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
-		}
-	}
+	if (filter) revealMatch(filter);
 }
 
 function init() {
@@ -270,6 +159,20 @@ function init() {
 			const tagId = tagButton.dataset.tagId;
 			if (!tagId) return;
 			setFilter(currentFilter === tagId ? null : tagId);
+			// Every linked tag lives inside a side panel (see PersonCard.astro),
+			// which ScrollyRegion.astro keeps open via `.side-panel:focus-within`
+			// as a fallback for keyboard users tabbing in — independent of, and
+			// blind to, the mouse-hover/filter-driven `is-hovered` class syncSide
+			// Panels.client.ts manages. A mouse click focuses the button same as
+			// activating it by keyboard does, so without this, that fallback
+			// alone kept this exact panel open after moving the mouse away and
+			// clearing the filter, since focus just... stayed, for no reason
+			// anymore. Blurring here doesn't undo the fallback's actual job —
+			// tabbing *to* the button still reveals the panel *before* this ever
+			// runs — it only lets go once the button's already been activated,
+			// when is-hovered (via the worktagfilter dispatch just above) is
+			// already covering the same job.
+			tagButton.blur();
 			return;
 		}
 

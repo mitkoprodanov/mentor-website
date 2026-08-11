@@ -7,9 +7,15 @@ interface Props {
 }
 
 const { project } = Astro.props;
+
+// Only a single-person project has one unambiguous person color to key its
+// tf-match filter-highlight ring off (see the shared rule in
+// Timeline.astro) — a joint project falls back to the general accent,
+// same as it always rendered before that rule existed.
+const personColor = project.people?.length === 1 ? `var(--${project.people[0]}-color)` : 'var(--accent-3)';
 ---
 
-<div class="card project-card" data-project-id={project.id} data-tags={project.tagIds.join(' ')}>
+<div class="card project-card" data-project-id={project.id} data-tags={project.tagIds.join(' ')} style={`--person-color: ${personColor}`}>
 	<div class="project-header">
 		<h4>{project.name}</h4>
 		{

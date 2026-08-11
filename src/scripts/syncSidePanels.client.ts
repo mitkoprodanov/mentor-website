@@ -307,6 +307,16 @@ if (left && right) {
  * on both, since the pair reads as one unit and popping in just whichever
  * side was actually hovered looked lopsided in practice.
  *
+ * A `worktagfilter` event (see tagFilter.client.ts) counts as "hovered" too,
+ * for as long as the filter stays active — clicking a skill on one side
+ * shouldn't collapse the *other* side back down while it's exactly the
+ * comparison a filter is for, and the open state needs to survive the
+ * mouse actually leaving, or navigating away to another section (`.
+ * is-active` above going false and true again) and back, not just the
+ * instant of the click. Since `isAnyHovered()` is the single source both
+ * the hide-timer and every direct `setHovered` call already key off, this
+ * is the one place that needs to know about it.
+ *
  * Driven by JS rather than a pure-CSS `:hover`/`:has()` combinator so that
  * hovering any of the four tracked elements (both zones, both panels) can
  * consistently drive the *same* two panels, and so a short grace delay can
@@ -316,11 +326,12 @@ if (left && right) {
  */
 const hoverTargets = [leftZone, rightZone, left?.panel, right?.panel].filter((el): el is HTMLElement => el instanceof HTMLElement);
 
-if (hoverTargets.length > 0) {
+if (pairs.length > 0) {
 	let hideTimer: ReturnType<typeof setTimeout> | null = null;
+	let filterActive = false;
 
 	function isAnyHovered(): boolean {
-		return hoverTargets.some((el) => el.matches(':hover'));
+		return filterActive || hoverTargets.some((el) => el.matches(':hover'));
 	}
 
 	function setHovered(hovered: boolean): void {
@@ -349,6 +360,11 @@ if (hoverTargets.length > 0) {
 		el.addEventListener('mouseenter', scheduleHoverUpdate);
 		el.addEventListener('mouseleave', scheduleHoverUpdate);
 	});
+
+	window.addEventListener('worktagfilter', ((event: CustomEvent<string | null>) => {
+		filterActive = event.detail !== null;
+		scheduleHoverUpdate();
+	}) as EventListener);
 }
 
 export {};
