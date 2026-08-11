@@ -186,8 +186,12 @@ const afterItems = buildRenderList(after);
 		padding: 0.5rem 0.5rem 0.5rem 1rem;
 		border-radius: 999px;
 		background: var(--bg-alt);
-		border: 1px solid var(--accent-3);
-		box-shadow: 0 0 16px 2px var(--accent-soft);
+		/* --project-dot, not either person's accent or --mentor — a
+		   highlight is neither person-specific nor era-specific, so it gets
+		   the one color on the page that's already deliberately neutral of
+		   both (see its own definition in Layout.astro). */
+		border: 1px solid var(--project-dot);
+		box-shadow: 0 0 16px 2px var(--project-dot-soft);
 		font-size: 0.85rem;
 		transition:
 			opacity 220ms ease,
@@ -207,7 +211,7 @@ const afterItems = buildRenderList(after);
 	}
 
 	.filter-chip-label strong {
-		color: var(--accent-3);
+		color: var(--project-dot);
 	}
 
 	.filter-chip-clear {
@@ -217,7 +221,7 @@ const afterItems = buildRenderList(after);
 		height: 1.5rem;
 		border-radius: 50%;
 		border: none;
-		background: var(--accent-soft);
+		background: var(--project-dot-soft);
 		color: var(--fg);
 		cursor: pointer;
 		font-size: 0.75rem;
@@ -225,7 +229,7 @@ const afterItems = buildRenderList(after);
 	}
 
 	.filter-chip-clear:hover {
-		background: var(--accent-3);
+		background: var(--project-dot);
 		color: var(--bg);
 	}
 

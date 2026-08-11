@@ -21,25 +21,34 @@ const { label, linked = false, tagId } = Astro.props;
 }
 
 <style>
+	/* This component only ever renders inside PersonCard.astro, itself
+	   always inside ScrollyRegion.astro's .side-panel — --person-color is
+	   set once there (Mitko's orange, Ádám's yellow) and inherits straight
+	   down, so every tag pill's color follows whichever side it's on
+	   instead of one fixed color for both. color-mix() dilutes it for the
+	   soft/tinted variants instead of needing separate hand-picked "-soft"
+	   colors per person. --accent-3 is a defensive fallback only — there's
+	   no real case where --person-color isn't already in scope. */
 	.tag {
 		font-size: 0.75rem;
 		padding: 0.25rem 0.6rem;
 		border-radius: 999px;
-		background: var(--accent-soft);
-		color: var(--accent-3);
-		border: 1px solid rgba(255, 122, 0, 0.3);
+		background: color-mix(in srgb, var(--person-color, var(--accent-3)) 15%, transparent);
+		color: var(--person-color, var(--accent-3));
+		border: 1px solid color-mix(in srgb, var(--person-color, var(--accent-3)) 30%, transparent);
 		/* Long labels (e.g. award names) wrap onto multiple lines inside the
 		   pill instead of forcing it wider than its container — max-width
 		   keeps the pill itself from ever exceeding the row it sits in. */
 		max-width: 100%;
 		white-space: normal;
 		overflow-wrap: break-word;
+		transition: opacity 0.2s ease;
 	}
 
 	button.tag {
 		font-family: inherit;
 		cursor: pointer;
-		text-decoration: underline dotted rgba(255, 209, 102, 0.5);
+		text-decoration: underline dotted color-mix(in srgb, var(--person-color, var(--accent-3)) 50%, transparent);
 		text-underline-offset: 3px;
 		transition:
 			opacity 0.2s ease,
@@ -49,24 +58,31 @@ const { label, linked = false, tagId } = Astro.props;
 	}
 
 	button.tag:hover {
-		background: var(--accent-3);
+		background: var(--person-color, var(--accent-3));
 		color: var(--bg);
 	}
 
 	button.tag:focus-visible {
-		outline: 2px solid var(--accent-3);
+		outline: 2px solid var(--person-color, var(--accent-3));
 		outline-offset: 2px;
 	}
 
 	button.tag[aria-pressed='true'] {
-		background: var(--accent-3);
+		background: var(--person-color, var(--accent-3));
 		color: var(--bg);
 		text-decoration: none;
 		transform: scale(1.05);
-		box-shadow: 0 0 12px 2px var(--accent-soft);
+		box-shadow: 0 0 12px 2px color-mix(in srgb, var(--person-color, var(--accent-3)) 45%, transparent);
 	}
 
-	:global(body.filter-active) button.tag:not([aria-pressed='true']) {
-		opacity: 0.45;
+	/* While a filter is active, a clickable-but-unselected tag (another
+	   skill you could switch to) stays at full brightness — it's still a
+	   live option. A plain, unlinked tag (data/tags.ts has it, but nothing
+	   anywhere is actually tagged with it, so PersonCard never makes it a
+	   button — see linkedTagIds there) has nothing to switch to, so it's
+	   the one that dims instead: previously this was backwards, dimming
+	   every real option and leaving dead labels at full brightness. */
+	:global(body.filter-active) .tag:not(.tag--linked) {
+		opacity: 0.4;
 	}
 </style>

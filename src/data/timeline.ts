@@ -291,7 +291,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'mandragora-early',
 					name: 'Mandragora: Whispers of the Witch Tree',
 					info: 'Action-RPG — joining the team as the project continued in production.',
-					experiences: [{ person: 'adam', slug: 'adam-mandragora-joins', tagIds: ['ue-blueprint'] }],
+					experiences: [{ person: 'adam', slug: 'adam-mandragora-joins', tagIds: ['ui-ux-design', 'encounter-design', 'ue-blueprint'] }],
 				},
 			],
 		},
