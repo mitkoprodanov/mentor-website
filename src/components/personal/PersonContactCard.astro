@@ -9,7 +9,7 @@ interface Props {
 const { person } = Astro.props;
 ---
 
-<div class="contact-card" style={`--person-color: var(--${person.id}-color)`}>
+<div class="contact-card" style={`--person-color: var(--${person.id}-color); --link-color: var(--person-color);`}>
 	<ExternalLink href={person.linkedin}>LinkedIn</ExternalLink>
 	{
 		person.email && (
