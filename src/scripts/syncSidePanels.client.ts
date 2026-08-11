@@ -81,6 +81,9 @@
 
 const DESKTOP = window.matchMedia('(min-width: 901px)');
 
+const leftZone = document.querySelector<HTMLElement>('.hover-zone--left');
+const rightZone = document.querySelector<HTMLElement>('.hover-zone--right');
+
 interface PanelPair {
 	column: HTMLElement;
 	panel: HTMLElement;
@@ -146,6 +149,18 @@ function updatePositions(): void {
 		panel.style.left = `${rects[i].left}px`;
 		panel.style.width = `${rects[i].width}px`;
 	});
+
+	// Hover zones reach from the true viewport edge to the reserved
+	// column's own inner edge, rather than stopping at the column itself —
+	// see the file-level comment above and .hover-zone in the .astro file.
+	// Looked up by index into `pairs`/`rects` (not `left`/`right` directly)
+	// so this stays correct even if one side is ever missing.
+	const leftIndex = left ? pairs.indexOf(left) : -1;
+	const rightIndex = right ? pairs.indexOf(right) : -1;
+	const leftRect = leftIndex >= 0 ? rects[leftIndex] : undefined;
+	const rightRect = rightIndex >= 0 ? rects[rightIndex] : undefined;
+	if (leftZone && leftRect) leftZone.style.width = `${Math.max(0, leftRect.left + leftRect.width)}px`;
+	if (rightZone && rightRect) rightZone.style.width = `${Math.max(0, window.innerWidth - rightRect.left)}px`;
 }
 
 // Whether the previous call left things docked — see the `force` param on
@@ -181,6 +196,8 @@ function updateDock(force = false): void {
 	// since "false → false" looks like no change even though
 	// reachedStart itself just flipped.
 	pairs.forEach(({ panel }) => panel.classList.toggle('is-active', reachedStart));
+	leftZone?.classList.toggle('is-enabled', reachedStart);
+	rightZone?.classList.toggle('is-enabled', reachedStart);
 
 	if (!reachedStart) {
 		if (force || wasAtBottom) {
@@ -279,6 +296,59 @@ if (left && right) {
 		leftScroll.addEventListener('scroll', mirror(leftScroll, rightScroll));
 		rightScroll.addEventListener('scroll', mirror(rightScroll, leftScroll));
 	}
+}
+
+/**
+ * Immersive hover reveal: resting state shows just the timeline, each side
+ * reduced to its header plus a small peek line (see ScrollyRegion.astro's
+ * .side-panel-peek/.side-panel-scroll crossfade). Hovering *either* side —
+ * .hover-zone included, so the true screen edge counts too, not just the
+ * reserved column itself — reveals *both* panels together via `.is-hovered`
+ * on both, since the pair reads as one unit and popping in just whichever
+ * side was actually hovered looked lopsided in practice.
+ *
+ * Driven by JS rather than a pure-CSS `:hover`/`:has()` combinator so that
+ * hovering any of the four tracked elements (both zones, both panels) can
+ * consistently drive the *same* two panels, and so a short grace delay can
+ * be added on leaving — without it, the cursor crossing from a hover zone
+ * onto the (higher z-index, same-position) panel sitting on top of it would
+ * register as a leave-then-immediately-re-enter and could flicker.
+ */
+const hoverTargets = [leftZone, rightZone, left?.panel, right?.panel].filter((el): el is HTMLElement => el instanceof HTMLElement);
+
+if (hoverTargets.length > 0) {
+	let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function isAnyHovered(): boolean {
+		return hoverTargets.some((el) => el.matches(':hover'));
+	}
+
+	function setHovered(hovered: boolean): void {
+		pairs.forEach(({ panel }) => panel.classList.toggle('is-hovered', hovered));
+	}
+
+	function scheduleHoverUpdate(): void {
+		if (hideTimer !== null) {
+			clearTimeout(hideTimer);
+			hideTimer = null;
+		}
+		if (isAnyHovered()) {
+			setHovered(true);
+			return;
+		}
+		// Grace delay before actually collapsing, re-checked when it fires
+		// (not just blindly hiding) in case a later mouseenter already
+		// canceled and rescheduled this by then.
+		hideTimer = setTimeout(() => {
+			hideTimer = null;
+			setHovered(isAnyHovered());
+		}, 150);
+	}
+
+	hoverTargets.forEach((el) => {
+		el.addEventListener('mouseenter', scheduleHoverUpdate);
+		el.addEventListener('mouseleave', scheduleHoverUpdate);
+	});
 }
 
 export {};

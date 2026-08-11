@@ -31,11 +31,26 @@ const adam = getPerson('adam');
 
 <div id="personal" class="scrolly">
 	<div class="scrolly-grid">
+		<!-- Extend the hover-to-reveal trigger all the way to the true viewport
+		     edge, not just the reserved column — see syncSidePanels.client.ts,
+		     which sizes these to span from the screen edge to the column's
+		     inner edge every resize. Fixed-position, so their place in the DOM
+		     doesn't matter for layout; it only matters for the :hover state
+		     they contribute in syncSidePanels.client.ts's shared hover group. -->
+		<div class="hover-zone hover-zone--left" aria-hidden="true"></div>
+		<div class="hover-zone hover-zone--right" aria-hidden="true"></div>
+
 		<div class="scrolly-col scrolly-col--left">
-			<div class="side-panel">
+			<div class="side-panel" style={`--person-color: var(--${mitko.id}-color)`}>
 				<PersonHeader person={mitko} />
-				<div class="side-panel-scroll">
-					<PersonCard person={mitko} />
+				<div class="side-panel-stack">
+					<div class="side-panel-peek" aria-hidden="true">
+						<span class="peek-chevron">«</span>
+						<span class="peek-text">Hover either side to reveal skills &amp; filters</span>
+					</div>
+					<div class="side-panel-scroll">
+						<PersonCard person={mitko} />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -46,10 +61,16 @@ const adam = getPerson('adam');
 		</div>
 
 		<div class="scrolly-col scrolly-col--right">
-			<div class="side-panel">
+			<div class="side-panel" style={`--person-color: var(--${adam.id}-color)`}>
 				<PersonHeader person={adam} />
-				<div class="side-panel-scroll">
-					<PersonCard person={adam} />
+				<div class="side-panel-stack">
+					<div class="side-panel-peek" aria-hidden="true">
+						<span class="peek-text">Hover either side to reveal skills &amp; filters</span>
+						<span class="peek-chevron">»</span>
+					</div>
+					<div class="side-panel-scroll">
+						<PersonCard person={adam} />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -117,6 +138,65 @@ const adam = getPerson('adam');
 		pointer-events: auto;
 	}
 
+	/* Invisible full-viewport-height strips that widen the hover trigger all
+	   the way out to the true screen edge — sized/positioned by
+	   syncSidePanels.client.ts to always reach from x=0 (or the right edge)
+	   to the reserved column's own inner edge, so on wide viewports (where
+	   .scrolly-grid's 1600px max-width leaves empty margin outside the
+	   column) that margin is still hoverable, not just the column itself.
+	   Only pointer-events-active once enabled (see .is-enabled — tied to the
+	   same "Timeline reached" gate as .side-panel.is-active) and only on
+	   devices that actually have hover, so they never swallow taps on touch
+	   devices or clicks before the panels are even in play. */
+	.hover-zone {
+		position: fixed;
+		top: 0;
+		height: 100vh;
+		pointer-events: none;
+		z-index: 4;
+	}
+
+	.hover-zone--left {
+		left: 0;
+	}
+
+	.hover-zone--right {
+		right: 0;
+	}
+
+	@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+		.hover-zone.is-enabled {
+			pointer-events: auto;
+		}
+	}
+
+	/* Peek hint and the actual skills/hobbies card occupy the same grid
+	   cell and crossfade between each other (see the media query below)
+	   instead of one pushing the other around — so revealing the card never
+	   causes a layout jump, and collapsing it back just leaves a quiet,
+	   mostly-transparent strip under the header (the timeline shows through
+	   the reserved column) rather than an awkward empty gap. Plain flex
+	   item outside that media query — see the .side-panel-peek/-scroll
+	   fallback rules just below for why. */
+	.side-panel-stack {
+		flex: 1 1 auto;
+		min-height: 0;
+	}
+
+	/* Hidden outright, not just faded, whenever the hover-collapse below
+	   doesn't apply (mobile's stacked layout, or a desktop-width device
+	   without real hover) — there'd be nothing for it to invite you toward
+	   in either case, since the skills/hobbies card is simply always shown
+	   there instead. */
+	.side-panel-peek {
+		display: none;
+	}
+
+	.peek-chevron {
+		color: var(--person-color);
+		font-size: 0.85rem;
+	}
+
 	/* Only the skill/hobby card scrolls — the name/role header above stays
 	   put, and this scrolls independently of the page (overscroll-behavior:
 	   contain stops it from handing scroll off to the page once it hits its
@@ -124,8 +204,7 @@ const adam = getPerson('adam');
 	   (still fully scrollable by wheel/trackpad/keyboard/touch) since the
 	   panel already reads as its own self-contained frame. */
 	.side-panel-scroll {
-		flex: 1 1 auto;
-		min-height: 0;
+		height: 100%;
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		scrollbar-width: none;
@@ -136,11 +215,87 @@ const adam = getPerson('adam');
 		display: none;
 	}
 
+	/* Context-sensitive display, desktop pointer devices only: resting
+	   state shows just the timeline, with each side reduced to its
+	   always-visible header plus a small peek line beneath it (the skills
+	   card faded out). Hovering *either* side — including .hover-zone,
+	   which reaches all the way to the true screen edge, not just the
+	   reserved column — reveals *both* panels together (see the
+	   .is-hovered class, applied to both by syncSidePanels.client.ts,
+	   whichever side was actually hovered), since the two read as a single
+	   paired unit on the page and popping in just one at a time looked
+	   lopsided in practice. :focus-within is a same-side-only fallback on
+	   top of that, so tabbing into a filter tag always reveals at least the
+	   panel it's in even before the JS hover-group logic has a chance to
+	   run. */
+	@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+		.side-panel-stack {
+			display: grid;
+			grid-template-rows: 1fr;
+		}
+
+		.side-panel-peek,
+		.side-panel-scroll {
+			grid-area: 1 / 1;
+			min-height: 0;
+		}
+
+		.side-panel-peek {
+			display: flex;
+			align-self: start;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			gap: 0.5rem;
+			padding-top: 0.35rem;
+			font-size: 0.75rem;
+			color: var(--fg-muted);
+			pointer-events: none;
+			opacity: 1;
+			transition: opacity 260ms ease;
+		}
+
+		.side-panel-scroll {
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 280ms ease;
+		}
+
+		.side-panel.is-hovered .side-panel-scroll,
+		.side-panel:focus-within .side-panel-scroll {
+			opacity: 1;
+			pointer-events: auto;
+		}
+
+		.side-panel.is-hovered .side-panel-peek,
+		.side-panel:focus-within .side-panel-peek {
+			opacity: 0;
+		}
+
+		/* The contacts end-animation (see syncSidePanels.client.ts) docks
+		   this panel down onto the Contact overlay's matching header,
+		   clamping max-height to just that header. Deliberately does NOT
+		   force the skills card visible here: if the mouse isn't actually
+		   over the panel (the .is-hovered/:focus-within rules above, which
+		   still apply exactly as normal on top of this), the header should
+		   just slide down on its own with nothing else appearing — not pop
+		   the whole card open for a moment mid-slide. The peek line stays
+		   hidden either way; "hover to reveal" stops being useful advice
+		   once you've already scrolled to the very end. */
+		.side-panel.is-docked .side-panel-peek {
+			opacity: 0;
+		}
+	}
+
 	@media (max-width: 900px) {
 		.scrolly-grid {
 			display: flex;
 			flex-direction: column;
 			gap: 3rem;
+		}
+
+		.hover-zone {
+			display: none;
 		}
 
 		/* Fixed positioning only makes sense once there's room for a
@@ -156,6 +311,7 @@ const adam = getPerson('adam');
 		}
 
 		.side-panel-scroll {
+			height: auto;
 			overflow-y: visible;
 		}
 	}
