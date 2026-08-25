@@ -1,4 +1,19 @@
 import type { PersonId } from './people';
+import type { ProjectMedia } from './projects';
+import { exigoMedia } from './media/exigo';
+import { warhammerMarkOfChaosMedia } from './media/warhammer-mark-of-chaos';
+import { heroes6Media } from './media/heroes6';
+import { supernovaMedia } from './media/supernova';
+import { lolUniverseMedia } from './media/lol-universe';
+import { aroundMedia } from './media/around';
+import { beastsOfBrawliaMedia } from './media/beasts-of-brawlia';
+import { mmoReworkMedia } from './media/mmo-rework';
+import { mandragoraMedia } from './media/mandragora';
+import { hyphaMedia } from './media/hypha';
+import { spacePunksMedia } from './media/space-punks';
+import { imagicLabsMedia } from './media/imagic-labs';
+import { kreatorMedia } from './media/kreator';
+import { mentorMedia } from './media/mentor';
 
 /**
  * The career timeline, read top to bottom in chronological/narrative order.
@@ -65,6 +80,46 @@ export interface ProjectDef {
 	/** Short project-level blurb shown on the timeline's center node card, alongside `name`. */
 	info?: string;
 	experiences: ExperienceRef[];
+	/**
+	 * Showcase gallery for this project's detail modal — the one that opens
+	 * when its node is clicked (see ProjectRow.astro / ProjectModal.astro).
+	 * Each entry is `{ src, kind: 'image' | 'gif', caption, alt? }` (see
+	 * ProjectMedia in data/projects.ts). Omit it and the project falls back to
+	 * the shared PLACEHOLDER_MEDIA (one image + one gif); add your own here to
+	 * override — e.g.
+	 *   media: [
+	 *     { src: '/projects/heroes6/battle.jpg', kind: 'image', caption: 'A boss encounter mid-fight.' },
+	 *     { src: '/projects/heroes6/ai.gif',     kind: 'gif',   caption: 'Campaign AI planning a turn.' },
+	 *   ]
+	 * Only projects with a `name` render a clickable node, so only those show a modal.
+	 */
+	media?: ProjectMedia[];
+	/**
+	 * Overrides this row's detail-modal id (default: the project `id`,
+	 * namespaced `tl-` at render time). Two layout rows sharing the same
+	 * `modalId` open one and the same modal — used to fuse a project that's
+	 * been split into separate rows purely for grid layout (see `around-mitko`
+	 * / `around-adam`) back into a single clickable card. Exactly one of the
+	 * rows renders that shared modal (carrying the full `modalExperiences` and
+	 * `media`); the other sets `noModal`. Rows that share a `modalId` also
+	 * highlight together on hover (see CompanyBlock.astro), so the split reads
+	 * as one clickable area.
+	 */
+	modalId?: string;
+	/**
+	 * Experiences shown *inside the modal*, when they differ from this row's
+	 * own inline `experiences` — e.g. the modal-owning half of a split project
+	 * lists both people here, so its inline card still shows just one person
+	 * while the shared modal shows both (exactly like a naturally-joint project
+	 * such as Supernova). Defaults to `experiences`.
+	 */
+	modalExperiences?: ExperienceRef[];
+	/**
+	 * This row renders no modal of its own; its click target still opens the
+	 * shared modal named by `modalId`. Set on the non-owning half of a split
+	 * project (see `around-adam`).
+	 */
+	noModal?: boolean;
 	/**
 	 * Grid-row span (see ProjectRow.astro), for a solo project whose card
 	 * should visually run tall alongside more than one row on the other
@@ -177,12 +232,14 @@ export const timeline: TimelineEntry[] = [
 						id: 'exigo',
 						name: 'Armies of Exigo',
 						info: 'RTS campaign & multiplayer level design, contributions to the proprietary script editor.',
+						media: exigoMedia,
 						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['systems-level-design'] }],
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
 						name: 'Warhammer: Mark of Chaos & Battle March',
 						info: 'RTS campaign & multiplayer maps, including the siege game mode.',
+						media: warhammerMarkOfChaosMedia,
 						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', tagIds: ['systems-level-design'] }],
 					},
 				],
@@ -200,6 +257,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'heroes6',
 					name: 'Might & Magic: Heroes VI',
 					info: 'Turn-based fantasy strategy — campaign AI, tutorial system, hero abilities & boss encounters.',
+					media: heroes6Media,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['gameplay-ai'] },
 						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['ui-ux-design', 'systems-level-design'] },
@@ -242,6 +300,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'supernova',
 					name: 'Supernova',
 					info: 'Wave army movement, status-effect system, tech tree, and hero ability kits.',
+					media: supernovaMedia,
 					experiences: [
 						{
 							person: 'mitko',
@@ -255,6 +314,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'lol-universe',
 					name: 'League of Legends Universe',
 					info: 'Products in the League of Legends universe, built alongside Riot Games designers.',
+					media: lolUniverseMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-lol-universe' },
 						{ person: 'adam', slug: 'adam-lol-universe' },
@@ -266,12 +326,22 @@ export const timeline: TimelineEntry[] = [
 					info: 'Narrative-driven, point-and-click adventure built in UE4 Blueprint.',
 					rowSpan: 2,
 					squareBottomRight: true,
+					// The two "Around" rows are one project split for layout — this half
+					// owns the shared modal and lists both people so it reads like any
+					// other joint project (see ProjectDef.modalId / modalExperiences).
+					modalId: 'around',
+					media: aroundMedia,
+					modalExperiences: [
+						{ person: 'mitko', slug: 'mitko-around' },
+						{ person: 'adam', slug: 'adam-around', tagIds: ['ue-blueprint'] },
+					],
 					experiences: [{ person: 'mitko', slug: 'mitko-around' }],
 				},
 				{
 					id: 'beasts-of-brawlia',
 					name: 'Beasts of Brawlia',
 					info: 'Fun-oriented arena brawler born from an in-house pitch contest.',
+					media: beastsOfBrawliaMedia,
 					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
 				},
 				{
@@ -279,18 +349,24 @@ export const timeline: TimelineEntry[] = [
 					name: 'Around',
 					info: 'Narrative-driven, point-and-click adventure built in UE4 Blueprint.',
 					bridgeLeft: true,
+					// The other half of the same "Around" project — opens the shared
+					// modal owned by `around-mitko` above; renders none of its own.
+					modalId: 'around',
+					noModal: true,
 					experiences: [{ person: 'adam', slug: 'adam-around', tagIds: ['ue-blueprint'] }],
 				},
 				{
 					id: 'mmo-rework',
 					name: 'MMO Microservices Rework',
 					info: 'Reworked a monolithic MMO server into microservices, Agile-driven.',
+					media: mmoReworkMedia,
 					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', tagIds: ['cpp', 'agile'] }],
 				},
 				{
 					id: 'mandragora-early',
 					name: 'Mandragora: Whispers of the Witch Tree',
 					info: 'Action-RPG — joining the team as the project continued in production.',
+					media: mandragoraMedia,
 					experiences: [{ person: 'adam', slug: 'adam-mandragora-joins' }],
 				},
 			],
@@ -307,6 +383,9 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'space-punks',
+						name: 'Space Punks',
+						info: 'Sci-fi co-op action RPG in Unreal Engine 4 — gameplay features and a deep dive into GAS.',
+						media: spacePunksMedia,
 						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog', tagIds: ['gas'] }],
 					},
 				],
@@ -319,6 +398,9 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'imagic-labs-project',
+						name: 'Image Gallery Product',
+						info: 'A mobile image-gallery startup product — SOLID and Clean Code in daily practice.',
+						media: imagicLabsMedia,
 						experiences: [
 							{
 								person: 'mitko',
@@ -337,6 +419,9 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'kreator-project',
+						name: 'Original IP Prototype',
+						info: 'An original pitch taken to a playable prototype — networking foundations and core gameplay.',
+						media: kreatorMedia,
 						experiences: [{ person: 'mitko', slug: 'mitko-kreator-studios' }],
 					},
 				],
@@ -357,6 +442,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
 						info: 'Action-RPG — final two years: UI/UX, boss encounters, abilities & talent trees.',
+						media: mandragoraMedia,
 						experiences: [{ person: 'adam', slug: 'adam-mandragora', tagIds: ['ui-ux-design', 'encounter-design'] }],
 					},
 				],
@@ -371,6 +457,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'hypha',
 						name: 'Hypha: The Wood Wide Web',
 						info: 'Network-building strategy board game — waging the underground territorial war of fungi.',
+						media: hyphaMedia,
 						experiences: [{ person: 'adam', slug: 'adam-personal-project', tagIds: ['tabletop'] }],
 					},
 				],
@@ -387,6 +474,9 @@ export const timeline: TimelineEntry[] = [
 			projects: [
 				{
 					id: 'mentor',
+					name: 'Original Game Project',
+					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',
+					media: mentorMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-mentor' },
 						{ person: 'adam', slug: 'adam-mentor' },

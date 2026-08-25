@@ -1,37 +1,103 @@
 ---
 import type { Project } from '../../data/projects';
-import ExternalLink from '../common/ExternalLink.astro';
+import { getPerson, type PersonId } from '../../data/people';
+import { getTag } from '../../data/tags';
+import ProjectModal from './ProjectModal.astro';
 
 interface Props {
 	project: Project;
 }
 
 const { project } = Astro.props;
+
+// Default to both people when a project doesn't name its own — matches the
+// data-model note on Project.people.
+const peopleIds: PersonId[] = project.people ?? ['mitko', 'adam'];
+const peopleLabel = peopleIds.map((id) => getPerson(id).name).join(' & ');
+
+const tagLabels = project.tagIds.map((id) => getTag(id).label);
+const media = project.media ?? [];
 ---
 
-<div class="card project-card" data-project-id={project.id} data-tags={project.tagIds.join(' ')}>
-	<div class="project-header">
-		<h4>{project.name}</h4>
+<div class="project-card-wrap">
+	<button
+		type="button"
+		class="card project-card"
+		data-project-open={project.id}
+		data-tags={project.tagIds.join(' ')}
+		aria-haspopup="dialog"
+		aria-label={`Open details for ${project.name}`}
+	>
+		<div class="project-header">
+			<span class="project-name">{project.name}</span>
+			<span class="open-hint" aria-hidden="true">Details →</span>
+		</div>
+		<p class="project-detail">{project.detail}</p>
 		{
-			project.url && (
-				<ExternalLink href={project.url} class="project-link">
-					Visit
-				</ExternalLink>
+			media.length > 0 && (
+				<div class="thumb-strip" aria-hidden="true">
+					{media.slice(0, 3).map((m) => (
+						<span class="thumb">
+							<img src={m.src} alt="" loading="lazy" decoding="async" />
+							{m.kind === 'gif' && <span class="thumb-badge">GIF</span>}
+						</span>
+					))}
+				</div>
 			)
 		}
-	</div>
-	<div class="content">
-		<p>{project.detail}</p>
+	</button>
+
+	<ProjectModal
+		modalId={project.id}
+		title={project.name}
+		subtitle={project.detail}
+		people={peopleLabel}
+		tags={tagLabels}
+		media={media}
+		url={project.url}
+	>
 		<p>{project.description}</p>
-	</div>
+	</ProjectModal>
 </div>
 
 <style>
+	.project-card-wrap {
+		display: contents;
+	}
+
+	/* The clickable preview. A <button> so it's keyboard- and screen-reader
+	   operable for free; reset the default button chrome back to a card. */
 	.card {
+		display: block;
+		width: 100%;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
 		background: var(--bg);
 		border: 1px solid var(--border);
 		border-radius: 14px;
 		padding: 1.1rem 1.25rem;
+		transition:
+			transform 0.2s ease,
+			border-color 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease,
+			opacity 0.26s ease;
+	}
+
+	.project-card:hover,
+	.project-card:focus-visible {
+		transform: translateY(-3px);
+		border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+		box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--accent-soft);
+		background: var(--bg-alt);
+		outline: none;
+	}
+
+	.project-card:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
 	}
 
 	.project-header {
@@ -39,30 +105,93 @@ const { project } = Astro.props;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 0.75rem;
-		margin-bottom: 0.6rem;
+		margin-bottom: 0.4rem;
 	}
 
-	.project-header h4 {
-		margin: 0;
+	.project-name {
 		font-size: 1rem;
+		font-weight: 600;
+		letter-spacing: -0.01em;
 	}
 
-	.project-link {
-		font-size: 0.8rem;
+	.open-hint {
 		flex-shrink: 0;
+		font-size: 0.78rem;
+		color: var(--fg-muted);
+		transition:
+			color 0.2s ease,
+			transform 0.2s ease;
 	}
 
-	.content {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+	.project-card:hover .open-hint,
+	.project-card:focus-visible .open-hint {
+		color: var(--accent-3);
+		transform: translateX(3px);
 	}
 
-	.card :global(p) {
+	.project-detail {
+		margin: 0;
 		font-size: 0.88rem;
 		line-height: 1.5;
-		color: var(--fg);
-		margin: 0;
-		white-space: pre-line;
+		color: var(--fg-muted);
+	}
+
+	.thumb-strip {
+		display: flex;
+		gap: 0.5rem;
+		margin-top: 0.85rem;
+	}
+
+	.thumb {
+		position: relative;
+		flex: 1;
+		min-width: 0;
+		aspect-ratio: 16 / 9;
+		border-radius: 8px;
+		overflow: hidden;
+		border: 1px solid var(--border);
+	}
+
+	.thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+		filter: saturate(0.85);
+		transition:
+			transform 0.25s ease,
+			filter 0.25s ease;
+	}
+
+	.project-card:hover .thumb img,
+	.project-card:focus-visible .thumb img {
+		transform: scale(1.05);
+		filter: saturate(1.05);
+	}
+
+	.thumb-badge {
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		font-size: 0.6rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		padding: 0.05rem 0.3rem;
+		border-radius: 5px;
+		background: rgba(11, 13, 18, 0.75);
+		color: var(--accent-2);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.card,
+		.open-hint,
+		.thumb img {
+			transition: none;
+		}
+
+		.project-card:hover,
+		.project-card:focus-visible {
+			transform: none;
+		}
 	}
 </style>

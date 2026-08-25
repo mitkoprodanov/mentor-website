@@ -1,8 +1,11 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
+import { getTag } from '../../data/tags';
+import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
+import ProjectModal from '../projects/ProjectModal.astro';
 
 interface Props {
 	mitko: CompanyDef[];
@@ -55,7 +58,16 @@ const tracks = await Promise.all(
 								};
 							}),
 						);
-						return { project, cards };
+						// Detail-modal data (see ProjectRow.astro for the same shape) —
+						// only named projects render a clickable node/modal.
+						return {
+							project,
+							cards,
+							modalId: `tl-${project.id}`,
+							peopleLabel: cards.map((c) => c.person.name).join(' & '),
+							modalTagLabels: [...new Set(cards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label),
+							modalMedia: project.media ?? PLACEHOLDER_MEDIA,
+						};
 					}),
 				);
 				return { company, projects };
@@ -132,7 +144,7 @@ const tracks = await Promise.all(
 							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
 						</div>
 						<div class="track-projects">
-							{projects.map(({ project, cards }) => (
+							{projects.map(({ project, cards, modalId, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
 								class="track-row"
 								class:list={{
@@ -154,6 +166,7 @@ const tracks = await Promise.all(
 													<h5 class="node-label">{project.name}</h5>
 													{project.info && <p class="node-info">{project.info}</p>}
 												</div>
+												<span class="node-hint" aria-hidden="true">Details →</span>
 											</div>
 										)
 									}
@@ -171,6 +184,36 @@ const tracks = await Promise.all(
 											</ExperienceCard>
 										))}
 									</div>
+									{
+										project.name && (
+											<button
+												type="button"
+												class="row-open"
+												data-project-open={modalId}
+												aria-haspopup="dialog"
+												aria-label={`Open details for ${project.name}`}
+											/>
+										)
+									}
+									{
+										project.name && (
+											<ProjectModal
+												modalId={modalId}
+												title={project.name}
+												subtitle={project.info}
+												people={peopleLabel}
+												tags={modalTagLabels}
+												media={modalMedia}
+											>
+												{cards.map((c) => (
+													<div class="modal-exp" style={`--person-color: var(--${c.person.id}-color)`}>
+														<p class="modal-exp__person">{c.person.name}</p>
+														<c.Content />
+													</div>
+												))}
+											</ProjectModal>
+										)
+									}
 								</div>
 							))}
 						</div>
@@ -403,6 +446,96 @@ const tracks = await Promise.all(
 		display: flex;
 		align-items: flex-start;
 		gap: 0.6rem;
+	}
+
+	/* The whole boxed row is the click target: a transparent <button> stretched
+	   over the row (below each experience card's own Showcase controls, which
+	   are lifted above it) so clicking anywhere over the node OR the cards opens
+	   the modal. See the matching block in ProjectRow.astro. */
+	.track-row--boxed {
+		position: relative;
+		isolation: isolate;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+
+	.track-row--boxed:hover {
+		border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+		box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+		background: var(--bg-alt);
+	}
+
+	.track-company.emphasized .track-row--boxed:hover {
+		border-color: var(--mentor-border);
+	}
+
+	.row-open {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		border-radius: inherit;
+		cursor: pointer;
+	}
+
+	.row-open:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	.cards :global(.showcase) {
+		position: relative;
+		z-index: 2;
+	}
+
+	.node-hint {
+		flex-shrink: 0;
+		margin-left: auto;
+		align-self: center;
+		font-size: 0.72rem;
+		color: var(--fg-muted);
+		opacity: 0.7;
+		transition:
+			color 0.2s ease,
+			opacity 0.2s ease,
+			transform 0.2s ease;
+	}
+
+	.track-row--boxed:hover .node-hint {
+		color: var(--accent-3);
+		opacity: 1;
+		transform: translateX(3px);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.track-row--boxed,
+		.node-hint {
+			transition: none;
+		}
+	}
+
+	/* One person's experience prose inside the modal — see ProjectRow.astro. */
+	.modal-exp {
+		padding-left: 0.85rem;
+		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.modal-exp + .modal-exp {
+		margin-top: 1.1rem;
+	}
+
+	.modal-exp__person {
+		margin: 0 0 0.35rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--person-color, var(--accent));
 	}
 
 	.dot {

@@ -1,8 +1,11 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, COLUMN } from '../../data/people';
+import { getTag } from '../../data/tags';
+import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import type { ProjectDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
+import ProjectModal from '../projects/ProjectModal.astro';
 
 interface Props {
 	project: ProjectDef;
@@ -11,29 +14,50 @@ interface Props {
 
 const { project, emphasized = false } = Astro.props;
 
-const cards = await Promise.all(
-	project.experiences.map(async (ref) => {
-		const entry = await getEntry('experiences', ref.slug);
-		if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
-		const { Content } = await render(entry);
-		return {
-			person: getPerson(ref.person),
-			Content,
-			tagIds: ref.tagIds ?? [],
-			link: entry.data.link,
-			previewImage: entry.data.previewImage,
-		};
-	}),
-);
+async function loadCards(refs: ProjectDef['experiences']) {
+	return Promise.all(
+		refs.map(async (ref) => {
+			const entry = await getEntry('experiences', ref.slug);
+			if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
+			const { Content } = await render(entry);
+			return {
+				person: getPerson(ref.person),
+				Content,
+				tagIds: ref.tagIds ?? [],
+				link: entry.data.link,
+				previewImage: entry.data.previewImage,
+			};
+		}),
+	);
+}
+
+// Cards rendered inline in this row — one person for a split project's half.
+const cards = await loadCards(project.experiences);
+// Cards shown inside the detail modal. A split project's modal-owning half sets
+// `modalExperiences` to list both people, so its shared card reads like any
+// other joint project; everything else just reuses its own inline cards.
+const modalCards = project.modalExperiences ? await loadCards(project.modalExperiences) : cards;
 
 const leftCard = cards.find((c) => COLUMN[c.person.id] === 'left');
 const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
+
+// Detail modal — only named projects render a clickable node, so only they get
+// a modal. Namespaced (`tl-`) so timeline ids never collide with the Projects
+// section's own modal ids. A split project's two rows share one `modalId`, so
+// both open the same modal; the non-owning half sets `noModal` and renders none
+// of its own. Tags are the union of the modal's experience tags; media falls
+// back to the shared placeholder (see data/timeline.ts).
+const modalId = `tl-${project.modalId ?? project.id}`;
+const peopleLabel = modalCards.map((c) => c.person.name).join(' & ');
+const modalTagLabels = [...new Set(modalCards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label);
+const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 ---
 
 <div
 	class="project-row"
+	data-modal-group={project.modalId}
 	class:list={{
 		'project-row--boxed': Boolean(project.name),
 		'project-row--solo-left': singleSide === 'left',
@@ -66,6 +90,7 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 					<h5 class="node-label">{project.name}</h5>
 					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
+				<span class="node-hint" aria-hidden="true">Details →</span>
 			</div>
 		)
 	}
@@ -112,6 +137,38 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 			)
 		}
 	</div>
+
+	{
+		project.name && (
+			<button
+				type="button"
+				class="row-open"
+				data-project-open={modalId}
+				aria-haspopup="dialog"
+				aria-label={`Open details for ${project.name}`}
+			/>
+		)
+	}
+
+	{
+		project.name && !project.noModal && (
+			<ProjectModal
+				modalId={modalId}
+				title={project.name}
+				subtitle={project.info}
+				people={peopleLabel}
+				tags={modalTagLabels}
+				media={modalMedia}
+			>
+				{modalCards.map((c) => (
+					<div class="modal-exp" style={`--person-color: var(--${c.person.id}-color)`}>
+						<p class="modal-exp__person">{c.person.name}</p>
+						<c.Content />
+					</div>
+				))}
+			</ProjectModal>
+		)
+	}
 </div>
 
 <style>
@@ -135,6 +192,119 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 		display: flex;
 		align-items: flex-start;
 		gap: 0.6rem;
+	}
+
+	/* The whole boxed row is the click target: a transparent <button> stretched
+	   over the row (below the experience cards' own Showcase controls, which are
+	   lifted above it) so clicking anywhere over the node OR the experience
+	   cards opens the modal. `isolation` keeps that overlay's z-index local to
+	   the row. Only named projects are boxed, and only they get an overlay. */
+	.project-row--boxed {
+		position: relative;
+		isolation: isolate;
+		transition:
+			border-color 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+
+	.project-row--boxed:hover {
+		border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+		box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+		background: var(--bg-alt);
+	}
+
+	/* A project split into two layout rows that share one modal (see
+	   ProjectDef.modalId, e.g. "Around") reads as a single clickable area:
+	   hovering either half lights up both boxes — and the bridge fill between
+	   them — so the seam never gives away that they're two separate boxes.
+	   `.company-projects` is the parent grid (owned by CompanyBlock), reached
+	   via :global; the grouped rows are this component's own elements. */
+	:global(.company-projects:has([data-modal-group]:hover)) .project-row[data-modal-group] {
+		border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+		box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+		background: var(--bg-alt);
+	}
+
+	:global(.company-projects:has([data-modal-group]:hover)) .project-row--bridge-left::before {
+		background: var(--bg-alt);
+	}
+
+	:global(.company-projects:has([data-modal-group]:hover)) .project-row[data-modal-group] .node-hint {
+		color: var(--accent-3);
+		opacity: 1;
+		transform: translateX(3px);
+	}
+
+	.row-open {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		border-radius: inherit;
+		cursor: pointer;
+	}
+
+	.row-open:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	/* Keep each experience card's own Showcase toggle (and its expanded embed)
+	   above the overlay so they stay independently clickable. */
+	.experience-row :global(.showcase) {
+		position: relative;
+		z-index: 2;
+	}
+
+	.node-hint {
+		flex-shrink: 0;
+		margin-left: auto;
+		align-self: center;
+		font-size: 0.75rem;
+		color: var(--fg-muted);
+		opacity: 0.7;
+		transition:
+			color 0.2s ease,
+			opacity 0.2s ease,
+			transform 0.2s ease;
+	}
+
+	.project-row--boxed:hover .node-hint {
+		color: var(--accent-3);
+		opacity: 1;
+		transform: translateX(3px);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.project-row--boxed,
+		.node-hint {
+			transition: none;
+		}
+	}
+
+	/* One person's experience prose inside the modal — a lighter-weight stand-in
+	   for the timeline's ExperienceCard, deliberately without the `.card`/
+	   `data-tags` hooks so the tag-filter never treats these as timeline cards. */
+	.modal-exp {
+		padding-left: 0.85rem;
+		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.modal-exp + .modal-exp {
+		margin-top: 1.1rem;
+	}
+
+	.modal-exp__person {
+		margin: 0 0 0.35rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--person-color, var(--accent));
 	}
 
 	.dot {

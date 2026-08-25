@@ -1,0 +1,292 @@
+---
+import type { ProjectMedia } from '../../data/projects';
+import ExternalLink from '../common/ExternalLink.astro';
+
+/**
+ * The detail modal shared by the Projects section (ProjectCard.astro) and the
+ * timeline (ProjectRow.astro). It renders only the frame — head, tags,
+ * gallery, close/backdrop affordances — and takes the main body as a slot, so
+ * each caller supplies whatever fits it (a plain description, or the project's
+ * rendered experience prose). Open/close wiring lives in
+ * scripts/projectModal.client.ts and keys off `data-project-modal` here
+ * matching a trigger's `data-project-open`.
+ */
+interface Props {
+	/** Unique across the page — must equal the trigger's `data-project-open`. */
+	modalId: string;
+	title: string;
+	/** Strap-line under the title (a project's `detail`/`info`). */
+	subtitle?: string;
+	/** Who worked on it, e.g. "Mitko & Ádám". */
+	people?: string;
+	/** Tag labels rendered as pills. */
+	tags?: string[];
+	media?: ProjectMedia[];
+	url?: string;
+	urlLabel?: string;
+}
+
+const { modalId, title, subtitle, people, tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
+const titleId = `project-modal-title-${modalId}`;
+---
+
+<dialog class="project-modal" data-project-modal={modalId} aria-labelledby={titleId}>
+	<div class="project-modal__panel">
+		<button type="button" class="project-modal__close" data-project-close aria-label="Close dialog">×</button>
+
+		<header class="project-modal__head">
+			<h3 id={titleId} class="project-modal__title">{title}</h3>
+			{subtitle && <p class="project-modal__detail">{subtitle}</p>}
+			{people && <p class="project-modal__people">{people}</p>}
+		</header>
+
+		{
+			tags.length > 0 && (
+				<ul class="project-modal__tags">
+					{tags.map((label) => (
+						<li class="tag">{label}</li>
+					))}
+				</ul>
+			)
+		}
+
+		<div class="project-modal__body">
+			<slot />
+		</div>
+
+		{
+			media.length > 0 && (
+				<section class="project-modal__gallery" aria-label="Showcase gallery">
+					{media.map((m) => (
+						<figure class="shot">
+							<div class="shot-frame">
+								<img src={m.src} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
+								{m.kind === 'gif' && <span class="shot-badge">GIF</span>}
+							</div>
+							<figcaption>{m.caption}</figcaption>
+						</figure>
+					))}
+				</section>
+			)
+		}
+
+		{
+			url && (
+				<div class="project-modal__actions">
+					<ExternalLink href={url} class="project-link">
+						{urlLabel}
+					</ExternalLink>
+				</div>
+			)
+		}
+	</div>
+</dialog>
+
+<style>
+	.project-modal {
+		width: min(760px, calc(100vw - 2rem));
+		max-height: min(88vh, 900px);
+		padding: 0;
+		border: 1px solid var(--border);
+		border-radius: 18px;
+		background: var(--bg-alt);
+		color: var(--fg);
+		overflow: hidden;
+		box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+	}
+
+	.project-modal::backdrop {
+		background: rgba(4, 6, 10, 0.66);
+		backdrop-filter: blur(3px);
+	}
+
+	.project-modal[open] {
+		animation: modal-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.project-modal[open]::backdrop {
+		animation: backdrop-in 0.24s ease;
+	}
+
+	@keyframes modal-in {
+		from {
+			opacity: 0;
+			transform: translateY(12px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	@keyframes backdrop-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
+	}
+
+	/* The panel owns all padding so a click anywhere outside it lands on the
+	   <dialog> element itself — that's what the backdrop-close handler keys
+	   off of (see projectModal.client.ts). */
+	.project-modal__panel {
+		position: relative;
+		max-height: min(88vh, 900px);
+		overflow-y: auto;
+		padding: 1.75rem;
+		overscroll-behavior: contain;
+	}
+
+	.project-modal__close {
+		position: absolute;
+		top: 0.9rem;
+		right: 0.9rem;
+		width: 2rem;
+		height: 2rem;
+		display: grid;
+		place-items: center;
+		font-size: 1.4rem;
+		line-height: 1;
+		color: var(--fg-muted);
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		cursor: pointer;
+		transition:
+			color 0.2s ease,
+			border-color 0.2s ease;
+	}
+
+	.project-modal__close:hover {
+		color: var(--fg);
+		border-color: var(--accent);
+	}
+
+	.project-modal__close:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 2px;
+	}
+
+	.project-modal__head {
+		padding-right: 2.5rem;
+	}
+
+	.project-modal__title {
+		margin: 0;
+		font-size: 1.4rem;
+	}
+
+	.project-modal__detail {
+		margin: 0.4rem 0 0;
+		font-size: 0.92rem;
+		color: var(--accent-3);
+	}
+
+	.project-modal__people {
+		margin: 0.15rem 0 0;
+		font-size: 0.8rem;
+		color: var(--fg-muted);
+	}
+
+	.project-modal__tags {
+		list-style: none;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: 1rem 0 0;
+		padding: 0;
+	}
+
+	.tag {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 999px;
+		background: var(--accent-soft);
+		color: var(--accent-3);
+		border: 1px solid rgba(255, 122, 0, 0.3);
+	}
+
+	.project-modal__body {
+		margin-top: 1.1rem;
+	}
+
+	/* Base prose styling for whatever a caller slots in — a plain description
+	   paragraph or several rendered experience blocks. `pre-line` preserves the
+	   intentional line breaks in the Projects descriptions; harmless elsewhere. */
+	.project-modal__body :global(p) {
+		margin: 0;
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: var(--fg);
+		white-space: pre-line;
+	}
+
+	.project-modal__body :global(p + p) {
+		margin-top: 0.75rem;
+	}
+
+	.project-modal__gallery {
+		margin-top: 1.5rem;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+		gap: 1rem;
+	}
+
+	.shot {
+		margin: 0;
+	}
+
+	.shot-frame {
+		position: relative;
+		border-radius: 10px;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		background: var(--bg);
+	}
+
+	.shot-frame img {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+	}
+
+	.shot-badge {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		padding: 0.1rem 0.4rem;
+		border-radius: 6px;
+		background: rgba(11, 13, 18, 0.8);
+		color: var(--accent-2);
+	}
+
+	.shot figcaption {
+		margin-top: 0.5rem;
+		font-size: 0.8rem;
+		line-height: 1.45;
+		color: var(--fg-muted);
+	}
+
+	.project-modal__actions {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.project-link {
+		font-size: 0.85rem;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.project-modal[open],
+		.project-modal[open]::backdrop {
+			animation: none;
+		}
+	}
+</style>
