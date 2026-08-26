@@ -1,6 +1,7 @@
 ---
 import type { Person } from '../../data/people';
 import ExternalLink from '../common/ExternalLink.astro';
+import CvDownloadLink from './CvDownloadLink.astro';
 
 interface Props {
 	person: Person;
@@ -10,6 +11,13 @@ const { person } = Astro.props;
 ---
 
 <div class="contact-card" style={`--person-color: var(--${person.id}-color)`}>
+	{
+		person.cv && (
+			<div class="cv-slot">
+				<CvDownloadLink person={person} />
+			</div>
+		)
+	}
 	<ExternalLink href={person.linkedin}>LinkedIn</ExternalLink>
 	{
 		person.email && (
@@ -43,6 +51,14 @@ const { person } = Astro.props;
 		align-self: center;
 		font-size: 1rem;
 		font-weight: 600;
+	}
+
+	/* Sits at the very top of this card, which is directly below the name in
+	   PersonHeader — so the CV download reads as belonging to that person. */
+	.cv-slot {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 0.2rem;
 	}
 
 	/* Desktop only — parked fully below the viewport (not just nudged down)

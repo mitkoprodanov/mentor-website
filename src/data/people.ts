@@ -14,6 +14,8 @@ export interface Person {
 	education: string;
 	linkedin: string;
 	email?: string;
+	/** Public path to the downloadable PDF CV (served from public/cv/). */
+	cv?: string;
 	/** Ordered list of WorkTag ids (see data/tags.ts) — grouped by category for display, in first-occurrence order. */
 	tagIds: string[];
 	hobbies?: string[];
@@ -27,6 +29,7 @@ export const people: Person[] = [
 		since: 2009,
 		education: 'MSc Computer Engineering, BUTE',
 		linkedin: 'https://www.linkedin.com/in/mitko-prodanov-920b55b7/',
+		cv: '/cv/CV_Mitko_Prodanov_2026.pdf',
 		tagIds: [
 			'c',
 			'cpp',
@@ -60,6 +63,7 @@ export const people: Person[] = [
 		since: 2004,
 		education: 'BSc Business Informatics, Corvinus',
 		linkedin: 'https://linkedin.com/in/adam-nemeshazi',
+		cv: '/cv/CV_Adam_Nemeshazi_2026_GD.pdf',
 		tagIds: ['systems-level-design', 'encounter-design', 'ui-ux-design', 'ue-blueprint', 'tech-trees-progression', 'agile-scrum', 'qubit-spring-1st-place'],
 		hobbies: [
 			'Began creating custom maps at the age of 12 for popular titles of the era (Doom II, Duke Nukem 3D, Age of Empires II, Warcraft III)',

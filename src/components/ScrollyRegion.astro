@@ -22,6 +22,7 @@
 import { getPerson } from '../data/people';
 import PersonHeader from './personal/PersonHeader.astro';
 import PersonCard from './personal/PersonCard.astro';
+import CvDownloadLink from './personal/CvDownloadLink.astro';
 import Timeline from './timeline/Timeline.astro';
 import Projects from './sections/Projects.astro';
 
@@ -43,6 +44,9 @@ const adam = getPerson('adam');
 		<div class="scrolly-col scrolly-col--left">
 			<div class="side-panel" style={`--person-color: var(--${mitko.id}-color)`}>
 				<PersonHeader person={mitko} />
+				<div class="side-panel-cv">
+					<CvDownloadLink person={mitko} />
+				</div>
 				<div class="side-panel-stack">
 					<div class="side-panel-peek" aria-hidden="true">
 						<span class="peek-chevron">«</span>
@@ -63,6 +67,9 @@ const adam = getPerson('adam');
 		<div class="scrolly-col scrolly-col--right">
 			<div class="side-panel" style={`--person-color: var(--${adam.id}-color)`}>
 				<PersonHeader person={adam} />
+				<div class="side-panel-cv">
+					<CvDownloadLink person={adam} />
+				</div>
 				<div class="side-panel-stack">
 					<div class="side-panel-peek" aria-hidden="true">
 						<span class="peek-text">Hover either side to reveal skills &amp; filters</span>
@@ -184,6 +191,18 @@ const adam = getPerson('adam');
 		min-height: 0;
 	}
 
+	/* CV button sits directly below the name header and above the scrolling
+	   skills/filters stack — so it's reachable without scrolling the card.
+	   Indented to line up under the header text (matching its 1.75rem side
+	   padding). On desktop it's revealed on hover along with the skills (see
+	   the media query below); on mobile's static layout it's always shown. */
+	.side-panel-cv {
+		flex-shrink: 0;
+		display: flex;
+		justify-content: flex-start;
+		padding: 0 1.75rem;
+	}
+
 	/* Hidden outright, not just faded, whenever the hover-collapse below
 	   doesn't apply (mobile's stacked layout, or a desktop-width device
 	   without real hover) — there'd be nothing for it to invite you toward
@@ -262,8 +281,20 @@ const adam = getPerson('adam');
 			transition: opacity 280ms ease;
 		}
 
+		/* CV button reveals in step with the skills card — hidden at rest
+		   (just header + peek line showing), fading in on hover. It reserves
+		   its layout space either way, so revealing it never shifts the
+		   skills below. */
+		.side-panel-cv {
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 280ms ease;
+		}
+
 		.side-panel.is-hovered .side-panel-scroll,
-		.side-panel:focus-within .side-panel-scroll {
+		.side-panel:focus-within .side-panel-scroll,
+		.side-panel.is-hovered .side-panel-cv,
+		.side-panel:focus-within .side-panel-cv {
 			opacity: 1;
 			pointer-events: auto;
 		}
@@ -283,7 +314,8 @@ const adam = getPerson('adam');
 		   the whole card open for a moment mid-slide. The peek line stays
 		   hidden either way; "hover to reveal" stops being useful advice
 		   once you've already scrolled to the very end. */
-		.side-panel.is-docked .side-panel-peek {
+		.side-panel.is-docked .side-panel-peek,
+		.side-panel.is-docked .side-panel-cv {
 			opacity: 0;
 		}
 	}

@@ -1,0 +1,98 @@
+---
+/**
+ * "Download the PDF CV" pill for one person. Shaped like the skill/filter
+ * tags (see common/Tag.astro) — same rounded-pill language — but color-coded
+ * to the person's own accent (a step away from the tags' uniform orange) and
+ * roughly twice as tall, so it reads as an action button rather than a tag.
+ *
+ * Rendered identically in both places it appears — below the name in the
+ * Contact section (PersonContactCard.astro) and below the name in the fixed
+ * side panels (ScrollyRegion.astro) — so it looks the same wherever it shows.
+ * Renders nothing when the person has no `cv` path set. The `download`
+ * attribute asks the browser to save the file rather than open it in a tab.
+ */
+import type { Person } from '../../data/people';
+
+interface Props {
+	person: Person;
+}
+
+const { person } = Astro.props;
+const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
+---
+
+{
+	person.cv && (
+		<a
+			class="cv-download"
+			href={person.cv}
+			download
+			style={`--person-color: var(--${person.id}-color)`}
+			aria-label={label}
+			title={label}
+		>
+			<svg class="cv-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+				<path
+					d="M12 3v10m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+			<span class="cv-label">Download CV</span>
+		</a>
+	)
+}
+
+<style>
+	.cv-download {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		/* Same pill radius as the filter tags. Vertical padding is set so the
+		   button lands a touch over 2x a filter tag's height (~24px → ~50px),
+		   reading as an action button rather than another tag. */
+		border-radius: 999px;
+		padding: 1rem 1.2rem;
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: none;
+		/* Color-coded to the person, unlike the tags' fixed orange — a soft
+		   tint fill, a mid-strength border, and full-strength text/icon. */
+		color: var(--person-color);
+		background: color-mix(in srgb, var(--person-color) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
+		transition:
+			color 0.2s ease,
+			background 0.2s ease,
+			border-color 0.2s ease,
+			transform 0.2s ease;
+	}
+
+	/* Fills solid on hover, same as a filter tag going active. */
+	.cv-download:hover,
+	.cv-download:focus-visible {
+		color: var(--bg);
+		background: var(--person-color);
+		border-color: var(--person-color);
+	}
+
+	.cv-download:focus-visible {
+		outline: 2px solid var(--person-color);
+		outline-offset: 2px;
+	}
+
+	.cv-icon {
+		flex-shrink: 0;
+		transition: transform 0.2s ease;
+	}
+
+	/* Nudge the arrow down on hover to hint "download". */
+	.cv-download:hover .cv-icon,
+	.cv-download:focus-visible .cv-icon {
+		transform: translateY(1px);
+	}
+</style>
