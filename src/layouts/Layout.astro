@@ -59,10 +59,56 @@ const {
 		   mistaken for either person's color. */
 		--project-dot: #ef4444;
 		--project-dot-soft: rgba(239, 68, 68, 0.25);
+
+		/* One on-brand scrollbar shared by the whole site — the page itself and
+		   every inner scroll area (the project detail modal, a person card's
+		   revealed skills, the filtered results panel). A soft translucent thumb
+		   at rest that warms to the accent on hover, on an invisible track, so it
+		   reads as part of the dark UI rather than the OS default. */
+		--scrollbar-thumb: color-mix(in oklab, var(--fg-muted) 45%, transparent);
+		--scrollbar-thumb-hover: color-mix(in oklab, var(--accent) 70%, var(--fg-muted));
+
+		/* Native form controls / default scrollbars render dark. */
+		color-scheme: dark;
 	}
 
 	* {
 		box-sizing: border-box;
+	}
+
+	/* Firefox — thin, tinted; the color inherits to inner scroll containers. */
+	html {
+		scrollbar-width: thin;
+		scrollbar-color: var(--scrollbar-thumb) transparent;
+	}
+
+	/* WebKit / Chromium — pill thumb inset from an invisible track (the 2px
+	   transparent border + padding-box clip gives it breathing room), warming
+	   to the accent on hover. Applies document-wide, so the page and every
+	   overflow area (modal, side panel, filter panel) share the same bar. */
+	::-webkit-scrollbar {
+		width: 11px;
+		height: 11px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--scrollbar-thumb);
+		border-radius: 999px;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--scrollbar-thumb-hover);
+		background-clip: padding-box;
+	}
+
+	::-webkit-scrollbar-corner {
+		background: transparent;
 	}
 
 	html,

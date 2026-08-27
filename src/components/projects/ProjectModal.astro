@@ -17,6 +17,8 @@ interface Props {
 	title: string;
 	/** Strap-line under the title (a project's `detail`/`info`). */
 	subtitle?: string;
+	/** Year or year range the work spans, e.g. "2026" or "2024 – Present". */
+	dateRange?: string;
 	/** Who worked on it, e.g. "Mitko & Ádám". */
 	people?: string;
 	/** Tag labels rendered as pills. */
@@ -26,7 +28,7 @@ interface Props {
 	urlLabel?: string;
 }
 
-const { modalId, title, subtitle, people, tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
+const { modalId, title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 
 /**
@@ -73,7 +75,15 @@ function youtubeId(src: string): string {
 		<header class="project-modal__head">
 			<h3 id={titleId} class="project-modal__title">{title}</h3>
 			{subtitle && <p class="project-modal__detail">{subtitle}</p>}
-			{people && <p class="project-modal__people">{people}</p>}
+			{
+				(dateRange || people) && (
+					<p class="project-modal__meta">
+						{dateRange && <span class="project-modal__year">{dateRange}</span>}
+						{dateRange && people && <span class="project-modal__meta-sep" aria-hidden="true">·</span>}
+						{people && <span>{people}</span>}
+					</p>
+				)
+			}
 		</header>
 
 		{
@@ -207,6 +217,13 @@ function youtubeId(src: string): string {
 		overscroll-behavior: contain;
 	}
 
+	/* Slimmer take on the site-wide scrollbar (see Layout.astro) — the modal is
+	   a compact surface, so a lighter bar sits better inside it while keeping
+	   the same tinted thumb. */
+	.project-modal__panel::-webkit-scrollbar {
+		width: 8px;
+	}
+
 	.project-modal__close {
 		position: absolute;
 		top: 0.9rem;
@@ -252,10 +269,27 @@ function youtubeId(src: string): string {
 		color: var(--accent-3);
 	}
 
-	.project-modal__people {
-		margin: 0.15rem 0 0;
+	.project-modal__meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.3rem 0 0;
 		font-size: 0.8rem;
 		color: var(--fg-muted);
+	}
+
+	/* The work's timeframe, called out in the person accent so it reads as a
+	   distinct fact rather than blending into the muted people line. */
+	.project-modal__year {
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.03em;
+		font-weight: 600;
+		color: var(--accent-3);
+	}
+
+	.project-modal__meta-sep {
+		color: var(--border);
 	}
 
 	.project-modal__tags {

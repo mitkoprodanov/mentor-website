@@ -10,9 +10,11 @@ import ProjectModal from '../projects/ProjectModal.astro';
 interface Props {
 	project: ProjectDef;
 	emphasized?: boolean;
+	/** The enclosing company's date range — shown in the detail modal unless the project overrides it with its own `dateRange`. */
+	dateRange?: string;
 }
 
-const { project, emphasized = false } = Astro.props;
+const { project, emphasized = false, dateRange } = Astro.props;
 
 async function loadCards(refs: ProjectDef['experiences']) {
 	return Promise.all(
@@ -50,6 +52,7 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 // of its own. Tags are the union of the modal's experience tags; media falls
 // back to the shared placeholder (see data/timeline.ts).
 const modalId = `tl-${project.modalId ?? project.id}`;
+const modalDateRange = project.dateRange ?? dateRange;
 const peopleLabel = modalCards.map((c) => c.person.name).join(' & ');
 const modalTagLabels = [...new Set(modalCards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label);
 const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
@@ -159,6 +162,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 				modalId={modalId}
 				title={project.name}
 				subtitle={project.info}
+				dateRange={modalDateRange}
 				people={peopleLabel}
 				tags={modalTagLabels}
 				media={modalMedia}

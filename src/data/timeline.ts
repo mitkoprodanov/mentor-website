@@ -10,6 +10,7 @@ import { beastsOfBrawliaMedia } from './media/beasts-of-brawlia';
 import { mmoReworkMedia } from './media/mmo-rework';
 import { mandragoraMedia } from './media/mandragora';
 import { hyphaMedia } from './media/hypha';
+import { biobotMedia } from './media/biobot';
 import { spacePunksMedia } from './media/space-punks';
 import { imagicLabsMedia } from './media/imagic-labs';
 import { kreatorMedia } from './media/kreator';
@@ -77,6 +78,14 @@ export interface ProjectDef {
 	id: string;
 	/** Omit for a single-project company — the company name is used instead. */
 	name?: string;
+	/**
+	 * Year (or year range) shown in this project's detail modal. Overrides the
+	 * enclosing company's `dateRange` — used when a single project inside a
+	 * longer-running company happened in a specific year (e.g. Biobot's 2026
+	 * competition win inside Ádám's 2024 – Present personal-project box).
+	 * Falls back to the company's `dateRange` when omitted.
+	 */
+	dateRange?: string;
 	/** Short project-level blurb shown on the timeline's center node card, alongside `name`. */
 	info?: string;
 	experiences: ExperienceRef[];
@@ -459,6 +468,14 @@ export const timeline: TimelineEntry[] = [
 						info: 'Network-building strategy board game — waging the underground territorial war of fungi.',
 						media: hyphaMedia,
 						experiences: [{ person: 'adam', slug: 'adam-personal-project', tagIds: ['tabletop'] }],
+					},
+					{
+						id: 'biobot',
+						name: 'Biobot',
+						info: 'Award-winning card game fusing organic tissue and robotics through transparent, stackable cards.',
+						dateRange: '2026',
+						media: biobotMedia,
+						experiences: [{ person: 'adam', slug: 'adam-biobot', tagIds: ['tabletop', 'card-game', 'qubit-spring-1st-place'] }],
 					},
 				],
 			},

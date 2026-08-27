@@ -1,6 +1,6 @@
 ---
 /**
- * Personal + Timeline + Side Projects + Contact, in one scroll.
+ * Personal + Timeline + Contact, in one scroll.
  *
  * Both people sit in a sticky bar at the top, one card anchored to each edge
  * with the timeline visible in the gap between them — the cards are capped in
@@ -23,7 +23,6 @@ import PersonCard from './personal/PersonCard.astro';
 import CvDownloadLink from './personal/CvDownloadLink.astro';
 import ExternalLink from './common/ExternalLink.astro';
 import Timeline from './timeline/Timeline.astro';
-import Projects from './sections/Projects.astro';
 import Contact from './sections/Contact.astro';
 
 const mitko = getPerson('mitko');
@@ -81,7 +80,6 @@ const adam = getPerson('adam');
 
 	<div class="timeline-area" id="timeline-area">
 		<Timeline />
-		<Projects />
 	</div>
 
 	<Contact />
@@ -329,6 +327,12 @@ const adam = getPerson('adam');
 		max-height: calc(100vh - 12rem);
 		overflow-y: auto;
 		overscroll-behavior: contain;
+	}
+
+	/* Slimmer take on the site-wide scrollbar (see Layout.astro) for the
+	   revealed skills — a light bar inside the narrow card, same tinted thumb. */
+	.side-panel-stack::-webkit-scrollbar {
+		width: 8px;
 	}
 
 	.side-panel.is-open .side-panel-stack {

@@ -64,6 +64,7 @@ const tracks = await Promise.all(
 							project,
 							cards,
 							modalId: `tl-${project.id}`,
+							modalDateRange: project.dateRange ?? company.dateRange,
 							peopleLabel: cards.map((c) => c.person.name).join(' & '),
 							modalTagLabels: [...new Set(cards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label),
 							modalMedia: project.media ?? PLACEHOLDER_MEDIA,
@@ -144,7 +145,7 @@ const tracks = await Promise.all(
 							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
 						</div>
 						<div class="track-projects">
-							{projects.map(({ project, cards, modalId, peopleLabel, modalTagLabels, modalMedia }) => (
+							{projects.map(({ project, cards, modalId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
 								class="track-row"
 								class:list={{
@@ -202,6 +203,7 @@ const tracks = await Promise.all(
 												modalId={modalId}
 												title={project.name}
 												subtitle={project.info}
+												dateRange={modalDateRange}
 												people={peopleLabel}
 												tags={modalTagLabels}
 												media={modalMedia}

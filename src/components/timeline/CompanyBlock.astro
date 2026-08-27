@@ -31,7 +31,7 @@ const emphasized = company.underMentor === true;
 		<h3 class:list={{ emphasized }}>{company.name}</h3>
 	</div>
 	<div class="company-projects">
-		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} />)}
+		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} dateRange={company.dateRange} />)}
 	</div>
 </div>
 

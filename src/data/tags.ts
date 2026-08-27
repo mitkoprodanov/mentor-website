@@ -7,7 +7,6 @@
  */
 
 import { timeline, type CompanyDef } from './timeline';
-import { projects } from './projects';
 
 export interface WorkTag {
 	id: string;
@@ -115,10 +114,6 @@ export function getLinkedTagIds(): Set<string> {
 			entry.mitko.forEach(collectCompany);
 			entry.adam.forEach(collectCompany);
 		}
-	}
-
-	for (const project of projects) {
-		for (const tagId of project.tagIds) ids.add(tagId);
 	}
 
 	return ids;
