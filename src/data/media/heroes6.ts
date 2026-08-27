@@ -3,9 +3,11 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Might & Magic: Heroes VI (see data/timeline.ts). */
 export const heroes6Media: ProjectMedia[] = [
 	{
-		src: '/projects/heroes6/battle.jpg',
-		kind: 'image',
-		caption: 'A boss encounter mid-fight.',
+		src: 'https://www.youtube.com/watch?v=EnHEfd9MFr0',
+		kind: 'youtube',
+		start: 62,
+		end: 120,
+		caption: 'Might & Magic: Heroes VI — gameplay.',
 	},
 	{
 		src: '/projects/heroes6/ai.gif',

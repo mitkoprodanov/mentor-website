@@ -19,6 +19,130 @@ function syncScrollLock(): void {
 	document.body.style.overflow = anyOpen ? 'hidden' : '';
 }
 
+/**
+ * A Facebook video/reel embeds as a fixed-size cross-origin iframe (640×360, see
+ * ProjectModal.astro) whose content can't be reflowed from here. To make it
+ * fill the card's full width at any size without letterboxing, scale the whole
+ * iframe by (container width ÷ 640); its 16:9 height then matches the frame's
+ * own 16:9 box exactly. Re-run whenever a frame changes size — which includes
+ * the moment its modal opens (0 → width) and any viewport resize.
+ */
+const VIDEO_BASE_W = 640;
+
+function scaleVideo(frame: Element): void {
+	const iframe = frame.querySelector<HTMLIFrameElement>('.shot-video');
+	if (!iframe) return;
+	const width = (frame as HTMLElement).clientWidth;
+	if (width > 0) iframe.style.transform = `scale(${width / VIDEO_BASE_W})`;
+}
+
+function initVideos(): void {
+	const frames = document.querySelectorAll<HTMLElement>('.shot-frame--video');
+	if (frames.length === 0) return;
+	const observer = new ResizeObserver((entries) => {
+		for (const entry of entries) scaleVideo(entry.target);
+	});
+	frames.forEach((frame) => {
+		observer.observe(frame);
+		scaleVideo(frame);
+	});
+}
+
+/* ---- YouTube embeds -------------------------------------------------------
+ * A `.shot-youtube` mount (data-yt-id / optional data-start / data-end) becomes
+ * a YouTube IFrame Player API player the first time its modal opens — the API
+ * lets us loop an arbitrary [start, end] segment, which the plain iframe embed
+ * params can't do reliably. Players are created lazily (the API script only
+ * loads once a modal with a YouTube mount is actually opened), reused on
+ * reopen, and paused when their modal closes so nothing plays in the
+ * background. Playing is muted so browsers allow it to start on its own. */
+interface YtEntry {
+	player: any;
+	start: number;
+	end: number | null;
+	timer: number | null;
+}
+
+const ytPlayers = new WeakMap<HTMLElement, YtEntry>();
+let ytApiPromise: Promise<any> | null = null;
+
+function loadYouTubeApi(): Promise<any> {
+	const w = window as any;
+	if (w.YT && w.YT.Player) return Promise.resolve(w.YT);
+	if (ytApiPromise) return ytApiPromise;
+	ytApiPromise = new Promise((resolve) => {
+		const prev = w.onYouTubeIframeAPIReady;
+		w.onYouTubeIframeAPIReady = () => {
+			if (typeof prev === 'function') prev();
+			resolve(w.YT);
+		};
+		const tag = document.createElement('script');
+		tag.src = 'https://www.youtube.com/iframe_api';
+		document.head.appendChild(tag);
+	});
+	return ytApiPromise;
+}
+
+async function activateYouTube(scope: HTMLElement): Promise<void> {
+	const frames = scope.querySelectorAll<HTMLElement>('.shot-frame--youtube');
+	if (frames.length === 0) return;
+	const YT = await loadYouTubeApi();
+	frames.forEach((frame) => {
+		const existing = ytPlayers.get(frame);
+		if (existing) {
+			existing.player.seekTo?.(existing.start, true);
+			existing.player.playVideo?.();
+			return;
+		}
+		const mount = frame.querySelector<HTMLElement>('.shot-youtube[data-yt-id]');
+		if (!mount) return;
+
+		const start = Number(mount.dataset.start ?? 0) || 0;
+		const end = mount.dataset.end ? Number(mount.dataset.end) : null;
+		const entry: YtEntry = { player: null, start, end, timer: null };
+
+		entry.player = new YT.Player(mount, {
+			width: '100%',
+			height: '100%',
+			videoId: mount.dataset.ytId,
+			host: 'https://www.youtube-nocookie.com',
+			playerVars: { start, autoplay: 1, mute: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+			events: {
+				onReady: (e: any) => {
+					e.target.seekTo(start, true);
+					e.target.playVideo();
+				},
+				onStateChange: (e: any) => {
+					// Loop the [start, end] segment: while playing, poll the time and
+					// jump back to `start` once `end` is passed. (Also catches a video
+					// that ends naturally before `end`.)
+					if (e.data === YT.PlayerState.ENDED) {
+						entry.player.seekTo(start, true);
+						entry.player.playVideo();
+						return;
+					}
+					if (!end) return;
+					if (e.data === YT.PlayerState.PLAYING && entry.timer === null) {
+						entry.timer = window.setInterval(() => {
+							if ((entry.player.getCurrentTime?.() ?? 0) >= end) entry.player.seekTo(start, true);
+						}, 200);
+					} else if (e.data !== YT.PlayerState.PLAYING && entry.timer !== null) {
+						clearInterval(entry.timer);
+						entry.timer = null;
+					}
+				},
+			},
+		});
+		ytPlayers.set(frame, entry);
+	});
+}
+
+function pauseYouTube(scope: HTMLElement): void {
+	scope.querySelectorAll<HTMLElement>('.shot-frame--youtube').forEach((frame) => {
+		ytPlayers.get(frame)?.player?.pauseVideo?.();
+	});
+}
+
 function openById(id: string | null): void {
 	if (!id) return;
 	const dialog = document.querySelector<HTMLDialogElement>(`dialog[data-project-modal="${id}"]`);
@@ -28,6 +152,8 @@ function openById(id: string | null): void {
 function init(): void {
 	const dialogs = document.querySelectorAll<HTMLDialogElement>('dialog[data-project-modal]');
 	if (dialogs.length === 0) return;
+
+	initVideos();
 
 	document.addEventListener('click', (event) => {
 		const el = event.target as HTMLElement;
@@ -43,7 +169,14 @@ function init(): void {
 		}
 	});
 
-	const observer = new MutationObserver(syncScrollLock);
+	const observer = new MutationObserver((mutations) => {
+		syncScrollLock();
+		for (const mutation of mutations) {
+			const dialog = mutation.target as HTMLElement;
+			if (dialog.hasAttribute('open')) void activateYouTube(dialog);
+			else pauseYouTube(dialog);
+		}
+	});
 
 	dialogs.forEach((dialog) => {
 		// The panel owns all the padding, so a click whose target is the

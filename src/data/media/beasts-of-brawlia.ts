@@ -3,9 +3,9 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Beasts of Brawlia (see data/timeline.ts). */
 export const beastsOfBrawliaMedia: ProjectMedia[] = [
 	{
-		src: '/projects/beasts-of-brawlia/arena.jpg',
-		kind: 'image',
-		caption: 'An arena brawl in full swing.',
+		src: 'https://www.facebook.com/watch/?v=938966559787679',
+		kind: 'facebook-video',
+		caption: 'Beasts of Brawlia — gameplay video.',
 	},
 	{
 		src: '/projects/beasts-of-brawlia/combo.gif',

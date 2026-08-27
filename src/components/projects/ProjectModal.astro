@@ -28,6 +28,42 @@ interface Props {
 
 const { modalId, title, subtitle, people, tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
+
+/**
+ * Facebook embed URL — the video plugin's iframe form, so no Facebook SDK or
+ * script is needed on the page. `href` is the public page URL of a Facebook
+ * video (facebook.com/watch/?v=…) or reel (facebook.com/reel/…) — the plugin
+ * handles both. The 640×360 base is a 16:9 landscape box; the iframe is then
+ * CSS-transform-scaled to exactly fill its container width (see .shot-video +
+ * the scaler in projectModal.client.ts), so it fills the card horizontally
+ * with no letterboxing at any width.
+ */
+const VIDEO_BASE_W = 640;
+const VIDEO_BASE_H = 360;
+function facebookVideoEmbed(pageUrl: string): string {
+	const params = new URLSearchParams({ href: pageUrl, show_text: 'false', width: String(VIDEO_BASE_W), height: String(VIDEO_BASE_H) });
+	return `https://www.facebook.com/plugins/video.php?${params.toString()}`;
+}
+
+/** Both Facebook kinds render identically (same plugin) — only the badge differs. */
+const isFacebookEmbed = (kind: string) => kind === 'facebook-reel' || kind === 'facebook-video';
+
+/** Pull the 11-char video id out of any YouTube URL form (or pass through a bare id). */
+function youtubeId(src: string): string {
+	try {
+		const u = new URL(src);
+		const host = u.hostname.replace(/^www\./, '');
+		if (host === 'youtu.be') return u.pathname.slice(1);
+		if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+			if (u.pathname === '/watch') return u.searchParams.get('v') ?? src;
+			const m = u.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/);
+			if (m) return m[1];
+		}
+	} catch {
+		/* not a URL — assume it's already an id */
+	}
+	return src;
+}
 ---
 
 <dialog class="project-modal" data-project-modal={modalId} aria-labelledby={titleId}>
@@ -57,15 +93,47 @@ const titleId = `project-modal-title-${modalId}`;
 		{
 			media.length > 0 && (
 				<section class="project-modal__gallery" aria-label="Showcase gallery">
-					{media.map((m) => (
-						<figure class="shot">
-							<div class="shot-frame">
-								<img src={m.src} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
-								{m.kind === 'gif' && <span class="shot-badge">GIF</span>}
-							</div>
-							<figcaption>{m.caption}</figcaption>
-						</figure>
-					))}
+					{media.map((m) =>
+						m.kind === 'youtube' ? (
+							<figure class="shot">
+								<div class="shot-frame shot-frame--youtube">
+									<div
+										class="shot-youtube"
+										data-yt-id={youtubeId(m.src)}
+										data-start={m.start != null ? String(m.start) : undefined}
+										data-end={m.end != null ? String(m.end) : undefined}
+										title={m.alt ?? m.caption}
+									/>
+									<span class="shot-badge">YOUTUBE</span>
+								</div>
+								<figcaption>{m.caption}</figcaption>
+							</figure>
+						) : isFacebookEmbed(m.kind) ? (
+							<figure class="shot shot--video">
+								<div class="shot-frame shot-frame--video">
+									<iframe
+										class="shot-video"
+										src={facebookVideoEmbed(m.src)}
+										title={m.alt ?? m.caption}
+										loading="lazy"
+										scrolling="no"
+										allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+										allowfullscreen
+									/>
+									<span class="shot-badge">{m.kind === 'facebook-reel' ? 'REEL' : 'VIDEO'}</span>
+								</div>
+								<figcaption>{m.caption}</figcaption>
+							</figure>
+						) : (
+							<figure class="shot">
+								<div class="shot-frame">
+									<img src={m.src} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
+									{m.kind === 'gif' && <span class="shot-badge">GIF</span>}
+								</div>
+								<figcaption>{m.caption}</figcaption>
+							</figure>
+						),
+					)}
 				</section>
 			)
 		}
@@ -227,11 +295,14 @@ const titleId = `project-modal-title-${modalId}`;
 		margin-top: 0.75rem;
 	}
 
+	/* One media item per row, each spanning the full width of the modal — so
+	   videos (and shots) use up all the horizontal space rather than being
+	   squeezed several-to-a-line. */
 	.project-modal__gallery {
 		margin-top: 1.5rem;
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-		gap: 1rem;
+		grid-template-columns: 1fr;
+		gap: 1.25rem;
 	}
 
 	.shot {
@@ -251,6 +322,44 @@ const titleId = `project-modal-title-${modalId}`;
 		width: 100%;
 		aspect-ratio: 16 / 9;
 		object-fit: cover;
+	}
+
+	/* A Facebook video/reel embed — a full-width 16:9 frame, with the fixed-size
+	   plugin iframe absolutely positioned inside and transform-scaled by JS to
+	   exactly fill it (see projectModal.client.ts). `overflow: hidden` (from
+	   .shot-frame) clips the scaled iframe to the rounded frame. */
+	.shot-frame--video {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #000;
+	}
+
+	.shot-video {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 640px;
+		height: 360px;
+		border: 0;
+		transform-origin: top left;
+	}
+
+	/* YouTube embeds via the IFrame API (see projectModal.client.ts) are natively
+	   responsive, so — unlike the fixed-size Facebook plugin — the iframe just
+	   fills a full-width 16:9 frame directly, no transform-scaling needed. */
+	.shot-frame--youtube {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #000;
+	}
+
+	.shot-frame--youtube :global(iframe),
+	.shot-youtube {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
 	}
 
 	.shot-badge {

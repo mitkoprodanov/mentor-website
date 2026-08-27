@@ -6,9 +6,9 @@ import type { ProjectMedia } from './types';
  */
 export const aroundMedia: ProjectMedia[] = [
 	{
-		src: '/projects/around/scene.jpg',
-		kind: 'image',
-		caption: 'A hand-painted point-and-click scene.',
+		src: 'https://www.facebook.com/reel/291274308860973',
+		kind: 'facebook-reel',
+		caption: 'Around — gameplay reel.',
 	},
 	{
 		src: '/projects/around/dialogue.gif',

@@ -36,12 +36,19 @@ const media = project.media ?? [];
 		{
 			media.length > 0 && (
 				<div class="thumb-strip" aria-hidden="true">
-					{media.slice(0, 3).map((m) => (
-						<span class="thumb">
-							<img src={m.src} alt="" loading="lazy" decoding="async" />
-							{m.kind === 'gif' && <span class="thumb-badge">GIF</span>}
-						</span>
-					))}
+					{media.slice(0, 3).map((m) =>
+						m.kind === 'facebook-reel' || m.kind === 'facebook-video' || m.kind === 'youtube' ? (
+							<span class="thumb thumb--reel">
+								<span class="thumb-play">▶</span>
+								<span class="thumb-badge">{m.kind === 'facebook-reel' ? 'REEL' : m.kind === 'youtube' ? 'YT' : 'VIDEO'}</span>
+							</span>
+						) : (
+							<span class="thumb">
+								<img src={m.src} alt="" loading="lazy" decoding="async" />
+								{m.kind === 'gif' && <span class="thumb-badge">GIF</span>}
+							</span>
+						),
+					)}
 				</div>
 			)
 		}
@@ -172,6 +179,19 @@ const media = project.media ?? [];
 	.project-card:focus-visible .thumb img {
 		transform: scale(1.05);
 		filter: saturate(1.05);
+	}
+
+	/* A reel has no static thumbnail — show a dark tile with a play glyph. */
+	.thumb--reel {
+		display: grid;
+		place-items: center;
+		background: #000;
+		color: var(--fg);
+	}
+
+	.thumb-play {
+		font-size: 1rem;
+		opacity: 0.85;
 	}
 
 	.thumb-badge {
