@@ -183,6 +183,14 @@ const adam = getPerson('adam');
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		overflow: hidden;
+		/* Never let the whole card grow past the viewport when its skills are
+		   revealed. The sticky bar sits ~3.6rem down (top: 3rem + the bar's own
+		   padding), so cap the card a little short of the remaining height and
+		   leave a small bottom gap. The fixed header/CV/button keep their size
+		   and the skills list (.side-panel-stack) flex-shrinks into its own
+		   scroll area to absorb whatever's left — so the card bottom is always
+		   on screen. Lifted on mobile below, where the bar scrolls with the page. */
+		max-height: calc(100vh - 4.5rem);
 		transition:
 			border-color 0.25s ease,
 			box-shadow 0.25s ease;
@@ -324,7 +332,12 @@ const adam = getPerson('adam');
 	   the wheel handling in panelToggle.client.ts. */
 	.side-panel-stack {
 		display: none;
-		max-height: calc(100vh - 12rem);
+		/* A flex child of the capped .side-panel: min-height:0 lets it shrink
+		   below its content so it — and only it — takes up the slack when the
+		   card would exceed its max-height, scrolling internally while the
+		   header/CV/button stay put. Short skill lists still render at their
+		   natural height (flex-grow stays 0). */
+		min-height: 0;
 		overflow-y: auto;
 		overscroll-behavior: contain;
 	}
@@ -549,6 +562,10 @@ const adam = getPerson('adam');
 		   grow to its natural height and push the page instead of trapping a
 		   tall list inside a short scroll box, and drop the full-page modal
 		   backdrop that only made sense when the card was a sticky overlay. */
+		.side-panel {
+			max-height: none;
+		}
+
 		.side-panel-stack {
 			max-height: none;
 			overflow-y: visible;
