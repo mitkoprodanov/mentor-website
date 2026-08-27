@@ -40,6 +40,31 @@ if (contact && !prefersReduced) {
 	let snapping = false;
 	let settleTimer = 0;
 
+	// A hash-link jump (the navbar's About/Timeline/Contact, the brand link)
+	// smooth-scrolls through this transition band. Without this guard the snap
+	// reads that programmatic upward travel as the reader scrolling up and yanks
+	// them back down to the bottom rest — so a jump to About/Timeline from the
+	// Contact section stalls around Projects. While a jump is in flight we stand
+	// down; the flag is re-armed on every scroll tick and released once the
+	// scroll settles at its target.
+	let navJump = false;
+	let navJumpTimer = 0;
+	const armNavJump = () => {
+		navJump = true;
+		window.clearTimeout(navJumpTimer);
+		navJumpTimer = window.setTimeout(() => {
+			navJump = false;
+			lastY = window.scrollY;
+		}, 200);
+	};
+
+	document.addEventListener('click', (event) => {
+		const target = event.target;
+		if (target instanceof Element && target.closest('a[href^="#"]')) {
+			armNavJump();
+		}
+	});
+
 	// Don't fight another overlay that has taken over the page: the filter modal,
 	// an open project dialog (which locks body scroll via overflow:hidden), or an
 	// expanded person card in the sticky bar.
@@ -65,6 +90,13 @@ if (contact && !prefersReduced) {
 		const y = window.scrollY;
 		const dir = y - lastY;
 		lastY = y;
+
+		// Keep the guard alive while a hash-link jump is still travelling, and
+		// let it drive the scroll all the way to its target untouched.
+		if (navJump) {
+			armNavJump();
+			return;
+		}
 
 		if (snapping || dir === 0 || blocked()) return;
 

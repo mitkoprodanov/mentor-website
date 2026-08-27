@@ -95,6 +95,7 @@ const adam = getPerson('adam');
 	import '../scripts/filterModal.client';
 	import '../scripts/contactMode.client';
 	import '../scripts/contactSnap.client';
+	import '../scripts/navScroll.client';
 </script>
 
 <style>
@@ -234,10 +235,25 @@ const adam = getPerson('adam');
 		padding: 0.9rem 1rem 0.4rem;
 	}
 
+	/* Hidden while the card rests — the CV pill only reads as relevant once the
+	   card is engaged, so it follows the same reveal as the skills panel: hover
+	   (.reveal), keyboard focus, the touch toggle (.is-open), or contact mode
+	   (further down). Otherwise the un-hovered card shows no CV button. */
 	.side-panel-cv {
-		display: flex;
+		display: none;
 		justify-content: flex-start;
 		padding: 0 1rem;
+	}
+
+	.side-panel.is-open .side-panel-cv {
+		display: flex;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.person-bar-inner.reveal .side-panel-cv,
+		.person-bar-inner:focus-within .side-panel-cv {
+			display: flex;
+		}
 	}
 
 	/* Toggle and LinkedIn share one cell and crossfade between each other when
@@ -392,6 +408,12 @@ const adam = getPerson('adam');
 	/* No skills panel in contact mode. */
 	:global(body.contact-mode) .side-panel-stack {
 		display: none !important;
+	}
+
+	/* CV pill stays put in contact mode, where the cards read as contact cards
+	   even though they aren't hover-revealed. */
+	:global(body.contact-mode) .side-panel-cv {
+		display: flex;
 	}
 
 	.timeline-area {
