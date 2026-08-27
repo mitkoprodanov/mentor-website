@@ -27,8 +27,13 @@
 
 const contact = document.getElementById('contact');
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Touch devices drive this section with momentum scrolling; hijacking that
+// mid-flick to smooth-scroll to a snap point fights the user's own gesture and
+// reads as jank. The directional snap is a nicety for wheel/trackpad, so stand
+// down entirely on coarse pointers and let native scrolling run.
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
-if (contact && !prefersReduced) {
+if (contact && !prefersReduced && !coarsePointer) {
 	// How far Contact must intrude past a resting state before the snap fires —
 	// small enough to feel eager ("as soon as it's visible at the bottom"), large
 	// enough not to fire on a stray nudge. Capped as a fraction of the viewport

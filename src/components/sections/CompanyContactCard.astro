@@ -56,4 +56,18 @@ import ExternalLink from '../common/ExternalLink.astro';
 	.company-card :global(.external-link) {
 		font-size: 1.15rem;
 	}
+
+	/* The generous desktop padding squeezes the content column to a sliver on
+	   a phone (a ~295px card would leave ~200px of usable width) — pull it in
+	   so the studio name, lead line, and links have room to breathe. */
+	@media (max-width: 600px) {
+		.company-card {
+			padding: 2.5rem 1.5rem;
+			border-radius: 20px;
+		}
+
+		.company-card h3 {
+			font-size: 1.6rem;
+		}
+	}
 </style>

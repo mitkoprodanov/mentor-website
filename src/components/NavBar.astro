@@ -63,12 +63,36 @@ const links = [
 	}
 
 	@media (max-width: 600px) {
+		.navbar {
+			padding: 0.85rem 1rem;
+		}
+
 		.navbar-links {
 			gap: 1rem;
 		}
 
 		.navbar-links a {
 			font-size: 0.8rem;
+		}
+	}
+
+	/* At the narrowest widths the brand and the links run flush into each other
+	   (space-between pushes them to the edges until they touch). The brand's
+	   wide 0.15em tracking is the biggest space hog — tightening it (plus a
+	   slightly smaller font and link gap) reclaims enough room for a real gap
+	   between the two, without shrinking the text to the point of illegibility. */
+	@media (max-width: 380px) {
+		.navbar-brand {
+			font-size: 0.72rem;
+			letter-spacing: 0.05em;
+		}
+
+		.navbar-links {
+			gap: 0.6rem;
+		}
+
+		.navbar-links a {
+			font-size: 0.72rem;
 		}
 	}
 </style>

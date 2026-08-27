@@ -501,13 +501,63 @@ const adam = getPerson('adam');
 			padding: 1.5rem 1rem 3rem;
 		}
 
+		/* On a phone there's no room for two edge-anchored cards with the
+		   timeline showing through a centre gap — two 50%-width cards would
+		   leave only a sliver between them, and the sticky bar would sit
+		   opaque over the (now full-width, single-column) timeline scrolling
+		   behind it. So drop the sticky framing here: the bar becomes a normal
+		   block that scrolls away, and the two people stack full-width above
+		   the timeline like an ordinary intro. */
+		.person-bar {
+			position: static;
+		}
+
 		.person-bar-inner {
-			gap: 0.75rem;
-			padding: 0.5rem 0.75rem;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 1rem;
+			max-width: 520px;
+			padding: 0.5rem 0;
 		}
 
 		.person-slot {
-			flex: 1 1 0;
+			flex: 0 0 auto;
+			width: 100%;
+		}
+
+		/* Stacked and full-width, both cards read top-to-bottom left-aligned —
+		   the right card's mirrored (right-aligned) layout only makes sense when
+		   it's anchored to the right edge on desktop. */
+		.person-slot--right :global(.person-header),
+		.person-slot--right .card-filter {
+			text-align: left;
+		}
+
+		.person-slot--right .side-panel-cv {
+			justify-content: flex-start;
+		}
+
+		.person-slot--right .side-panel-action > * {
+			justify-self: start;
+		}
+
+		/* Expanding skills is now a plain inline accordion (tap to open): let it
+		   grow to its natural height and push the page instead of trapping a
+		   tall list inside a short scroll box, and drop the full-page modal
+		   backdrop that only made sense when the card was a sticky overlay. */
+		.side-panel-stack {
+			max-height: none;
+			overflow-y: visible;
+		}
+
+		.person-backdrop {
+			display: none;
+		}
+
+		/* The per-card blur halo reads as a floating overlay ring — with the
+		   bar now in normal flow it just muddies the edges, so drop it. */
+		.person-slot::before {
+			display: none;
 		}
 	}
 </style>
