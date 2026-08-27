@@ -104,6 +104,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 					side={COLUMN[singleCard.person.id]}
 					link={singleCard.link}
 					previewImage={singleCard.previewImage}
+					interactive={Boolean(project.name)}
 				>
 					<singleCard.Content />
 				</ExperienceCard>
@@ -117,6 +118,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 							side="left"
 							link={leftCard.link}
 							previewImage={leftCard.previewImage}
+							interactive={Boolean(project.name)}
 						>
 							<leftCard.Content />
 						</ExperienceCard>
@@ -129,6 +131,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 							side="right"
 							link={rightCard.link}
 							previewImage={rightCard.previewImage}
+							interactive={Boolean(project.name)}
 						>
 							<rightCard.Content />
 						</ExperienceCard>

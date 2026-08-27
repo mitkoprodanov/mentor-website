@@ -12,12 +12,19 @@ interface Props {
 	/** Optional showcase link (e.g. a YouTube video) — reveals an inline embed when the card is expanded. */
 	link?: string;
 	previewImage?: string;
+	/**
+	 * Whether this card sits inside a clickable row that opens a detail modal.
+	 * Only interactive cards get the hover lift/glow; a static card (e.g. an
+	 * unnamed, modal-less project like Ericsson) stays inert on hover so it
+	 * doesn't imply a "Details" page that isn't there.
+	 */
+	interactive?: boolean;
 }
 
-const { personId, tagIds, color, side, link, previewImage } = Astro.props;
+const { personId, tagIds, color, side, link, previewImage, interactive = true } = Astro.props;
 ---
 
-<div class:list={['card', `card--${side}`]} data-person={personId} data-tags={tagIds.join(' ')} style={`--person-color: ${color}`}>
+<div class:list={['card', `card--${side}`, { 'card--static': !interactive }]} data-person={personId} data-tags={tagIds.join(' ')} style={`--person-color: ${color}`}>
 	<div class="content">
 		<slot />
 	</div>
@@ -60,7 +67,7 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 	/* Brighter, glowing silhouette on hover — the same strength as the
 	   Projects cards and filter tags: a lift, a bright person-tinted halo and
 	   a crisp accent ring. */
-	.card:hover {
+	.card:not(.card--static):hover {
 		transform: translateY(-3px);
 		border-color: color-mix(in srgb, var(--person-color, var(--accent)) 70%, var(--border));
 		background: var(--bg-alt);
