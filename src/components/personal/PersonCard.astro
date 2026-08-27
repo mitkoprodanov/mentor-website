@@ -44,11 +44,12 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 </div>
 
 <style>
+	/* Sits inside the bar card (see ScrollyRegion.astro's .side-panel), which
+	   supplies the background, border and hover glow — so this is just the
+	   inner padding for the skills/hobbies content. */
 	.person-card {
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		padding: 0.75rem 1.75rem 1.75rem;
+		background: transparent;
+		padding: 0.35rem 1rem 0.75rem;
 		text-align: left;
 	}
 

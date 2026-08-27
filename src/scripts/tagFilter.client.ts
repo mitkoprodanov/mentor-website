@@ -1,21 +1,20 @@
 /**
  * Single-select WorkTag filter shared by the Timeline and the Projects
- * section. Clicking any linked tag (on a PersonCard or a ProjectCard)
- * collapses whichever of those two sections contain a match down to just
- * the matching entries — everything else fades out first, then the
- * survivors slide smoothly into their new positions (the FLIP technique:
- * record rects before the DOM mutation, then invert-and-play the delta as
- * a transform).
+ * section. Clicking any linked tag collapses whichever of those two sections
+ * contain a match down to just the matching entries (everything else is
+ * `display:none`d via `.tf-hidden`).
+ *
+ * The filtered result is then presented as a modal — the timeline-area is
+ * lifted over a backdrop (see filterModal.client.ts / ScrollyRegion.astro) —
+ * so the switch to the filtered set is instant here (no in-place FLIP reflow,
+ * which would fight that lift).
  *
  * Timeline collapse cascades bottom-up: a `.card` hides if it doesn't match
- * the active tag → its row's `.node` (dot + label) hides if none of that
- * row's cards remain → a `.company`/`.track-company` hides if it has no
- * visible rows → a whole `.track` (one side of an ApartBlock) hides if all
- * its companies are gone (the other track just keeps its own column — the
- * `.apart` grid always stays two columns, whichever side is/isn't visible)
- * → a `.mentor-container` hides if it's left empty.
- *
- * Projects collapse is flat: a `.project-card` hides if it doesn't match.
+ * the active tag → its row's `.node` hides if none of that row's cards remain
+ * → a `.company`/`.track-company` hides if it has no visible rows → a whole
+ * `.track` hides if all its companies are gone → a `.mentor-container` hides
+ * if it's left empty. Projects collapse is flat: a `.project-card` hides if it
+ * doesn't match.
  */
 
 type Filter = string | null;
@@ -23,16 +22,7 @@ type Filter = string | null;
 const TIMELINE_FLIP_SELECTOR = '.card, .node, .project-row, .track-row, .company, .track-company, .apart, .mentor-container';
 const PROJECTS_SELECTOR = '.project-card';
 
-const EXIT_MS = 200;
-const EXIT_STAGGER_MS = 18;
-const EXIT_STAGGER_CAP = 6;
-const FLIP_MS = 380;
-
 let currentFilter: Filter = null;
-
-function prefersReducedMotion(): boolean {
-	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 function matchesTags(el: HTMLElement, filter: Filter): boolean {
 	return filter === null || (el.dataset.tags ?? '').split(' ').includes(filter);
@@ -97,121 +87,9 @@ function computeHiddenProjectsSet(root: HTMLElement, filter: Filter): Set<Elemen
 	return toHide;
 }
 
-function flipStayersAndRevealEnterers(staying: HTMLElement[], beforeRects: Map<HTMLElement, DOMRect>, entering: HTMLElement[]) {
-	requestAnimationFrame(() => {
-		staying.forEach((el) => {
-			const before = beforeRects.get(el);
-			if (!before) return;
-			const after = el.getBoundingClientRect();
-			const dx = before.left - after.left;
-			const dy = before.top - after.top;
-			if (dx || dy) {
-				el.style.transition = 'none';
-				el.style.transform = `translate(${dx}px, ${dy}px)`;
-				void el.offsetWidth;
-			}
-		});
-
-		requestAnimationFrame(() => {
-			staying.forEach((el) => {
-				if (!beforeRects.has(el)) return;
-				el.style.transition = `transform ${FLIP_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
-				el.style.transform = '';
-			});
-			entering.forEach((el) => el.classList.remove('tf-enter-from'));
-
-			window.setTimeout(() => {
-				staying.forEach((el) => {
-					el.style.transition = '';
-				});
-			}, FLIP_MS + 50);
-		});
-	});
-}
-
-function applyFilter(
-	root: HTMLElement,
-	filter: Filter,
-	opts: {
-		computeHidden: (root: HTMLElement, filter: Filter) => Set<Element>;
-		flipSelector: string;
-		animatedSelector: string;
-		onApplied?: (toHide: Set<Element>) => void;
-	},
-) {
-	const toHide = opts.computeHidden(root, filter);
-	const animated = Array.from(root.querySelectorAll<HTMLElement>(opts.animatedSelector));
-
-	if (prefersReducedMotion()) {
-		animated.forEach((el) => el.classList.toggle('tf-hidden', toHide.has(el)));
-		opts.onApplied?.(toHide);
-		return;
-	}
-
-	const leaving: HTMLElement[] = [];
-	const entering: HTMLElement[] = [];
-	const staying: HTMLElement[] = [];
-
-	for (const el of animated) {
-		const wasHidden = el.classList.contains('tf-hidden');
-		const willHide = toHide.has(el);
-		if (!wasHidden && willHide) leaving.push(el);
-		else if (wasHidden && !willHide) entering.push(el);
-		else if (!wasHidden && !willHide) staying.push(el);
-	}
-
-	const beforeRects = new Map<HTMLElement, DOMRect>();
-	staying.filter((el) => el.matches(opts.flipSelector)).forEach((el) => beforeRects.set(el, el.getBoundingClientRect()));
-
-	if (leaving.length === 0) {
-		entering.forEach((el) => {
-			el.classList.remove('tf-hidden');
-			el.classList.add('tf-enter-from');
-		});
-		opts.onApplied?.(toHide);
-		flipStayersAndRevealEnterers(staying, beforeRects, entering);
-		return;
-	}
-
-	leaving.forEach((el, i) => {
-		const delay = Math.min(i, EXIT_STAGGER_CAP) * EXIT_STAGGER_MS;
-		el.style.transitionDelay = `${delay}ms`;
-		el.classList.add('tf-leaving');
-	});
-	const maxStagger = Math.min(leaving.length - 1, EXIT_STAGGER_CAP) * EXIT_STAGGER_MS;
-
-	window.setTimeout(
-		() => {
-			leaving.forEach((el) => {
-				el.classList.remove('tf-leaving');
-				el.classList.add('tf-hidden');
-				el.style.transitionDelay = '';
-			});
-			entering.forEach((el) => {
-				el.classList.remove('tf-hidden');
-				el.classList.add('tf-enter-from');
-			});
-			opts.onApplied?.(toHide);
-			flipStayersAndRevealEnterers(staying, beforeRects, entering);
-		},
-		EXIT_MS + maxStagger,
-	);
-}
-
-function applyTimelineFilter(root: HTMLElement, filter: Filter) {
-	applyFilter(root, filter, {
-		computeHidden: computeHiddenTimelineSet,
-		flipSelector: TIMELINE_FLIP_SELECTOR,
-		animatedSelector: TIMELINE_FLIP_SELECTOR,
-	});
-}
-
-function applyProjectsFilter(root: HTMLElement, filter: Filter) {
-	applyFilter(root, filter, {
-		computeHidden: computeHiddenProjectsSet,
-		flipSelector: PROJECTS_SELECTOR,
-		animatedSelector: PROJECTS_SELECTOR,
-	});
+function applyFilter(root: HTMLElement, filter: Filter, animatedSelector: string, computeHidden: (root: HTMLElement, filter: Filter) => Set<Element>) {
+	const toHide = computeHidden(root, filter);
+	root.querySelectorAll<HTMLElement>(animatedSelector).forEach((el) => el.classList.toggle('tf-hidden', toHide.has(el)));
 }
 
 function setTagPressedState(filter: Filter) {
@@ -237,28 +115,31 @@ function updateChip(chipId: string, labelId: string, filter: Filter) {
 	}
 }
 
+/** Echo the active skill as a pill under each person card in the sticky bar
+ *  (see ScrollyRegion.astro's .card-filter). */
+function updateCardTags(filter: Filter) {
+	const label = filter ? tagLabelFor(filter) : '';
+	document.querySelectorAll<HTMLElement>('.card-filter').forEach((el) => {
+		const span = el.querySelector<HTMLElement>('[data-card-filter-label]');
+		if (span) span.textContent = label;
+		el.hidden = filter === null;
+	});
+}
+
 function setFilter(filter: Filter) {
 	currentFilter = filter;
 
 	const timelineRoot = document.getElementById('timeline');
-	if (timelineRoot) applyTimelineFilter(timelineRoot, filter);
+	if (timelineRoot) applyFilter(timelineRoot, filter, TIMELINE_FLIP_SELECTOR, computeHiddenTimelineSet);
 
 	const projectsRoot = document.getElementById('projects');
-	if (projectsRoot) applyProjectsFilter(projectsRoot, filter);
+	if (projectsRoot) applyFilter(projectsRoot, filter, PROJECTS_SELECTOR, computeHiddenProjectsSet);
 
 	document.body.classList.toggle('filter-active', filter !== null);
 	setTagPressedState(filter);
 
 	updateChip('timeline-filter-chip', 'timeline-filter-chip-skill', filter);
-
-	if (filter && projectsRoot) {
-		const hasMatchingProject = Array.from(projectsRoot.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`)).some((card) =>
-			(card.dataset.tags ?? '').split(' ').includes(filter),
-		);
-		if (hasMatchingProject) {
-			projectsRoot.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
-		}
-	}
+	updateCardTags(filter);
 }
 
 function init() {
@@ -274,6 +155,12 @@ function init() {
 		}
 
 		if (target.closest('#timeline-filter-chip-clear')) {
+			setFilter(null);
+			return;
+		}
+
+		// The active-skill pill echoed under each person card clears the filter.
+		if (target.closest('.card-filter-tag')) {
 			setFilter(null);
 		}
 	});

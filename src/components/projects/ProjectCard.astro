@@ -89,8 +89,13 @@ const media = project.media ?? [];
 	.project-card:hover,
 	.project-card:focus-visible {
 		transform: translateY(-3px);
-		border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
-		box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--accent-soft);
+		border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+		/* Brighter, glowing silhouette: a warm accent halo on top of the
+		   existing lift shadow. */
+		box-shadow:
+			0 10px 28px -12px rgba(0, 0, 0, 0.7),
+			0 0 22px -2px rgba(255, 122, 0, 0.45),
+			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
 		background: var(--bg-alt);
 		outline: none;
 	}

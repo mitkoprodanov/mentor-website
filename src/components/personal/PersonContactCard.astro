@@ -61,34 +61,8 @@ const { person } = Astro.props;
 		margin-bottom: 0.2rem;
 	}
 
-	/* Desktop only — parked fully below the viewport (not just nudged down)
-	   until syncSidePanels.client.ts adds .is-revealed, which only happens
-	   once the page hits its true scroll end (see updateDock there).
-	   Otherwise, as an ordinary in-flow element, it would just quietly
-	   scroll up into view like everything else well before that point.
-	   `100vh` rather than a fixed px amount guarantees it starts off-screen
-	   below no matter where its resting spot ends up sitting in the
-	   viewport. The header above it (see PersonHeader.astro/Contact.astro)
-	   doesn't need this same treatment — it's covered instead, the whole
-	   time, by the fixed side panel's own header sitting on top of it,
-	   which is what's actually seen coming down to meet this — this card
-	   is the other half of that motion, sliding up from outside the screen
-	   to meet it in turn, so the two halves read as converging on the seam
-	   between them from opposite directions. Duration matches the fixed
-	   panel's own docking transition (see ScrollyRegion.astro) so both
-	   halves arrive together. */
-	@media (min-width: 901px) {
-		.contact-card {
-			opacity: 0;
-			transform: translateY(100vh);
-			transition:
-				opacity 500ms ease,
-				transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
-		}
-
-		.contact-card.is-revealed {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+	/* No entrance animation of its own: the whole Contact overlay crossfades
+	   in as one piece (see Contact.astro / contactReveal.client.ts), so this
+	   card is simply part of that fade rather than a separate element sliding
+	   or popping into view. */
 </style>

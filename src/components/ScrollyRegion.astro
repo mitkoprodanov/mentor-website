@@ -1,351 +1,490 @@
 ---
 /**
- * Timeline + Side Projects + Personal, woven into one continuous scroll:
- * the center column (Timeline, Side Projects) scrolls with the page like
- * normal. Each side panel is a fully independent, fixed-position frame —
- * never nudged by scrolling the center/page, and its own scrolling never
- * bleeds into the page either (see syncSidePanels.client.ts, which also
- * positions it over its reserved grid column and mirrors its scroll to the
- * other side, so both panels always move together). Its name/role header
- * stays put while only the skills/hobbies beneath it scroll — until
- * Contact's own placeholder starts scrolling into view from below (well
- * before the page's true end), at which point the header animates down to
- * dock directly onto a second, always-present copy of itself sitting
- * inside Contact's fixed overlay — scrolling back up even slightly
- * reverses it. Contact info (both people's and the studio's) lives in its
- * own separate Contact section instead — see sections/Contact.astro. Its
- * z-index here is explicitly higher than that overlay's: without it,
- * DOM order alone would put the overlay (declared after this component)
- * on top, hiding the very header that's supposed to be sliding down onto
- * it.
+ * Personal + Timeline + Side Projects + Contact, in one scroll.
+ *
+ * Both people sit in a sticky bar at the top, one card anchored to each edge
+ * with the timeline visible in the gap between them — the cards are capped in
+ * width and carry their own background, so revealing their skills never covers
+ * the whole timeline, only the sides.
+ *
+ * Each card collapses to name + role + CV + a "Skills" button; the skills and
+ * filter tags reveal on hover (both cards together) or via the button on
+ * touch (see panelToggle.client.ts). Filtering is modal (filterModal).
+ *
+ * Near the page's end the bar shifts into "contact mode" (see
+ * contactMode.client.ts): each card swaps its Skills button for a LinkedIn
+ * link (the CV stays), and the studio's contact card slides up into the
+ * centre between them — so the same two cards become the contact cards in
+ * place, with no duplicated second set.
  */
 import { getPerson } from '../data/people';
 import PersonHeader from './personal/PersonHeader.astro';
 import PersonCard from './personal/PersonCard.astro';
 import CvDownloadLink from './personal/CvDownloadLink.astro';
+import ExternalLink from './common/ExternalLink.astro';
 import Timeline from './timeline/Timeline.astro';
 import Projects from './sections/Projects.astro';
+import Contact from './sections/Contact.astro';
 
 const mitko = getPerson('mitko');
 const adam = getPerson('adam');
 ---
 
 <div id="personal" class="scrolly">
-	<div class="scrolly-grid">
-		<!-- Extend the hover-to-reveal trigger all the way to the true viewport
-		     edge, not just the reserved column — see syncSidePanels.client.ts,
-		     which sizes these to span from the screen edge to the column's
-		     inner edge every resize. Fixed-position, so their place in the DOM
-		     doesn't matter for layout; it only matters for the :hover state
-		     they contribute in syncSidePanels.client.ts's shared hover group. -->
-		<div class="hover-zone hover-zone--left" aria-hidden="true"></div>
-		<div class="hover-zone hover-zone--right" aria-hidden="true"></div>
+	<!-- Dimmed backdrop behind the filter modal — clicking it clears the
+	     filter (see filterModal.client.ts). Fixed, so its DOM position here
+	     doesn't matter. -->
+	<div class="filter-backdrop" aria-hidden="true"></div>
 
-		<div class="scrolly-col scrolly-col--left">
-			<div class="side-panel" style={`--person-color: var(--${mitko.id}-color)`}>
-				<PersonHeader person={mitko} />
-				<div class="side-panel-cv">
-					<CvDownloadLink person={mitko} />
-				</div>
-				<div class="side-panel-stack">
-					<div class="side-panel-peek" aria-hidden="true">
-						<span class="peek-chevron">«</span>
-						<span class="peek-text">Hover either side to reveal skills &amp; filters</span>
-					</div>
-					<div class="side-panel-scroll">
-						<PersonCard person={mitko} />
-					</div>
-				</div>
-			</div>
-		</div>
+	<!-- Modal backdrop for the person cards: blurs and desaturates the rest of
+	     the page whenever a card's skills are revealed (hover, keyboard focus,
+	     or the touch toggle), the same way the project detail modal dims its
+	     background — driven purely by :has() below. Sits under the sticky bar so
+	     the cards stay crisp on top. Fixed, so its DOM position here doesn't
+	     matter. -->
+	<div class="person-backdrop" aria-hidden="true"></div>
 
-		<div class="scrolly-col scrolly-col--center">
-			<Timeline />
-			<Projects />
-		</div>
-
-		<div class="scrolly-col scrolly-col--right">
-			<div class="side-panel" style={`--person-color: var(--${adam.id}-color)`}>
-				<PersonHeader person={adam} />
-				<div class="side-panel-cv">
-					<CvDownloadLink person={adam} />
-				</div>
-				<div class="side-panel-stack">
-					<div class="side-panel-peek" aria-hidden="true">
-						<span class="peek-text">Hover either side to reveal skills &amp; filters</span>
-						<span class="peek-chevron">»</span>
+	<div class="person-bar">
+		<div class="person-bar-inner">
+			{
+				[
+					{ person: mitko, side: 'left' as const },
+					{ person: adam, side: 'right' as const },
+				].map((entry) => (
+					<div class:list={['person-slot', `person-slot--${entry.side}`]} style={`--person-color: var(--${entry.person.id}-color)`}>
+						<div class="side-panel">
+							<PersonHeader person={entry.person} />
+							<div class="side-panel-cv">
+								<CvDownloadLink person={entry.person} />
+							</div>
+							<div class="side-panel-action">
+								<button class="panel-toggle" type="button" aria-expanded="false">
+									<span class="panel-toggle-label">Skills</span>
+									<span class="panel-toggle-chev" aria-hidden="true">▾</span>
+								</button>
+								<div class="side-panel-linkedin">
+									<ExternalLink href={entry.person.linkedin}>LinkedIn</ExternalLink>
+								</div>
+							</div>
+							<div class="side-panel-stack">
+								<PersonCard person={entry.person} />
+							</div>
+							<div class="card-filter" hidden>
+								<button type="button" class="card-filter-tag" data-card-filter-label />
+							</div>
+						</div>
 					</div>
-					<div class="side-panel-scroll">
-						<PersonCard person={adam} />
-					</div>
-				</div>
-			</div>
+				))
+			}
 		</div>
 	</div>
+
+	<div class="timeline-area" id="timeline-area">
+		<Timeline />
+		<Projects />
+	</div>
+
+	<Contact />
 </div>
 
 <script>
 	import '../scripts/tagFilter.client';
 	import '../scripts/experienceCard.client';
 	import '../scripts/projectModal.client';
-	import '../scripts/syncSidePanels.client';
+	import '../scripts/panelToggle.client';
+	import '../scripts/filterModal.client';
+	import '../scripts/contactMode.client';
 </script>
 
 <style>
 	.scrolly {
 		width: 100%;
-		padding: 4rem 1.5rem;
+		padding: 2rem 1.5rem 4rem;
 	}
 
-	.scrolly-grid {
-		display: grid;
-		grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
-		column-gap: 2rem;
+	/* Transparent, so the timeline shows through the gap between the two
+	   edge-anchored cards; each card carries its own opaque background. */
+	.person-bar {
+		position: sticky;
+		top: 3rem;
+		z-index: 4;
+	}
+
+	.person-bar-inner {
+		display: flex;
+		justify-content: space-between;
+		align-items: start;
+		gap: 1.5rem;
 		max-width: 1600px;
 		margin: 0 auto;
+		padding: 0.6rem 1.5rem;
 	}
 
-	/* .scrolly-col--left/--right stay in normal grid flow, stretched to the
-	   center column's height by the grid's default align-items: stretch —
-	   purely there to reserve the correct width/height slot. Their actual
-	   content (.side-panel) is taken out of flow entirely (position: fixed)
-	   and positioned by syncSidePanels.client.ts to sit exactly over this
-	   reserved slot, so the column itself renders empty. */
+	/* Capped width and anchored to each edge — leaving the centre open for the
+	   timeline even when the skills are expanded. */
+	.person-slot {
+		position: relative;
+		flex: 0 1 340px;
+		min-width: 0;
+	}
+
+	/* Each resting card carries its own soft "modal" halo: a band just outside
+	   its border that blurs and desaturates whatever shows through the sticky
+	   bar behind it (usually the timeline), fading gradually to nothing at its
+	   outer edge — so even an un-hovered card reads as lifted off its
+	   background, a lighter echo of the full-page backdrop that drops in on
+	   hover. Lives on the slot (not the panel, which clips overflow) and sits
+	   behind the opaque card, so only the ring around it is ever visible. */
+	.person-slot::before {
+		content: '';
+		position: absolute;
+		inset: -18px;
+		z-index: -1;
+		border-radius: 28px;
+		-webkit-backdrop-filter: blur(8px) saturate(0.5);
+		backdrop-filter: blur(8px) saturate(0.5);
+		/* Feather the blur out to nothing across the ring *outside* the card:
+		   fully applied at the card edge, transparent at the outer edge, on all
+		   four sides. Two linear gradients (one per axis) intersected so the
+		   corners fade too — a plain radial mask can't ring a non-square box
+		   without cutting off the long sides. */
+		-webkit-mask:
+			linear-gradient(to right, transparent, #000 18px, #000 calc(100% - 18px), transparent),
+			linear-gradient(to bottom, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		-webkit-mask-composite: source-in;
+		mask:
+			linear-gradient(to right, transparent, #000 18px, #000 calc(100% - 18px), transparent),
+			linear-gradient(to bottom, transparent, #000 18px, #000 calc(100% - 18px), transparent);
+		mask-composite: intersect;
+		opacity: 1;
+		pointer-events: none;
+		transition: opacity 0.25s ease;
+	}
+
+	/* Once the skills are revealed, the full-page .person-backdrop takes over
+	   the blur/desaturate, so each card's own halo would only double the edge —
+	   fade it out then. */
+	.person-bar-inner.reveal .person-slot::before,
+	.person-bar-inner:has(.side-panel.is-open) .person-slot::before {
+		opacity: 0;
+	}
+
+	/* Each card is its own opaque, bordered box so it cleanly covers the
+	   timeline only where it sits. When its skills are revealed it behaves like
+	   a modal — a blurred/desaturated backdrop drops over the rest of the page
+	   (see .person-backdrop) and the card itself scrolls if its content
+	   overflows the viewport (see .side-panel-stack) rather than the page. */
 	.side-panel {
-		position: fixed;
-		/* Resting values — syncSidePanels.client.ts overrides both inline,
-		   but only ever in an on/off pair: full resting size, or docked
-		   (top pulled down to the Contact section's matching header,
-		   max-height clamped to just its own header's height so the
-		   skills/hobbies beneath disappear). Never anything in between —
-		   see the .astro file. The transition here is what turns that
-		   instant state flip into a smooth slide/shrink. */
-		top: 6rem;
-		max-height: calc(100vh - 8rem);
-		overflow: hidden;
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
-		opacity: 0;
-		pointer-events: none;
-		/* Above .contact-overlay's own z-index (5) — see the file-level
-		   comment above. Below the navbar's (10), which never needs to be
-		   covered by this. */
-		z-index: 6;
-		/* top/max-height duration matches .contact-overlay's own
-		   --contact-reveal-duration (see Contact.astro) — this header's
-		   slide and that overlay's fade/slide are meant to land together. */
+		padding-bottom: 0.7rem;
+		background: var(--bg);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		overflow: hidden;
 		transition:
-			opacity 200ms ease,
-			top 800ms cubic-bezier(0.22, 1, 0.36, 1),
-			max-height 800ms cubic-bezier(0.22, 1, 0.36, 1);
+			border-color 0.25s ease,
+			box-shadow 0.25s ease;
 	}
 
-	.side-panel.is-active {
+	/* Brighter, glowing silhouette when the card is hovered. */
+	.side-panel:hover {
+		border-color: color-mix(in srgb, var(--person-color) 55%, var(--border));
+		box-shadow: 0 0 26px -2px color-mix(in srgb, var(--person-color) 38%, transparent);
+	}
+
+	/* Hovering one card reveals both (they're a paired unit), so the *other*
+	   card is part of the same modal even though the pointer isn't on it — give
+	   it the same lifted border/glow so it stands off the blurred, desaturated
+	   backdrop exactly like the hovered one, rather than sitting flat with just
+	   its faint idle border. Also applies to the touch-opened card. */
+	.person-bar-inner.reveal .side-panel,
+	.side-panel.is-open {
+		border-color: color-mix(in srgb, var(--person-color) 55%, var(--border));
+		box-shadow: 0 0 26px -2px color-mix(in srgb, var(--person-color) 38%, transparent);
+	}
+
+	/* Modal backdrop for a revealed card — blurs and desaturates the rest of the
+	   page behind the cards, like the project detail modal's ::backdrop. Sits
+	   below the sticky bar (z-index 4) so the opaque cards stay crisp on top.
+	   Shown via :has() whenever any card's skills are revealed — hover
+	   (.reveal), keyboard focus (:focus-within), or the touch toggle (.is-open)
+	   — but never in contact mode, where the cards aren't showing skills. */
+	.person-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 3;
+		background: rgba(4, 6, 10, 0.5);
+		-webkit-backdrop-filter: blur(5px) saturate(0.65);
+		backdrop-filter: blur(5px) saturate(0.65);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.25s ease;
+	}
+
+	:global(body:not(.contact-mode):has(.person-bar-inner.reveal)) .person-backdrop,
+	:global(body:not(.contact-mode):has(.person-bar-inner:focus-within)) .person-backdrop,
+	:global(body:not(.contact-mode):has(.side-panel.is-open)) .person-backdrop {
+		opacity: 1;
+	}
+
+	.side-panel :global(.person-header) {
+		padding: 0.9rem 1rem 0.4rem;
+	}
+
+	.side-panel-cv {
+		display: flex;
+		justify-content: flex-start;
+		padding: 0 1rem;
+	}
+
+	/* Toggle and LinkedIn share one cell and crossfade between each other when
+	   contact mode flips — no layout jump. */
+	.side-panel-action {
+		display: grid;
+		padding: 0 1rem;
+	}
+
+	.side-panel-action > * {
+		grid-area: 1 / 1;
+		justify-self: start;
+		transition: opacity 0.4s ease;
+	}
+
+	/* "Skills" button styled like the CV pill: person-tinted soft fill, bold,
+	   same rounded silhouette. */
+	.panel-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.55rem 1rem;
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		color: var(--person-color);
+		background: color-mix(in srgb, var(--person-color) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
+		border-radius: 999px;
+		transition:
+			color 0.2s ease,
+			background 0.2s ease,
+			border-color 0.2s ease,
+			box-shadow 0.2s ease,
+			opacity 0.4s ease;
+	}
+
+	.panel-toggle:hover,
+	.panel-toggle:focus-visible {
+		color: var(--bg);
+		background: var(--person-color);
+		border-color: var(--person-color);
+		box-shadow: 0 0 18px 1px color-mix(in srgb, var(--person-color) 55%, transparent);
+	}
+
+	.panel-toggle-chev {
+		transition: transform 0.2s ease;
+	}
+
+	.side-panel.is-open .panel-toggle-chev {
+		transform: rotate(180deg);
+	}
+
+	/* LinkedIn shown only in contact mode (crossfaded in over the toggle). */
+	.side-panel-linkedin {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.side-panel-linkedin :global(.external-link) {
+		font-weight: 600;
+	}
+
+	/* Collapsed by default; skills reveal via the JS `.reveal` class (hover,
+	   both cards together) or the toggle's is-open (touch). When revealed and
+	   taller than the viewport allows, the card scrolls its own content here
+	   (capped height + contained overscroll) rather than letting the page
+	   scroll behind it — the modal behaviour paired with .person-backdrop and
+	   the wheel handling in panelToggle.client.ts. */
+	.side-panel-stack {
+		display: none;
+		max-height: calc(100vh - 12rem);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+
+	.side-panel.is-open .side-panel-stack {
+		display: block;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.person-bar-inner.reveal .side-panel-stack,
+		.person-bar-inner:focus-within .side-panel-stack {
+			display: block;
+		}
+	}
+
+	/* Right-hand card mirrors to the right edge. */
+	.person-slot--right :global(.person-header) {
+		text-align: right;
+	}
+
+	.person-slot--right .side-panel-cv {
+		justify-content: flex-end;
+	}
+
+	.person-slot--right .side-panel-action > * {
+		justify-self: end;
+	}
+
+	/* The active filter tag, echoed under the (collapsed) card while filtering
+	   — a button that clears the filter on click. */
+	.card-filter {
+		padding: 0.15rem 1rem 0;
+	}
+
+	.person-slot--right .card-filter {
+		text-align: right;
+	}
+
+	.card-filter-tag {
+		font-family: inherit;
+		cursor: pointer;
+		border: none;
+		display: inline-block;
+		font-size: 0.75rem;
+		font-weight: 600;
+		padding: 0.25rem 0.65rem;
+		border-radius: 999px;
+		background: var(--person-color);
+		color: var(--bg);
+		box-shadow: 0 0 14px 1px color-mix(in srgb, var(--person-color) 55%, transparent);
+		transition:
+			box-shadow 0.2s ease,
+			transform 0.2s ease;
+	}
+
+	.card-filter-tag:hover,
+	.card-filter-tag:focus-visible {
+		transform: translateY(-1px);
+		box-shadow: 0 0 20px 3px color-mix(in srgb, var(--person-color) 70%, transparent);
+		outline: none;
+	}
+
+	/* ---- Contact mode: the person cards become contact cards, in place ----
+	   As the reader scrolls into the closing Contact section (see
+	   sections/Contact.astro, which is where the "Contact" title + studio card
+	   live, in normal page flow), each person card swaps its Skills button for
+	   its LinkedIn link — so the two people read as contact cards pinned above
+	   that section. */
+	:global(body.contact-mode) .panel-toggle {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	:global(body.contact-mode) .side-panel-linkedin {
 		opacity: 1;
 		pointer-events: auto;
 	}
 
-	/* Invisible full-viewport-height strips that widen the hover trigger all
-	   the way out to the true screen edge — sized/positioned by
-	   syncSidePanels.client.ts to always reach from x=0 (or the right edge)
-	   to the reserved column's own inner edge, so on wide viewports (where
-	   .scrolly-grid's 1600px max-width leaves empty margin outside the
-	   column) that margin is still hoverable, not just the column itself.
-	   Only pointer-events-active once enabled (see .is-enabled — tied to the
-	   same "Timeline reached" gate as .side-panel.is-active) and only on
-	   devices that actually have hover, so they never swallow taps on touch
-	   devices or clicks before the panels are even in play. */
-	.hover-zone {
-		position: fixed;
-		top: 0;
-		height: 100vh;
-		pointer-events: none;
-		z-index: 4;
+	/* No skills panel in contact mode. */
+	:global(body.contact-mode) .side-panel-stack {
+		display: none !important;
 	}
 
-	.hover-zone--left {
-		left: 0;
-	}
-
-	.hover-zone--right {
-		right: 0;
-	}
-
-	@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
-		.hover-zone.is-enabled {
-			pointer-events: auto;
-		}
-	}
-
-	/* Peek hint and the actual skills/hobbies card occupy the same grid
-	   cell and crossfade between each other (see the media query below)
-	   instead of one pushing the other around — so revealing the card never
-	   causes a layout jump, and collapsing it back just leaves a quiet,
-	   mostly-transparent strip under the header (the timeline shows through
-	   the reserved column) rather than an awkward empty gap. Plain flex
-	   item outside that media query — see the .side-panel-peek/-scroll
-	   fallback rules just below for why. */
-	.side-panel-stack {
-		flex: 1 1 auto;
-		min-height: 0;
-	}
-
-	/* CV button sits directly below the name header and above the scrolling
-	   skills/filters stack — so it's reachable without scrolling the card.
-	   Indented to line up under the header text (matching its 1.75rem side
-	   padding). On desktop it's revealed on hover along with the skills (see
-	   the media query below); on mobile's static layout it's always shown. */
-	.side-panel-cv {
-		flex-shrink: 0;
+	.timeline-area {
 		display: flex;
-		justify-content: flex-start;
-		padding: 0 1.75rem;
+		flex-direction: column;
+		align-items: center;
+		max-width: 1600px;
+		margin: 0 auto;
 	}
 
-	/* Hidden outright, not just faded, whenever the hover-collapse below
-	   doesn't apply (mobile's stacked layout, or a desktop-width device
-	   without real hover) — there'd be nothing for it to invite you toward
-	   in either case, since the skills/hobbies card is simply always shown
-	   there instead. */
-	.side-panel-peek {
-		display: none;
+	/* ---- Filter modal ---------------------------------------------------
+	   Filtering doesn't collapse the page in place — it lifts the filtered
+	   Timeline jobs/projects into a centered modal panel over a dimmed
+	   backdrop, so the reader sees just the filtered results, not the whole
+	   site. Dismiss by clicking the backdrop, the panel chip's ✕, or Escape
+	   (see filterModal.client.ts / tagFilter.client.ts). */
+	.filter-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 25;
+		background: rgba(4, 6, 10, 0.74);
+		-webkit-backdrop-filter: blur(3px);
+		backdrop-filter: blur(3px);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.3s ease;
 	}
 
-	.peek-chevron {
-		color: var(--person-color);
-		font-size: 0.85rem;
+	:global(body.filter-active) .filter-backdrop {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
-	/* Only the skill/hobby card scrolls — the name/role header above stays
-	   put, and this scrolls independently of the page (overscroll-behavior:
-	   contain stops it from handing scroll off to the page once it hits its
-	   own top/bottom, per its own bounded height above). Scrollbar hidden
-	   (still fully scrollable by wheel/trackpad/keyboard/touch) since the
-	   panel already reads as its own self-contained frame. */
-	.side-panel-scroll {
-		height: 100%;
+	/* In the filtered modal, drop every heading/label from the original page
+	   layout — the "Timeline"/"Projects" section titles, the company/date
+	   headers, and the Mentor-era label — so the panel reads as just the flat
+	   collection of matching project cards, not a stripped-down copy of the
+	   whole site. The filter chip ("Filtered by: …") and each project's own
+	   name stay. */
+	:global(body.filter-active .section-title),
+	:global(body.filter-active .company-header),
+	:global(body.filter-active .track-header),
+	:global(body.filter-active .mentor-heading) {
+		display: none !important;
+	}
+
+	:global(body.filter-active) .timeline-area {
+		position: fixed;
+		top: 4.5rem;
+		left: 50%;
+		transform: translateX(-50%);
+		width: min(1200px, calc(100vw - 3rem));
+		max-height: calc(100vh - 6rem);
+		margin: 0;
+		padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
 		overflow-y: auto;
 		overscroll-behavior: contain;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
+		z-index: 26;
+		background: var(--bg);
+		border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+		border-radius: 20px;
+		box-shadow: 0 24px 70px -12px rgba(0, 0, 0, 0.85);
+		animation: filter-modal-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
-	.side-panel-scroll::-webkit-scrollbar {
-		display: none;
+	@keyframes filter-modal-in {
+		from {
+			opacity: 0;
+			transform: translateX(-50%) translateY(14px) scale(0.98);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(-50%) translateY(0) scale(1);
+		}
 	}
 
-	/* Context-sensitive display, desktop pointer devices only: resting
-	   state shows just the timeline, with each side reduced to its
-	   always-visible header plus a small peek line beneath it (the skills
-	   card faded out). Hovering *either* side — including .hover-zone,
-	   which reaches all the way to the true screen edge, not just the
-	   reserved column — reveals *both* panels together (see the
-	   .is-hovered class, applied to both by syncSidePanels.client.ts,
-	   whichever side was actually hovered), since the two read as a single
-	   paired unit on the page and popping in just one at a time looked
-	   lopsided in practice. :focus-within is a same-side-only fallback on
-	   top of that, so tabbing into a filter tag always reveals at least the
-	   panel it's in even before the JS hover-group logic has a chance to
-	   run. */
-	@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
-		.side-panel-stack {
-			display: grid;
-			grid-template-rows: 1fr;
-		}
-
-		.side-panel-peek,
-		.side-panel-scroll {
-			grid-area: 1 / 1;
-			min-height: 0;
-		}
-
-		.side-panel-peek {
-			display: flex;
-			align-self: start;
-			align-items: center;
-			justify-content: center;
-			text-align: center;
-			gap: 0.5rem;
-			padding-top: 0.35rem;
-			font-size: 0.75rem;
-			color: var(--fg-muted);
-			pointer-events: none;
-			opacity: 1;
-			transition: opacity 260ms ease;
-		}
-
-		.side-panel-scroll {
-			opacity: 0;
-			pointer-events: none;
-			transition: opacity 280ms ease;
-		}
-
-		/* CV button reveals in step with the skills card — hidden at rest
-		   (just header + peek line showing), fading in on hover. It reserves
-		   its layout space either way, so revealing it never shifts the
-		   skills below. */
-		.side-panel-cv {
-			opacity: 0;
-			pointer-events: none;
-			transition: opacity 280ms ease;
-		}
-
-		.side-panel.is-hovered .side-panel-scroll,
-		.side-panel:focus-within .side-panel-scroll,
-		.side-panel.is-hovered .side-panel-cv,
-		.side-panel:focus-within .side-panel-cv {
-			opacity: 1;
-			pointer-events: auto;
-		}
-
-		.side-panel.is-hovered .side-panel-peek,
-		.side-panel:focus-within .side-panel-peek {
-			opacity: 0;
-		}
-
-		/* The contacts end-animation (see syncSidePanels.client.ts) docks
-		   this panel down onto the Contact overlay's matching header,
-		   clamping max-height to just that header. Deliberately does NOT
-		   force the skills card visible here: if the mouse isn't actually
-		   over the panel (the .is-hovered/:focus-within rules above, which
-		   still apply exactly as normal on top of this), the header should
-		   just slide down on its own with nothing else appearing — not pop
-		   the whole card open for a moment mid-slide. The peek line stays
-		   hidden either way; "hover to reveal" stops being useful advice
-		   once you've already scrolled to the very end. */
-		.side-panel.is-docked .side-panel-peek,
-		.side-panel.is-docked .side-panel-cv {
-			opacity: 0;
+	@media (prefers-reduced-motion: reduce) {
+		:global(body.filter-active) .timeline-area {
+			animation: none;
 		}
 	}
 
 	@media (max-width: 900px) {
-		.scrolly-grid {
-			display: flex;
-			flex-direction: column;
-			gap: 3rem;
+		.scrolly {
+			padding: 1.5rem 1rem 3rem;
 		}
 
-		.hover-zone {
-			display: none;
+		.person-bar-inner {
+			gap: 0.75rem;
+			padding: 0.5rem 0.75rem;
 		}
 
-		/* Fixed positioning only makes sense once there's room for a
-		   standalone side column — on narrow screens everything just
-		   stacks in normal document flow instead, hover-based panel
-		   scrolling doesn't apply on touch anyway. */
-		.side-panel {
-			position: static;
-			max-height: none;
-			opacity: 1;
-			pointer-events: auto;
-			transition: none;
-		}
-
-		.side-panel-scroll {
-			height: auto;
-			overflow-y: visible;
+		.person-slot {
+			flex: 1 1 0;
 		}
 	}
 </style>

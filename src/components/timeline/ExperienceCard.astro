@@ -50,6 +50,24 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 		   card's own natural content — see the chain of flex:1 in
 		   ApartBlock.astro's .track-projects/.track-row/.cards. */
 		flex: 1;
+		transition:
+			transform 0.2s ease,
+			border-color 0.2s ease,
+			box-shadow 0.2s ease,
+			background 0.2s ease;
+	}
+
+	/* Brighter, glowing silhouette on hover — the same strength as the
+	   Projects cards and filter tags: a lift, a bright person-tinted halo and
+	   a crisp accent ring. */
+	.card:hover {
+		transform: translateY(-3px);
+		border-color: color-mix(in srgb, var(--person-color, var(--accent)) 70%, var(--border));
+		background: var(--bg-alt);
+		box-shadow:
+			0 10px 28px -12px rgba(0, 0, 0, 0.7),
+			0 0 22px -2px color-mix(in srgb, var(--person-color, var(--accent)) 55%, transparent),
+			0 0 0 1px color-mix(in srgb, var(--person-color, var(--accent)) 55%, transparent);
 	}
 
 	/* Pinned to their own column explicitly — not just left-to-right DOM
@@ -148,6 +166,10 @@ const { personId, tagIds, color, side, link, previewImage } = Astro.props;
 	@media (prefers-reduced-motion: reduce) {
 		.showcase-body {
 			transition: none;
+		}
+
+		.card:hover {
+			transform: none;
 		}
 	}
 

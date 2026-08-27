@@ -45,12 +45,19 @@ const { label, linked = false, tagId } = Astro.props;
 			opacity 0.2s ease,
 			transform 0.2s ease,
 			box-shadow 0.2s ease,
+			border-color 0.2s ease,
 			background 0.2s ease;
 	}
 
 	button.tag:hover {
 		background: var(--accent-3);
 		color: var(--bg);
+		border-color: var(--accent-3);
+		transform: translateY(-1px);
+		/* Brighter, glowing silhouette on hover. */
+		box-shadow:
+			0 0 18px 2px rgba(255, 209, 102, 0.5),
+			0 0 0 1px rgba(255, 209, 102, 0.6);
 	}
 
 	button.tag:focus-visible {
@@ -61,9 +68,12 @@ const { label, linked = false, tagId } = Astro.props;
 	button.tag[aria-pressed='true'] {
 		background: var(--accent-3);
 		color: var(--bg);
+		border-color: var(--accent-3);
 		text-decoration: none;
 		transform: scale(1.05);
-		box-shadow: 0 0 12px 2px var(--accent-soft);
+		box-shadow:
+			0 0 20px 3px rgba(255, 209, 102, 0.6),
+			0 0 0 1px rgba(255, 209, 102, 0.7);
 	}
 
 	:global(body.filter-active) button.tag:not([aria-pressed='true']) {

@@ -1,239 +1,66 @@
 ---
 /**
- * `#contact` itself is just a minimal, empty placeholder in normal document
- * flow — tall enough to serve as a scroll trigger and a landing spot for
- * the "Contact" nav link, nothing else. Everything actually seen —
- * the "Contact" title, both people's contact cards, and the studio's — is
- * `.contact-overlay`: a `position: fixed`, full-viewport, opaque panel,
- * entirely outside document flow. It starts translated fully below the
- * viewport and fades/slides up into place the instant the page hits its
- * true scroll limit (see syncSidePanels.client.ts) — `#contact`'s only
- * purpose is supplying enough height that that limit doesn't arrive while
- * the tail end of Timeline/Projects is still awkwardly on screen. Firing
- * exactly at the scroll limit (not just close to it) matters: it's what
- * guarantees the scrollbar is genuinely at the bottom once this is
- * showing, with no leftover room to keep scrolling underneath it without
- * anything visibly changing. Its speed is controlled by two custom
- * properties set on `.contact-overlay` itself below —
- * `--contact-reveal-duration` for the slide, `--contact-reveal-fade-duration`
- * for the opacity fade that covers whatever's left of Timeline/Projects
- * (deliberately quicker than the slide) — change either to adjust it.
+ * Contact closes the page as an ordinary full-height section in normal flow —
+ * the "Contact" title above the Mentor Game Studio card — so it simply scrolls
+ * up from the bottom as part of the main page, filling the viewport once
+ * reached (which is what pushes the tail of Timeline/Projects up out of view).
  *
- * Being `position: fixed` and opaque is what makes this simple: once
- * revealed, it's completely immune to further scrolling (no clamping or
- * fighting the scrollbar needed to hold it in place — it just doesn't move
- * with scroll at all, the same way the side panels don't), and its
- * background covers whatever's left of Timeline/Projects still visible
- * above it and this section's own now-redundant place in the page alike —
- * both simply disappear behind it rather than needing to be separately
- * animated out of the way.
- *
- * Each person's card is topped with its own PersonHeader — laid out exactly
- * like the top half of the fixed side panel further up the page (rounded
- * top border, name + title), but never actually shown here — it stays
- * permanently `visibility: hidden`, existing only to hold the correct
- * layout position for PersonContactCard below it and to give
- * syncSidePanels.client.ts something to measure. The fixed side panel's
- * own header is what's actually seen: it slides all the way down from its
- * resting spot near the top of the page to land exactly here and then
- * just stays, rather than handing off to a second element that would need
- * to be revealed in perfect sync with it — one continuously-visible header
- * instead of two that have to coordinate exact timing. PersonContactCard,
- * the bottom half, has nothing sliding onto it from elsewhere, so it gets
- * its own real pop-into-place animation (see PersonContactCard.astro). The
- * "Contact" title and the studio's own card have neither trick applied
- * individually — they're simply part of .contact-overlay's own fade-in.
+ * Scrolling into it also flips the sticky top bar into "contact mode" (see
+ * contactMode.client.ts + ScrollyRegion.astro): each person card swaps its
+ * Skills button for its LinkedIn link, so the two people read as contact cards
+ * pinned above this section.
  */
-import { getPerson } from '../../data/people';
-import PersonHeader from '../personal/PersonHeader.astro';
-import PersonContactCard from '../personal/PersonContactCard.astro';
 import CompanyContactCard from './CompanyContactCard.astro';
-
-const mitko = getPerson('mitko');
-const adam = getPerson('adam');
 ---
 
-<div id="contact" class="contact-anchor"></div>
-
-<div class="contact-overlay" id="contact-overlay">
-	<div class="contact-overlay-content">
-		<h2 class="contact-overlay-title brand-heading">Contact</h2>
-		<div class="contact-grid">
-			<div class="contact-person">
-				<PersonHeader person={mitko} />
-				<PersonContactCard person={mitko} />
-			</div>
-			<CompanyContactCard />
-			<div class="contact-person">
-				<PersonHeader person={adam} />
-				<PersonContactCard person={adam} />
-			</div>
-		</div>
-	</div>
-</div>
+<section id="contact" class="contact-zone">
+	<h2 class="contact-title brand-heading">Contact</h2>
+	<CompanyContactCard />
+</section>
 
 <style>
-	.contact-anchor {
-		/* Just tall enough to be a believable scroll target — no content
-		   of its own, see the file-level comment above. */
-		height: 40vh;
-		width: 100%;
-	}
-
-	.contact-overlay {
-		/* The knobs to adjust for reveal speed — everything below reads
-		   from these rather than hardcoded durations. --contact-reveal-duration
-		   (the slide) is kept roughly in sync with .side-panel's own
-		   docking transition (see ScrollyRegion.astro), so the header's
-		   slide and this settle together instead of visibly finishing at
-		   different times. --contact-reveal-fade-duration is deliberately
-		   quicker: it's what covers the tail end of Timeline/Projects
-		   still on screen, and that should read as a snappier cut, not
-		   linger at the same pace as the slide. */
-		--contact-reveal-duration: 800ms;
-		--contact-reveal-fade-duration: 350ms;
-		/* How tall the soft edge at the top of the panel is — see the
-		   mask-image below. The panel is deliberately taller than the
-		   viewport by exactly this much, extending above it (`top` is
-		   negative), so that at rest the entire feathered region sits
-		   above y=0 — off-screen, not just faded — and the whole visible
-		   viewport is solid, un-faded background. Only mid-slide, while
-		   the panel is still travelling up from below, does the feathered
-		   region pass through the visible area, which is what actually
-		   produces the soft-covering effect; once settled, nothing is
-		   left translucent at the top the way a same-height masked panel
-		   would leave permanently. */
-		--contact-reveal-feather: 100px;
-
-		position: fixed;
-		/* Hidden: parked with its own top edge exactly at the viewport's
-		   bottom edge (fully off-screen below). Revealed: top pulled up to
-		   -feather (see .is-revealed below) — same end position as before,
-		   but animating `top` directly rather than a `transform`.
-		   `transform` is deliberately avoided here: it's a compositor-only
-		   property, and forcibly clearing one for a synchronous, reliable
-		   measurement (which syncSidePanels.client.ts needs to do, to find
-		   out exactly where this ends up so the fixed side panel's header
-		   can land on it) turned out not to be safe to rely on — the
-		   previous version of this used `transform: translateY()` for the
-		   slide and briefly forced it to `none` before measuring a
-		   descendant's position, which quietly failed to actually take
-		   effect, so the fixed panel's header ended up docking roughly a
-		   full viewport-height too far down — genuinely off-screen, not
-		   just visually awkward. `top`/`height`, being ordinary layout
-		   properties, don't have that problem. */
-		top: 100vh;
-		left: 0;
-		right: 0;
-		height: calc(100vh + var(--contact-reveal-feather));
-		background: var(--bg);
-		opacity: 0;
-		pointer-events: none;
-		mask-image: linear-gradient(to bottom, transparent, black var(--contact-reveal-feather));
-		-webkit-mask-image: linear-gradient(to bottom, transparent, black var(--contact-reveal-feather));
-		transition:
-			opacity var(--contact-reveal-fade-duration) ease,
-			top var(--contact-reveal-duration) cubic-bezier(0.22, 1, 0.36, 1);
-		z-index: 5;
-	}
-
-	.contact-overlay.is-revealed {
-		opacity: 1;
-		top: calc(-1 * var(--contact-reveal-feather));
-		pointer-events: auto;
-	}
-
-	/* Offset back down by exactly the feather amount the parent extends
-	   upward by, so this — where the title/grid actually get centered —
-	   aligns with the true viewport regardless of that extra height. */
-	.contact-overlay-content {
-		position: absolute;
-		top: var(--contact-reveal-feather);
-		left: 0;
-		right: 0;
-		bottom: 0;
+	.contact-zone {
+		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 3rem;
-		padding: 2rem 1.5rem;
+		gap: 2.5rem;
+		padding: 4rem 1.5rem;
+		/* Anchor-jump lands below the fixed navbar + sticky bar. */
+		scroll-margin-top: 8rem;
 	}
 
-	.contact-overlay-title {
+	.contact-title {
+		margin: 0;
 		font-size: clamp(1.75rem, 4vw, 2.5rem);
 		text-align: center;
-		margin: 0;
+		color: var(--fg);
 	}
 
-	/* Matches ScrollyRegion.astro's .scrolly-grid column widths exactly, so
-	   Mitko's and Ádám's contact cards here line up with the fixed side
-	   panels above instead of being a slightly different width/position. */
-	.contact-grid {
-		display: grid;
-		grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(240px, 300px);
-		column-gap: 2rem;
-		align-items: center;
-		max-width: 1600px;
-		width: 100%;
+	/* A gentle fade/rise as the section scrolls into view, keyed off contact
+	   mode — enough to feel like it's floating up into place, without breaking
+	   the sense that it's just the page's own last section. */
+	.contact-title,
+	.contact-zone :global(.company-card) {
+		opacity: 0;
+		transform: translateY(24px);
+		transition:
+			opacity 0.6s ease,
+			transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
-	/* Header flush against the card below it — together they read as one
-	   continuous box, just like the fixed side panel does. */
-	.contact-person {
-		display: flex;
-		flex-direction: column;
+	:global(body.contact-mode) .contact-title,
+	:global(body.contact-mode) .contact-zone :global(.company-card) {
+		opacity: 1;
+		transform: translateY(0);
 	}
 
-	@media (max-width: 900px) {
-		.contact-anchor {
-			height: auto;
-		}
-
-		/* No fixed-overlay choreography on narrow screens — everything
-		   Contact has just stacks in normal document flow instead, same as
-		   the side panels' own mobile fallback in ScrollyRegion.astro. */
-		.contact-overlay {
-			position: static;
-			top: auto;
-			left: auto;
-			right: auto;
-			height: auto;
-			opacity: 1;
-			pointer-events: auto;
-			transition: none;
-			mask-image: none;
-			-webkit-mask-image: none;
-		}
-
-		.contact-overlay-content {
-			position: static;
-			padding: 3rem 1.5rem;
-		}
-
-		.contact-grid {
-			grid-template-columns: 1fr;
-			row-gap: 1.5rem;
-			max-width: 480px;
-			margin: 0 auto;
-		}
-	}
-
-	/* Desktop only — permanently invisible, never revealed. This isn't
-	   really a "second header" at all: it exists purely so
-	   syncSidePanels.client.ts has something at a fixed, correct layout
-	   position to measure and to keep this column's PersonContactCard
-	   positioned right below where a header would be — the fixed side
-	   panel's own header is the only one that ever actually gets seen,
-	   sliding all the way down from its resting spot to land here and
-	   simply staying, rather than handing off to a second element that
-	   has to be revealed in perfect sync with it. Two headers trying to
-	   coordinate exact timing was the source of every "it looks wrong"
-	   report on this so far — one continuously-visible one sidesteps the
-	   problem entirely instead of trying to solve the timing. */
-	@media (min-width: 901px) {
-		.contact-person :global(.person-header) {
-			visibility: hidden;
+	@media (prefers-reduced-motion: reduce) {
+		.contact-title,
+		.contact-zone :global(.company-card) {
+			transition: opacity 0.3s ease;
+			transform: none;
 		}
 	}
 </style>

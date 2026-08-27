@@ -461,14 +461,28 @@ const tracks = await Promise.all(
 			background 0.2s ease;
 	}
 
+	/* Same bright, glowing hover as the `together` project rows (see
+	   .project-row--boxed:hover in ProjectRow.astro) — a warm accent halo and
+	   crisp ring on top of the lift shadow — so every clickable timeline card
+	   lights up identically no matter which track it sits in. */
 	.track-row--boxed:hover {
-		border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
-		box-shadow: 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+		border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+		box-shadow:
+			0 10px 28px -14px rgba(0, 0, 0, 0.7),
+			0 0 22px -2px rgba(255, 122, 0, 0.45),
+			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
 		background: var(--bg-alt);
 	}
 
+	/* Mentor-era rows glow in the studio's own warm color instead of the plain
+	   accent, keeping their identity while getting the full glowing treatment. */
 	.track-company.emphasized .track-row--boxed:hover {
-		border-color: var(--mentor-border);
+		border-color: color-mix(in oklab, var(--mentor) 70%, var(--border));
+		box-shadow:
+			0 10px 28px -14px rgba(0, 0, 0, 0.7),
+			0 0 22px -2px rgba(255, 183, 3, 0.45),
+			0 0 0 1px color-mix(in oklab, var(--mentor) 55%, transparent);
+		background: var(--mentor-bg);
 	}
 
 	.row-open {
