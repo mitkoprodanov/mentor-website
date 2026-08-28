@@ -51,6 +51,9 @@ const adam = getPerson('adam');
 					{ person: adam, side: 'right' as const },
 				].map((entry) => (
 					<div class:list={['person-slot', `person-slot--${entry.side}`]} style={`--person-color: var(--${entry.person.id}-color)`}>
+						<div class:list={['person-photo', entry.person.id === 'mitko' ? 'person-photo--cutout' : 'person-photo--framed']} aria-hidden="true">
+							<img src={`/people/${entry.person.id}.png`} alt="" width="132" height="150" loading="eager" decoding="async" />
+						</div>
 						<div class="side-panel">
 							<PersonHeader person={entry.person} />
 							<div class="side-panel-cv">
@@ -94,6 +97,7 @@ const adam = getPerson('adam');
 	import '../scripts/contactMode.client';
 	import '../scripts/contactSnap.client';
 	import '../scripts/navScroll.client';
+	import '../scripts/personPhotos.client';
 </script>
 
 <style>
@@ -121,11 +125,137 @@ const adam = getPerson('adam');
 	}
 
 	/* Capped width and anchored to each edge — leaving the centre open for the
-	   timeline even when the skills are expanded. */
+	   timeline even when the skills are expanded. The whole slot (card + its
+	   photo) is the moving unit on the About→Timeline hand-off: it slides from
+	   the screen centre out to its own edge, so the photo stays locked directly
+	   above its card the entire way. Driven by personPhotos.client.ts:
+	     --cx    (per slot) distance from the card's centre to the viewport centre
+	     --split (eased 0→1) collapses it — split 0 stacks the pair at centre,
+	             split 1 rests each slot at its edge; --photo-motion zeroes the
+	             travel under reduced motion. */
 	.person-slot {
 		position: relative;
 		flex: 0 1 340px;
 		min-width: 0;
+		transform: translateX(calc((1 - var(--split, 1)) * var(--cx, 0px) * var(--photo-motion, 1)));
+		will-change: transform;
+	}
+
+	/* ---- Headshot photos above each card --------------------------------
+	   One per person, absolutely positioned above its card — out of flow, so it
+	   never adds height to the sticky bar ("doesn't take the space afterwards")
+	   — and carried along by the slot's transform so it rides above the card.
+	   It adds only its own flourish: an eased lift + zoom that's strongest at
+	   centre and settles as the pair reaches the sides, then a fade as it tucks
+	   behind the navbar. A vertical, flat-top hexagon echoing the brand. */
+	.person-photo {
+		/* Pointy-top hexagon traced from Adam's own source crop: the point sits
+		   top & bottom centre and the left/right edges run vertical, so the sides
+		   never pinch into a head the way a flat-top hexagon's side points do. */
+		--hex: polygon(50% 0%, 100% 28%, 100% 76%, 50% 100%, 0% 76%, 0% 28%);
+		position: absolute;
+		left: 50%;
+		bottom: calc(100% + 14px);
+		width: 132px;
+		height: 150px;
+		z-index: 2;
+		pointer-events: none;
+		clip-path: var(--hex);
+		transform: translateX(-50%)
+			translateY(calc((1 - var(--split, 1)) * -14px * var(--photo-motion, 1)))
+			scale(calc(1 + (1 - var(--split, 1)) * 0.1 * var(--photo-motion, 1)));
+		transform-origin: bottom center;
+		opacity: var(--photo-opacity, 1);
+		filter:
+			drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55))
+			drop-shadow(0 0 12px color-mix(in srgb, var(--person-color) 42%, transparent));
+		will-change: transform, opacity;
+	}
+
+	.person-photo img {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		/* Desaturated + sepia-warmed so the photo reads in the site's palette
+		   rather than as a raw snapshot. */
+		filter: grayscale(0.5) sepia(0.36) saturate(1.05) contrast(1.02) brightness(0.97);
+		transition: filter 0.3s ease;
+	}
+
+	/* --- Adam: a self-contained hexagon photo (its own café backdrop). A 3px
+	   person-tinted ring shows through the padding; the image is clipped to the
+	   same hexagon and scaled a hair past the frame so no white corner sliver
+	   from the source survives the crop. --- */
+	.person-photo--framed {
+		padding: 3px;
+		background: linear-gradient(150deg, color-mix(in srgb, var(--person-color) 90%, #fff), color-mix(in srgb, var(--person-color) 35%, var(--bg)));
+	}
+
+	.person-photo--framed img {
+		clip-path: var(--hex);
+		object-position: center 22%;
+		transform: scale(1.06);
+	}
+
+	/* Accent wash over Adam's photo, clipped to the hexagon. */
+	.person-photo--framed::after {
+		content: '';
+		position: absolute;
+		inset: 3px;
+		clip-path: var(--hex);
+		background: var(--person-color);
+		mix-blend-mode: soft-light;
+		opacity: 0.3;
+		pointer-events: none;
+		transition: opacity 0.3s ease;
+	}
+
+	/* --- Mitko: a background-removed cut-out. Instead of a hard photographic
+	   edge, he floats on a soft person-tinted radial backdrop inside the hexagon,
+	   and a person-coloured glow traced around his silhouette (the image's own
+	   drop-shadow, which follows its alpha) feathers the extraction edge so the
+	   cut reads as an intentional halo. --- */
+	.person-photo--cutout {
+		background: radial-gradient(
+			ellipse 72% 62% at 50% 42%,
+			color-mix(in srgb, var(--person-color) 34%, var(--bg)) 0%,
+			color-mix(in srgb, var(--person-color) 14%, var(--bg)) 48%,
+			var(--bg) 88%
+		);
+	}
+
+	.person-photo--cutout img {
+		/* Pulled down and un-zoomed so his whole head clears the top point. */
+		object-position: center 2%;
+		transform: scale(0.98);
+		filter: grayscale(0.5) sepia(0.36) saturate(1.05) contrast(1.02) brightness(0.97)
+			drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 75%, #fff))
+			drop-shadow(0 0 12px color-mix(in srgb, var(--person-color) 55%, transparent));
+	}
+
+	/* When the cards are engaged (hover reveals both together, or a card is
+	   touch-opened) the photos warm toward full colour — tying them into the
+	   same reveal choreography as the skills panels. */
+	.person-bar-inner.reveal .person-photo img,
+	.person-slot:has(.side-panel.is-open) .person-photo img,
+	.person-slot:hover .person-photo img {
+		filter: grayscale(0.15) sepia(0.15) saturate(1.1) contrast(1.02) brightness(1);
+	}
+
+	/* Cutout keeps its silhouette halo on hover (the drop-shadows must ride
+	   along with the warmed colour filter). */
+	.person-bar-inner.reveal .person-photo--cutout img,
+	.person-slot:has(.side-panel.is-open) .person-photo--cutout img,
+	.person-slot:hover .person-photo--cutout img {
+		filter: grayscale(0.15) sepia(0.15) saturate(1.1) contrast(1.02) brightness(1)
+			drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 75%, #fff))
+			drop-shadow(0 0 12px color-mix(in srgb, var(--person-color) 55%, transparent));
+	}
+
+	.person-bar-inner.reveal .person-photo--framed::after,
+	.person-slot:hover .person-photo--framed::after {
+		opacity: 0.16;
 	}
 
 	/* Each resting card carries its own soft "modal" halo: a band just outside
@@ -267,6 +397,20 @@ const adam = getPerson('adam');
 	.side-panel-action {
 		display: grid;
 		padding: 0 1rem;
+	}
+
+	/* Until the cards finish sliding out to the sides they're a purely visual,
+	   non-interactive intro: no Skills button (so the resting card is just its
+	   title), and nothing hoverable, openable, or glowing. Both switch on only
+	   once docked — body.cards-arrived, set by personPhotos.client.ts when the
+	   split completes. pointer-events:none also blocks every :hover effect
+	   (glow, photo warm-up) and the toggle click in one stroke. */
+	:global(body:not(.cards-arrived)) .person-bar-inner {
+		pointer-events: none;
+	}
+
+	:global(body:not(.cards-arrived)) .side-panel-action {
+		display: none;
 	}
 
 	.side-panel-action > * {
@@ -540,6 +684,8 @@ const adam = getPerson('adam');
 		.person-slot {
 			flex: 0 0 auto;
 			width: 100%;
+			/* No sticky split on a phone — the bar is a normal stacked block. */
+			transform: none !important;
 		}
 
 		/* Stacked and full-width, both cards read top-to-bottom left-aligned —
@@ -579,6 +725,16 @@ const adam = getPerson('adam');
 		   bar now in normal flow it just muddies the edges, so drop it. */
 		.person-slot::before {
 			display: none;
+		}
+
+		/* No sticky bar and no centre gap to split across on a phone: the photo
+		   just sits centred, in flow, above each stacked card and scrolls away
+		   with it. Drop the scroll-driven transform/fade entirely. */
+		.person-photo {
+			position: static;
+			margin: 0 auto 0.75rem;
+			transform: none !important;
+			opacity: 1 !important;
 		}
 	}
 </style>

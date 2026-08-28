@@ -42,17 +42,20 @@ import Section from '../Section.astro';
 		text-align: center;
 	}
 
-	/* Extra room below the (vertically centered) hero content, on top of
-	   Section.astro's base 4rem — so the tagline/vision line have scrolled
-	   well out of view by the time the Timeline's first entry appears,
-	   instead of the two overlapping in the viewport. Targets the #about id
-	   (also set by Section.astro) rather than the .about class: Section's
-	   own `padding: 4rem 1.5rem` shorthand has equal specificity to a
-	   class-only selector here, and — evidently — lands later in the
-	   compiled cascade, so a same-specificity override was silently losing
-	   to it. An id selector unambiguously outranks it either way. */
+	/* The hero no longer fills the whole first screen: it sits in the upper
+	   portion and the two founders' photos + card headers (pulled up from the
+	   sticky person bar just below) fill the lower portion, so opening the site
+	   shows the studio *and* the team at once. So drop Section's forced 100vh
+	   min-height and centre-justification here, and size the section with a
+	   bottom pad just large enough to seat the person bar in the lower part of
+	   the first screen — from where it splits out to the sides as you scroll.
+	   Targets the #about id (also set by Section.astro) rather than the .about
+	   class: Section's own `padding`/`min-height` land on the same element, and
+	   an id selector unambiguously outranks a class-only override either way. */
 	:global(#about) {
-		padding-bottom: calc(4rem + 50vh);
+		min-height: auto;
+		justify-content: flex-start;
+		padding-bottom: clamp(9rem, 4rem + 16vh, 15rem);
 	}
 
 	.hero-content h1 {
