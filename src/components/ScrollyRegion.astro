@@ -54,6 +54,32 @@ const adam = getPerson('adam');
 						<div class:list={['person-photo', entry.person.id === 'mitko' ? 'person-photo--cutout' : 'person-photo--framed']} aria-hidden="true">
 							<img src={`/people/${entry.person.id}.png`} alt="" width="132" height="150" loading="eager" decoding="async" />
 						</div>
+						{/* Curvy, person-tinted flourishes that lift the card off the busy
+						    timeline behind it — a stronger, more graphic separation than the
+						    soft blur ring alone. Two layers, both in the person's colour:
+						      • .decor-frame — a curvy loop just OUTSIDE the whole card, on
+						        every side (top, bottom, and both the outer and inner edge, so
+						        the edge facing the centre timeline is framed too). Stretches to
+						        fit the card at any height. The card is opaque and sits above,
+						        so only the loop around it ever shows.
+						      • .decor-cradle — arcs cupping the headshot above the card, so the
+						        line "circles" the whole person (photo) + card together. Fades in
+						        lock-step with the photo (see --photo-opacity), so it only shows
+						        while the photo does — before the pair docks and the photo tucks
+						        up behind the navbar.
+						    Both are left–right symmetric, so the same markup serves both cards. */}
+						<div class="slot-decor" aria-hidden="true">
+							<svg class="decor-frame" viewBox="0 0 372 151" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+								<path class="decor-line decor-line--thick" d="M24 9 C130 3 242 3 348 9 C362 11 367 19 365 31 C363 61 367 95 365 124 C364 137 358 143 348 142 C242 148 130 148 24 142 C13 141 8 134 8 122 C9 95 4 61 8 31 C9 19 13 12 24 9 Z" />
+								<path class="decor-line decor-line--thin" d="M8 40 C4 66 4 86 6 112 M364 40 C368 66 368 86 366 112" />
+								<path class="decor-line decor-line--accent" d="M24 9 C13 3 4 8 8 20" />
+								<path class="decor-line decor-line--accent" d="M348 142 C359 148 368 143 364 131" />
+							</svg>
+							<svg class="decor-cradle" viewBox="0 0 340 200" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+								<path class="decor-line decor-line--thick" d="M58 192 C38 150 58 90 108 60 C130 45 152 37 170 36 C188 37 210 45 232 60 C282 90 302 150 282 192" />
+								<path class="decor-line decor-line--thin" d="M44 192 C24 146 46 82 100 50 C126 34 150 27 170 26 C190 27 214 34 240 50 C294 82 316 146 296 192" />
+							</svg>
+						</div>
 						<div class="side-panel">
 							<PersonHeader person={entry.person} />
 							<div class="side-panel-cv">
@@ -304,6 +330,82 @@ const adam = getPerson('adam');
 	   a modal — a blurred/desaturated backdrop drops over the rest of the page
 	   (see .person-backdrop) and the card itself scrolls if its content
 	   overflows the viewport (see .side-panel-stack) rather than the page. */
+	/* ---- Curvy person-tinted flourishes --------------------------------
+	   Person-coloured curvy lines that lift each card off the busy timeline
+	   behind it — a crisp, graphic separation where the soft blur ring reads
+	   as depth, these read as identity/frame. Two layers (see the markup):
+	   a loop around the whole card, and arcs cupping the photo above it. The
+	   card panel is opaque and sits above (z-index below), so only the parts
+	   that reach past the card ever show. */
+	.slot-decor {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+		color: var(--person-color);
+	}
+
+	/* The card loop: inset OUTSIDE the card on every side, stretched to the
+	   slot so it frames the card at any height (resting or skills-expanded).
+	   preserveAspectRatio=none + non-scaling strokes keep the line crisp while
+	   the box stretches. */
+	.decor-frame {
+		position: absolute;
+		/* Explicit size (not auto) so the loop fills — and stretches with — the
+		   inset box; leaving width/height auto lets the SVG's intrinsic aspect
+		   ratio pin its height and it stops tracking the card. */
+		left: -16px;
+		top: -16px;
+		width: calc(100% + 32px);
+		height: calc(100% + 32px);
+		filter: drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 45%, transparent));
+		transition: opacity 0.25s ease;
+	}
+
+	/* The photo cradle: a fixed band directly above the card, sized to the
+	   photo. Tied to --photo-opacity (published on .person-bar-inner) so it
+	   fades out exactly as the headshot does when the pair docks. */
+	.decor-cradle {
+		position: absolute;
+		left: 0;
+		top: -200px;
+		width: 100%;
+		height: 200px;
+		opacity: var(--photo-opacity, 1);
+		filter: drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 45%, transparent));
+	}
+
+	.decor-line {
+		stroke: currentColor;
+		stroke-linecap: round;
+		fill: none;
+		vector-effect: non-scaling-stroke;
+	}
+
+	.decor-line--thick {
+		stroke-width: 2.4;
+		opacity: 0.9;
+	}
+
+	.decor-line--thin {
+		stroke-width: 1.2;
+		opacity: 0.5;
+	}
+
+	.decor-line--accent {
+		stroke-width: 3.2;
+		opacity: 0.8;
+	}
+
+	/* When the skills reveal (hover / open) the full-page backdrop takes over
+	   separation and the card grows tall — ease the card loop back so it
+	   doesn't compete with the expanded modal, mirroring the blur ring's fade.
+	   (The cradle is already gone by then: the photo has faded on docking.) */
+	.person-bar-inner.reveal .decor-frame,
+	.person-bar-inner:has(.side-panel.is-open) .decor-frame {
+		opacity: 0.4;
+	}
+
 	.side-panel {
 		display: flex;
 		flex-direction: column;
@@ -313,6 +415,10 @@ const adam = getPerson('adam');
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		overflow: hidden;
+		/* Own stacking context so the corner flourishes (z-index 0) sit behind
+		   the opaque card while its own children stay above. */
+		position: relative;
+		z-index: 1;
 		/* Never let the whole card grow past the viewport when its skills are
 		   revealed. The sticky bar sits ~3.6rem down (top: 3rem + the bar's own
 		   padding), so cap the card a little short of the remaining height and
@@ -722,8 +828,11 @@ const adam = getPerson('adam');
 		}
 
 		/* The per-card blur halo reads as a floating overlay ring — with the
-		   bar now in normal flow it just muddies the edges, so drop it. */
-		.person-slot::before {
+		   bar now in normal flow it just muddies the edges, so drop it. Same
+		   for the corner flourishes, which also risk poking past the viewport
+		   edge on a narrow full-width card. */
+		.person-slot::before,
+		.slot-decor {
 			display: none;
 		}
 
