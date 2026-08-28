@@ -80,13 +80,13 @@ const adam = getPerson('adam');
 								<path class="decor-line decor-line--thin" d="M44 192 C24 146 46 82 100 50 C126 34 150 27 170 26 C190 27 214 34 240 50 C294 82 316 146 296 192" />
 							</svg>
 						</div>
-						<div class="side-panel">
+						<div class="side-panel btn-sheen">
 							<PersonHeader person={entry.person} />
 							<div class="side-panel-cv">
 								<CvDownloadLink person={entry.person} />
 							</div>
 							<div class="side-panel-action">
-								<button class="panel-toggle" type="button" aria-expanded="false">
+								<button class="panel-toggle btn-sheen" type="button" aria-expanded="false">
 									<span class="panel-toggle-label">Skills</span>
 									<span class="panel-toggle-chev" aria-hidden="true">▾</span>
 								</button>
@@ -427,9 +427,27 @@ const adam = getPerson('adam');
 		   scroll area to absorb whatever's left — so the card bottom is always
 		   on screen. Lifted on mobile below, where the bar scrolls with the page. */
 		max-height: calc(100vh - 4.5rem);
+		/* Faint person-tinted glint drifting across the card — the same cue as
+		   the pills and timeline boxes — but only once the card is actually a
+		   live click target (see the cards-arrived gate below). */
+		--sheen-color: var(--person-color);
+		--sheen-strength: 0.09;
 		transition:
 			border-color 0.25s ease,
 			box-shadow 0.25s ease;
+	}
+
+	/* The two cards drift out of step with each other. */
+	.person-slot--right .side-panel {
+		--sheen-delay: -4.5s;
+	}
+
+	/* During the non-interactive intro the card isn't clickable yet, so it
+	   shouldn't advertise itself — hold the glint until body.cards-arrived
+	   (see .side-panel-action's gate above). */
+	:global(body:not(.cards-arrived)) .side-panel::after {
+		animation: none;
+		opacity: 0;
 	}
 
 	/* Brighter, glowing silhouette when the card is hovered. */
@@ -540,6 +558,11 @@ const adam = getPerson('adam');
 		background: color-mix(in srgb, var(--person-color) 14%, transparent);
 		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
 		border-radius: 999px;
+		/* Same person-tinted glint as the CV pill above it, offset the other
+		   way so the pair drift out of step. */
+		--sheen-color: var(--person-color);
+		--sheen-strength: 0.16;
+		--sheen-delay: -5s;
 		transition:
 			color 0.2s ease,
 			background 0.2s ease,

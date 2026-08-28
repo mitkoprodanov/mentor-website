@@ -150,6 +150,7 @@ const tracks = await Promise.all(
 								class="track-row"
 								class:list={{
 									'track-row--boxed': Boolean(project.name),
+									'btn-sheen': Boolean(project.name),
 									/* A boxed row that's the one being stretched (see
 									   CompanyDef.stretchToMiddleOf/stretchNearTopOf/
 									   alignBottomTo) has its own bottom padding stacking on
@@ -420,12 +421,30 @@ const tracks = await Promise.all(
 		flex-direction: column;
 		flex: 1;
 		gap: 0.85rem;
+		/* A clickable boxed row (one person's own detailed project) reads as an
+		   action surface, exactly like the shared `together` rows in
+		   ProjectRow.astro: soft warm-accent tint + colored slim border, plus
+		   the drifting sheen below. */
+		--row-fill: color-mix(in oklab, var(--accent) 6%, var(--bg));
+		--row-fill-hover: color-mix(in oklab, var(--accent) 11%, var(--bg-alt));
+		--row-line: color-mix(in oklab, var(--accent) 32%, var(--border));
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.07;
+	}
+
+	/* Mentor-era rows keep their studio identity — the tint, border and glint
+	   all shift to the warm Mentor gold instead of the plain accent. */
+	.track-company.emphasized .track-row {
+		--row-fill: color-mix(in oklab, var(--mentor) 8%, var(--bg));
+		--row-fill-hover: color-mix(in oklab, var(--mentor) 13%, var(--bg-alt));
+		--row-line: color-mix(in oklab, var(--mentor) 35%, var(--border));
+		--sheen-color: var(--mentor-strong);
 	}
 
 	.track-row--boxed {
-		border: 1px solid var(--border);
+		border: 1px solid var(--row-line);
 		border-radius: 14px;
-		background: var(--bg);
+		background: var(--row-fill);
 		padding: 1rem;
 	}
 
@@ -474,7 +493,7 @@ const tracks = await Promise.all(
 			0 10px 28px -14px rgba(0, 0, 0, 0.7),
 			0 0 22px -2px rgba(255, 122, 0, 0.45),
 			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
-		background: var(--bg-alt);
+		background: var(--row-fill-hover);
 	}
 
 	/* Mentor-era rows glow in the studio's own warm color instead of the plain
@@ -485,7 +504,7 @@ const tracks = await Promise.all(
 			0 10px 28px -14px rgba(0, 0, 0, 0.7),
 			0 0 22px -2px rgba(255, 183, 3, 0.45),
 			0 0 0 1px color-mix(in oklab, var(--mentor) 55%, transparent);
-		background: var(--mentor-bg);
+		background: var(--row-fill-hover);
 	}
 
 	.row-open {
@@ -586,6 +605,15 @@ const tracks = await Promise.all(
 		font-size: 0.78rem;
 		line-height: 1.4;
 		color: var(--fg-muted);
+	}
+
+	/* Stagger the drifting sheen so neighbouring boxes never glint together. */
+	.track-row--boxed:nth-child(3n + 2) {
+		--sheen-delay: -3s;
+	}
+
+	.track-row--boxed:nth-child(3n + 3) {
+		--sheen-delay: -6s;
 	}
 
 	@media (max-width: 900px) {

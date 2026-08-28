@@ -24,7 +24,7 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 {
 	person.cv && (
 		<a
-			class="cv-download"
+			class="cv-download btn-sheen"
 			href={person.cv}
 			download
 			style={`--person-color: var(--${person.id}-color)`}
@@ -65,6 +65,11 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 		color: var(--person-color);
 		background: color-mix(in srgb, var(--person-color) 14%, transparent);
 		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
+		/* Metallic glint drifts across in the person's own colour, offset so
+		   it never syncs with the Skills toggle sitting just below it. */
+		--sheen-color: var(--person-color);
+		--sheen-strength: 0.16;
+		--sheen-delay: -2s;
 		transition:
 			color 0.2s ease,
 			background 0.2s ease,

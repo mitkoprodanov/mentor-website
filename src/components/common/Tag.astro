@@ -12,7 +12,7 @@ const { label, linked = false, tagId } = Astro.props;
 
 {
 	linked ? (
-		<button type="button" class="tag tag--linked" data-tag-id={tagId} aria-pressed="false">
+		<button type="button" class="tag tag--linked btn-sheen" data-tag-id={tagId} aria-pressed="false">
 			{label}
 		</button>
 	) : (
@@ -39,6 +39,10 @@ const { label, linked = false, tagId } = Astro.props;
 	button.tag {
 		font-family: inherit;
 		cursor: pointer;
+		/* Warm-gold drifting glint marks the pill as a live click target;
+		   staggered below so neighbouring tags never flash together. */
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.16;
 		text-decoration: underline dotted rgba(255, 209, 102, 0.5);
 		text-underline-offset: 3px;
 		transition:
@@ -78,5 +82,13 @@ const { label, linked = false, tagId } = Astro.props;
 
 	:global(body.filter-active) button.tag:not([aria-pressed='true']) {
 		opacity: 0.45;
+	}
+
+	button.tag--linked:nth-of-type(3n + 2) {
+		--sheen-delay: -3s;
+	}
+
+	button.tag--linked:nth-of-type(3n + 3) {
+		--sheen-delay: -6s;
 	}
 </style>

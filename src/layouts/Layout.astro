@@ -155,4 +155,72 @@ const {
 	a {
 		color: inherit;
 	}
+
+	/* --- Shared "clickable surface" sheen --------------------------------
+	   A faint metallic glint that drifts once across an interactive pill or
+	   box every several seconds, then rests for the remainder of the cycle —
+	   just enough motion to hint "this surface is a live click target"
+	   without ever pulling focus. Opt in by adding the `btn-sheen` class to
+	   the element. Tune per element with:
+	     --sheen-strength : peak opacity of the glint (default 0.1)
+	     --sheen-color    : highlight tint (default warm white)
+	     --sheen-delay    : negative offset used to stagger neighbours so
+	                        they never all flash in unison. */
+	.btn-sheen {
+		position: relative;
+	}
+
+	.btn-sheen::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		/* Clip the glint to the host's own rounded shape. */
+		border-radius: inherit;
+		pointer-events: none;
+		/* A narrow diagonal band of light on an otherwise transparent layer;
+		   the oversized background gives the band room to travel across. */
+		background: linear-gradient(
+			115deg,
+			transparent 38%,
+			color-mix(in srgb, var(--sheen-color, #ffe9c7) 35%, transparent) 47%,
+			color-mix(in srgb, var(--sheen-color, #ffe9c7) 70%, transparent) 50%,
+			color-mix(in srgb, var(--sheen-color, #ffe9c7) 35%, transparent) 53%,
+			transparent 62%
+		);
+		background-size: 260% 100%;
+		background-repeat: no-repeat;
+		background-position: 160% 0;
+		opacity: 0;
+		/* `screen` brightens the tinted surface like a specular glint rather
+		   than painting a flat streak over it. */
+		mix-blend-mode: screen;
+		animation: btn-sheen-drift 9s ease-in-out var(--sheen-delay, 0s) infinite;
+	}
+
+	@keyframes btn-sheen-drift {
+		/* The glint sweeps through in the first ~2.3s, then the layer sits
+		   dark for the rest of the cycle — occasional, not a constant
+		   shimmer. */
+		0% {
+			background-position: 160% 0;
+			opacity: 0;
+		}
+		4% {
+			opacity: var(--sheen-strength, 0.1);
+		}
+		26% {
+			background-position: -60% 0;
+			opacity: 0;
+		}
+		100% {
+			background-position: -60% 0;
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.btn-sheen::after {
+			animation: none;
+		}
+	}
 </style>
