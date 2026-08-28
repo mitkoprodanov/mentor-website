@@ -129,7 +129,15 @@ const adam = getPerson('adam');
 <style>
 	.scrolly {
 		width: 100%;
-		padding: 2rem 1.5rem 4rem;
+		/* No bottom padding below the closing Contact section. Contact is
+		   min-height:100vh and the directional snap (contactSnap.client.ts) rests
+		   with its top flush to the viewport top — so any padding here would leave a
+		   strip of empty scroll *past* that rest: free play the snap can't remove
+		   (you'd snap to the title-on-top, then still be able to nudge ~4rem further).
+		   Contact fills the last screen on its own, so drop it and make that rest the
+		   true end of the page. (Mobile re-adds bottom padding below, where the snap
+		   is disabled and the bar scrolls with the page.) */
+		padding: 2rem 1.5rem 0;
 	}
 
 	/* Transparent, so the timeline shows through the gap between the two

@@ -44,6 +44,12 @@ if (contact && !prefersReduced && !coarsePointer) {
 	let lastY = window.scrollY;
 	let snapping = false;
 	let settleTimer = 0;
+	// Once Contact has snapped flush to the top it becomes a hard detent: it's the
+	// end of the page and the terminal rest, so the reader can't drift past it and
+	// can't linger part-way back. While parked here we hold the position static
+	// against any further downward scroll, and snap straight back to the bottom rest
+	// the moment they scroll up — no in-between free play in either direction.
+	let parkedAtTop = false;
 
 	// A hash-link jump (the navbar's About/Timeline/Contact, the brand link)
 	// smooth-scrolls through this transition band. Without this guard the snap
