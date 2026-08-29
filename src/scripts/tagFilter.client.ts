@@ -1,98 +1,67 @@
 /**
- * Single-select WorkTag filter shared by the Timeline and the Projects
- * section. Clicking any linked tag collapses whichever of those two sections
- * contain a match down to just the matching entries (everything else is
- * `display:none`d via `.tf-hidden`).
+ * Single-select WorkTag filter. Clicking any linked tag opens the detailed
+ * results view (FilterResults.astro) — lifted into a modal over a dimmed
+ * backdrop (see filterModal.client.ts / ScrollyRegion.astro) — showing just the
+ * Projects that match, grouped by who worked on them rather than the timeline's
+ * company/fork layout.
  *
- * The filtered result is then presented as a modal — the timeline-area is
- * lifted over a backdrop (see filterModal.client.ts / ScrollyRegion.astro) —
- * so the switch to the filtered set is instant here (no in-place FLIP reflow,
- * which would fight that lift).
- *
- * Timeline collapse cascades bottom-up: a `.card` hides if it doesn't match
- * the active tag → its row's `.node` hides if none of that row's cards remain
- * → a `.company`/`.track-company` hides if it has no visible rows → a whole
- * `.track` hides if all its companies are gone → a `.mentor-container` hides
- * if it's left empty. Projects collapse is flat: a `.project-card` hides if it
- * doesn't match.
+ * A Project matches if its `data-project-tags` (the union of its experience and
+ * media tags) includes the active tag. Inside a matching Project only the media
+ * whose own `data-media-tags` includes the tag stays shown — so the gallery
+ * narrows to just the relevant clips — and a Project whose gallery ends up empty
+ * simply drops the empty gallery frame. Empty groups/columns collapse away.
  */
 
 type Filter = string | null;
 
-const TIMELINE_FLIP_SELECTOR = '.card, .node, .project-row, .track-row, .company, .track-company, .apart, .mentor-container';
-const PROJECTS_SELECTOR = '.project-card';
-
 let currentFilter: Filter = null;
 
-function matchesTags(el: HTMLElement, filter: Filter): boolean {
-	return filter === null || (el.dataset.tags ?? '').split(' ').includes(filter);
+function hasTag(tags: string | undefined, filter: string): boolean {
+	return (tags ?? '').split(' ').filter(Boolean).includes(filter);
 }
 
-function computeHiddenTimelineSet(root: HTMLElement, filter: Filter): Set<Element> {
-	const toHide = new Set<Element>();
-	const emptyRows = new Set<Element>();
+/** Show only the matching Projects (and, within them, the matching media). */
+function applyResults(filter: Filter): void {
+	const root = document.getElementById('filter-results');
+	if (!root || filter === null) return;
 
-	const cards = Array.from(root.querySelectorAll<HTMLElement>('.card[data-tags]'));
-	for (const card of cards) {
-		if (!matchesTags(card, filter)) toHide.add(card);
-	}
+	let anyVisible = false;
 
-	const rows = Array.from(root.querySelectorAll<HTMLElement>('.project-row, .track-row'));
-	for (const row of rows) {
-		const rowCards = Array.from(row.querySelectorAll<HTMLElement>('.card'));
-		if (rowCards.length > 0 && rowCards.every((c) => toHide.has(c))) {
-			emptyRows.add(row);
-			toHide.add(row);
-			const node = row.querySelector('.node');
-			if (node) toHide.add(node);
-		}
-	}
+	root.querySelectorAll<HTMLElement>('[data-fr-card]').forEach((card) => {
+		const show = hasTag(card.dataset.projectTags, filter);
+		card.hidden = !show;
+		if (!show) return;
+		anyVisible = true;
 
-	const companies = Array.from(root.querySelectorAll<HTMLElement>('.company, .track-company'));
-	for (const company of companies) {
-		const rowsIn = Array.from(company.querySelectorAll<HTMLElement>('.project-row, .track-row'));
-		if (rowsIn.length > 0 && rowsIn.every((r) => emptyRows.has(r))) toHide.add(company);
-	}
+		// Narrow the gallery to media carrying this tag; drop the frame if none.
+		const gallery = card.querySelector<HTMLElement>('[data-gallery]');
+		let visibleShots = 0;
+		card.querySelectorAll<HTMLElement>('.shot[data-media-tags]').forEach((shot) => {
+			const shown = hasTag(shot.dataset.mediaTags, filter);
+			shot.classList.toggle('fr-hidden', !shown);
+			if (shown) visibleShots += 1;
+		});
+		if (gallery) gallery.classList.toggle('fr-gallery-empty', visibleShots === 0);
+	});
 
-	const tracks = Array.from(root.querySelectorAll<HTMLElement>('.track'));
-	for (const track of tracks) {
-		const companiesIn = Array.from(track.querySelectorAll<HTMLElement>(':scope > .track-company'));
-		if (companiesIn.length > 0 && companiesIn.every((c) => toHide.has(c))) toHide.add(track);
-	}
+	// Collapse away any column / group left with no visible cards.
+	const cols = Array.from(root.querySelectorAll<HTMLElement>('[data-fr-col]'));
+	cols.forEach((col) => {
+		col.hidden = !col.querySelector('[data-fr-card]:not([hidden])');
+	});
+	const solo = root.querySelector<HTMLElement>('[data-fr-solo]');
+	// Each solo column stays pinned to its own half (see .fr-col--left/right) so a
+	// one-person project always reads on that person's side, the empty half making
+	// the solo attribution unmistakable — even when only one column has matches.
+	if (solo) solo.hidden = !solo.querySelector('[data-fr-card]:not([hidden])');
+	const both = root.querySelector<HTMLElement>('[data-fr-group="both"]');
+	if (both) both.hidden = !both.querySelector('[data-fr-card]:not([hidden])');
 
-	const aparts = Array.from(root.querySelectorAll<HTMLElement>('.apart'));
-	for (const apart of aparts) {
-		const tracksIn = Array.from(apart.querySelectorAll<HTMLElement>(':scope > .track'));
-		const visible = tracksIn.filter((t) => !toHide.has(t));
-		if (tracksIn.length > 0 && visible.length === 0) toHide.add(apart);
-	}
-
-	const mentors = Array.from(root.querySelectorAll<HTMLElement>('.mentor-container'));
-	for (const mentor of mentors) {
-		const content = mentor.querySelector<HTMLElement>('.mentor-content');
-		const entries = content ? Array.from(content.children).filter((c) => c.classList.contains('company') || c.classList.contains('apart')) : [];
-		const visible = entries.filter((e) => !toHide.has(e));
-		if (entries.length > 0 && visible.length === 0) toHide.add(mentor);
-	}
-
-	return toHide;
+	const empty = root.querySelector<HTMLElement>('[data-fr-empty]');
+	if (empty) empty.hidden = anyVisible;
 }
 
-function computeHiddenProjectsSet(root: HTMLElement, filter: Filter): Set<Element> {
-	const toHide = new Set<Element>();
-	const cards = Array.from(root.querySelectorAll<HTMLElement>(`${PROJECTS_SELECTOR}[data-tags]`));
-	for (const card of cards) {
-		if (!matchesTags(card, filter)) toHide.add(card);
-	}
-	return toHide;
-}
-
-function applyFilter(root: HTMLElement, filter: Filter, animatedSelector: string, computeHidden: (root: HTMLElement, filter: Filter) => Set<Element>) {
-	const toHide = computeHidden(root, filter);
-	root.querySelectorAll<HTMLElement>(animatedSelector).forEach((el) => el.classList.toggle('tf-hidden', toHide.has(el)));
-}
-
-function setTagPressedState(filter: Filter) {
+function setTagPressedState(filter: Filter): void {
 	document.querySelectorAll<HTMLButtonElement>('button.tag--linked').forEach((btn) => {
 		btn.setAttribute('aria-pressed', String(filter !== null && btn.dataset.tagId === filter));
 	});
@@ -103,9 +72,9 @@ function tagLabelFor(tagId: string): string {
 	return btn?.textContent?.trim() ?? tagId;
 }
 
-function updateChip(chipId: string, labelId: string, filter: Filter) {
-	const chip = document.getElementById(chipId) as HTMLElement | null;
-	const label = document.getElementById(labelId);
+function updateChip(filter: Filter): void {
+	const chip = document.getElementById('timeline-filter-chip');
+	const label = document.getElementById('timeline-filter-chip-skill');
 	if (!chip || !label) return;
 	if (filter) {
 		label.textContent = tagLabelFor(filter);
@@ -117,7 +86,7 @@ function updateChip(chipId: string, labelId: string, filter: Filter) {
 
 /** Echo the active skill as a pill under each person card in the sticky bar
  *  (see ScrollyRegion.astro's .card-filter). */
-function updateCardTags(filter: Filter) {
+function updateCardTags(filter: Filter): void {
 	const label = filter ? tagLabelFor(filter) : '';
 	document.querySelectorAll<HTMLElement>('.card-filter').forEach((el) => {
 		const span = el.querySelector<HTMLElement>('[data-card-filter-label]');
@@ -126,23 +95,24 @@ function updateCardTags(filter: Filter) {
 	});
 }
 
-function setFilter(filter: Filter) {
+function setFilter(filter: Filter): void {
 	currentFilter = filter;
 
-	const timelineRoot = document.getElementById('timeline');
-	if (timelineRoot) applyFilter(timelineRoot, filter, TIMELINE_FLIP_SELECTOR, computeHiddenTimelineSet);
-
-	const projectsRoot = document.getElementById('projects');
-	if (projectsRoot) applyFilter(projectsRoot, filter, PROJECTS_SELECTOR, computeHiddenProjectsSet);
+	// Apply results before the modal opens so the panel is already narrowed to
+	// the matching set when it lifts in.
+	applyResults(filter);
 
 	document.body.classList.toggle('filter-active', filter !== null);
 	setTagPressedState(filter);
-
-	updateChip('timeline-filter-chip', 'timeline-filter-chip-skill', filter);
+	updateChip(filter);
 	updateCardTags(filter);
+
+	// Let the media embeds retarget to whatever's now visible (see
+	// projectModal.client.ts — pauses/activates YouTube in the results panel).
+	document.dispatchEvent(new CustomEvent('filter:change', { detail: { active: filter !== null } }));
 }
 
-function init() {
+function init(): void {
 	document.addEventListener('click', (event) => {
 		const target = event.target as HTMLElement;
 

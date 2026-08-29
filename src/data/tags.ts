@@ -104,6 +104,13 @@ export function getLinkedTagIds(): Set<string> {
 			for (const ref of project.experiences) {
 				for (const tagId of ref.tagIds ?? []) ids.add(tagId);
 			}
+			// Media items carry their own tags too (see ProjectMedia.tagIds) — a
+			// tag used only by a project's media still counts as linked, so it
+			// renders as a clickable filter and can surface that project in the
+			// results view (see FilterResults.astro).
+			for (const media of project.media ?? []) {
+				for (const tagId of media.tagIds ?? []) ids.add(tagId);
+			}
 		}
 	};
 

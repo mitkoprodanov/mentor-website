@@ -38,6 +38,18 @@ const bar = document.querySelector<HTMLElement>('.person-bar-inner');
 // is selected, cleared when the pointer next leaves both cards.
 let suppressed = false;
 
+// Pointer devices only: clicking a card's "Skills" button *locks* the paired
+// reveal open, so moving the pointer off the cards no longer collapses them
+// (see the pointerleave handler and the toggle click below). The two cards are
+// one unit, so this locks/reveals both. Cleared by clicking Skills again, an
+// outside click, selecting a filter tag, or Escape.
+let locked = false;
+
+function unlock(): void {
+	locked = false;
+	bar?.classList.remove('locked');
+}
+
 /**
  * The hover reveal keys off the two cards themselves, NOT the full-width bar
  * container. The bar spans the whole width — including the open centre over
@@ -57,6 +69,10 @@ if (bar) {
 			bar.classList.add('reveal');
 		});
 		card.addEventListener('pointerleave', () => {
+			// Locked open via the Skills button: stay revealed no matter where the
+			// pointer goes — only an outside click (or Escape / a filter tag)
+			// collapses it now.
+			if (locked) return;
 			// By the time pointerleave fires the pointer has already moved on, so
 			// :hover reflects where it went: collapse only if it isn't over the
 			// other card either (moving into the centre over the timeline hides;
@@ -98,6 +114,7 @@ if (bar) {
 }
 
 function dismissDetails(): void {
+	unlock();
 	bar?.classList.remove('reveal');
 	// Blur the just-clicked tag so `:focus-within` doesn't keep the panel open.
 	const active = document.activeElement as HTMLElement | null;
@@ -111,6 +128,24 @@ document.addEventListener('click', (event) => {
 
 	const toggle = target.closest<HTMLElement>('.panel-toggle');
 	if (toggle) {
+		if (hoverMQ.matches) {
+			// Pointer device: the reveal is already up (the pointer is over the
+			// card), so the button's job is just to *lock* it — both cards stay
+			// open when the pointer leaves. Click again to unlock; if the pointer
+			// has since moved off the cards, unlocking collapses them right away,
+			// otherwise normal hover takes over and they collapse on pointer-out.
+			locked = !locked;
+			if (locked) {
+				suppressed = false;
+				bar?.classList.add('reveal', 'locked');
+			} else {
+				bar?.classList.remove('locked');
+				if (!anyCardHovered()) bar?.classList.remove('reveal');
+			}
+			return;
+		}
+		// Touch: no hover reveal, so the button is an accordion — expand one card
+		// at a time.
 		const panel = toggle.closest<HTMLElement>('.side-panel');
 		if (!panel) return;
 		const willOpen = !panel.classList.contains('is-open');
@@ -124,11 +159,23 @@ document.addEventListener('click', (event) => {
 	if (target.closest('button.tag--linked') || target.closest('.card-filter-tag')) {
 		closeAll();
 		dismissDetails();
+		return;
+	}
+
+	// A click anywhere outside both cards collapses them. The two cards are one
+	// unit, so this collapses *both* — clearing a locked-open desktop reveal and
+	// any touch-opened accordion card alike.
+	if (!target.closest('.side-panel')) {
+		unlock();
+		closeAll();
+		bar?.classList.remove('reveal');
+		suppressed = false;
 	}
 });
 
 document.addEventListener('keydown', (event) => {
 	if (event.key === 'Escape') {
+		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
 		suppressed = false;

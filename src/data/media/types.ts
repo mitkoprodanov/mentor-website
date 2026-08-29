@@ -29,6 +29,18 @@ export interface ProjectMedia {
 	/** Alt text / accessible title — falls back to `caption` when omitted. */
 	alt?: string;
 	/**
+	 * WorkTag ids (see data/tags.ts) this specific media item illustrates —
+	 * edit them right here alongside the item's `src` (link) and `caption`
+	 * (description). They drive the skill-tag filter's detailed results view
+	 * (see components/projects/FilterResults.astro): while a tag is active,
+	 * only media whose `tagIds` include it stay visible, and a Project shows in
+	 * the results if *either* one of its experiences *or* one of its media
+	 * carries the active tag — so a Project with no matching experience tag can
+	 * still surface purely on a tagged media item. Omit for media that
+	 * shouldn't appear under any filter.
+	 */
+	tagIds?: string[];
+	/**
 	 * 'youtube' only — play a segment: start at `start` seconds and loop back to
 	 * it once `end` seconds is reached. Both optional; omit for the full video.
 	 */

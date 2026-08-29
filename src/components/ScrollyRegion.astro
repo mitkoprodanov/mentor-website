@@ -23,6 +23,7 @@ import PersonCard from './personal/PersonCard.astro';
 import CvDownloadLink from './personal/CvDownloadLink.astro';
 import ExternalLink from './common/ExternalLink.astro';
 import Timeline from './timeline/Timeline.astro';
+import FilterResults from './projects/FilterResults.astro';
 import Contact from './sections/Contact.astro';
 
 const mitko = getPerson('mitko');
@@ -109,6 +110,10 @@ const adam = getPerson('adam');
 
 	<div class="timeline-area" id="timeline-area">
 		<Timeline />
+		<!-- The skill-tag filter's detailed results — hidden until a filter turns
+		     on, when it replaces the timeline inside this lifted modal (see the
+		     body.filter-active rules below and FilterResults.astro). -->
+		<FilterResults />
 	</div>
 
 	<Contact />
@@ -440,6 +445,11 @@ const adam = getPerson('adam');
 		   live click target (see the cards-arrived gate below). */
 		--sheen-color: var(--person-color);
 		--sheen-strength: 0.09;
+		/* Let the collapsible rows inside (the Skills button and the CV pill)
+		   animate their height between 0 and auto rather than snapping — height
+		   keyword interpolation is opt-in and inherits, so enabling it here covers
+		   every descendant that transitions its height. */
+		interpolate-size: allow-keywords;
 		transition:
 			border-color 0.25s ease,
 			box-shadow 0.25s ease;
@@ -509,18 +519,50 @@ const adam = getPerson('adam');
 	   (further down). Otherwise the un-hovered card shows no CV button. */
 	.side-panel-cv {
 		display: none;
+		height: 0;
+		opacity: 0;
+		overflow: hidden;
 		justify-content: flex-start;
 		padding: 0 1rem;
+		/* Eases its height/opacity open whenever it's revealed — on hover/focus,
+		   when a card is touch-opened, and (the one the eye catches most) when the
+		   bar flips into contact mode on the way into the Contact section — instead
+		   of snapping the card taller. Discrete `display` keeps it out of flow (no
+		   residual gap in the resting card) until it opens; @starting-style below
+		   supplies the from-state for each reveal path. */
+		transition:
+			height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 0.4s ease,
+			display 0.4s allow-discrete;
 	}
 
 	.side-panel.is-open .side-panel-cv {
 		display: flex;
+		height: auto;
+		opacity: 1;
+	}
+
+	@starting-style {
+		.side-panel.is-open .side-panel-cv {
+			height: 0;
+			opacity: 0;
+		}
 	}
 
 	@media (hover: hover) and (pointer: fine) {
 		.person-bar-inner.reveal .side-panel-cv,
 		.person-bar-inner:focus-within .side-panel-cv {
 			display: flex;
+			height: auto;
+			opacity: 1;
+		}
+
+		@starting-style {
+			.person-bar-inner.reveal .side-panel-cv,
+			.person-bar-inner:focus-within .side-panel-cv {
+				height: 0;
+				opacity: 0;
+			}
 		}
 	}
 
@@ -529,6 +571,31 @@ const adam = getPerson('adam');
 	.side-panel-action {
 		display: grid;
 		padding: 0 1rem;
+		/* Grow the Skills button in when the pair docks (body.cards-arrived) instead
+		   of popping it — the row collapses to zero height before arrival and eases
+		   its height/opacity open, so the card's size change reads as one smooth
+		   settle at the end of the About→Timeline hand-off. The discrete `display`
+		   keeps it out of flow (no residual gap in the intro card) until it opens;
+		   @starting-style gives the entry its from-state.
+		   `clip` (not `hidden`) with a clip-margin still clips the row's height for
+		   that grow-in wipe, but lets the Skills button's hover glow bleed past the
+		   top and bottom edges instead of being sliced flat — the button fills the
+		   row exactly, so plain `hidden` cut its glow off. */
+		overflow: clip;
+		overflow-clip-margin: 22px;
+		height: auto;
+		opacity: 1;
+		transition:
+			height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 0.45s ease,
+			display 0.45s allow-discrete;
+	}
+
+	@starting-style {
+		:global(body.cards-arrived) .side-panel-action {
+			height: 0;
+			opacity: 0;
+		}
 	}
 
 	/* Until the cards finish sliding out to the sides they're a purely visual,
@@ -543,6 +610,8 @@ const adam = getPerson('adam');
 
 	:global(body:not(.cards-arrived)) .side-panel-action {
 		display: none;
+		height: 0;
+		opacity: 0;
 	}
 
 	.side-panel-action > * {
@@ -591,7 +660,8 @@ const adam = getPerson('adam');
 		transition: transform 0.2s ease;
 	}
 
-	.side-panel.is-open .panel-toggle-chev {
+	.side-panel.is-open .panel-toggle-chev,
+	.person-bar-inner.locked .panel-toggle-chev {
 		transform: rotate(180deg);
 	}
 
@@ -712,6 +782,25 @@ const adam = getPerson('adam');
 	   even though they aren't hover-revealed. */
 	:global(body.contact-mode) .side-panel-cv {
 		display: flex;
+		height: auto;
+		opacity: 1;
+	}
+
+	@starting-style {
+		:global(body.contact-mode) .side-panel-cv {
+			height: 0;
+			opacity: 0;
+		}
+	}
+
+	/* Under reduced motion the rest of the bar snaps rather than eases (photos,
+	   contact snap), so keep the Skills button and CV pill consistent: reveal them
+	   instantly with no height/opacity travel. */
+	@media (prefers-reduced-motion: reduce) {
+		.side-panel-action,
+		.side-panel-cv {
+			transition: none;
+		}
 	}
 
 	.timeline-area {
@@ -745,6 +834,11 @@ const adam = getPerson('adam');
 		pointer-events: auto;
 	}
 
+/* Filtering: hide the original timeline (rendered by the child Timeline — use :global for #timeline) and drop the original page headings/labels when the filter modal is active so the modal shows a flat project list. */
+	:global(body.filter-active #timeline) {
+		display: none;
+	}
+
 	/* In the filtered modal, drop every heading/label from the original page
 	   layout — the "Timeline"/"Projects" section titles, the company/date
 	   headers, and the Mentor-era label — so the panel reads as just the flat
@@ -758,6 +852,7 @@ const adam = getPerson('adam');
 	:global(body.filter-active .track-footer),
 	:global(body.filter-active .mentor-heading) {
 		display: none !important;
+	}
 	}
 
 	:global(body.filter-active) .timeline-area {
@@ -793,6 +888,58 @@ const adam = getPerson('adam');
 	@media (prefers-reduced-motion: reduce) {
 		:global(body.filter-active) .timeline-area {
 			animation: none;
+		}
+	}
+
+	/* ---- Filter view framing (desktop) --------------------------------------
+	   The two people stay on as a quiet frame around the filtered results — the
+	   same edge cards as the timeline, pinned to their sides, but stripped to
+	   just name + role: no Skills/CV/LinkedIn buttons, no skills panel, no
+	   headshot, no hover reveal, nothing clickable — like the About→Timeline
+	   intro phase, a label rather than a control. The results modal narrows to
+	   sit in the gap between them. Desktop only; on a phone the bar stacks above
+	   (see the max-width block below). */
+	@media (min-width: 901px) {
+		:global(body.filter-active) .person-bar {
+			position: fixed;
+			top: 3rem;
+			left: 0;
+			right: 0;
+			z-index: 27;
+			/* Purely a frame now — let clicks fall through to the backdrop/modal. */
+			pointer-events: none;
+		}
+
+		/* Rest the cards at their docked edge positions regardless of the
+		   scroll-driven --split (personPhotos.client.ts), so they reliably flank
+		   the results instead of sitting wherever the page happened to be
+		   scrolled to. */
+		:global(body.filter-active) .person-slot {
+			transform: none !important;
+		}
+
+		/* Minimal: drop the headshots and every control, leaving only the
+		   name/role header. */
+		:global(body.filter-active) .person-photo {
+			display: none;
+		}
+
+		:global(body.filter-active) .side-panel-action,
+		:global(body.filter-active) .side-panel-cv,
+		:global(body.filter-active) .side-panel-stack,
+		:global(body.filter-active) .card-filter {
+			display: none !important;
+		}
+
+		/* No skills-reveal backdrop here — the filter backdrop already dims the page. */
+		:global(body.filter-active) .person-backdrop {
+			display: none;
+		}
+
+		/* Narrow the results modal into the gap between the two edge cards (each
+		   ~340px wide inside the ≤1600px bar), leaving ~24px either side. */
+		:global(body.filter-active) .timeline-area {
+			width: min(824px, calc(100vw - 776px));
 		}
 	}
 
