@@ -4,6 +4,7 @@ import { getPerson, type PersonId } from '../../data/people';
 import { getTag } from '../../data/tags';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
+import { parseDateRange, isOngoing } from './dateRange';
 import ExperienceCard from './ExperienceCard.astro';
 import ProjectModal from '../projects/ProjectModal.astro';
 
@@ -116,7 +117,20 @@ const tracks = await Promise.all(
 						<span class="mentor-name">{MENTOR_ERA.label}</span>
 					</div>
 				)}
-				{track.companies.map(({ company, projects }, companyIndex) => (
+				{track.companies.map(({ company, projects }, companyIndex) => {
+					// An apart track is one person's alone, so every join/leave here is
+					// theirs — shown on their own side. The exception is the seam into a
+					// neighbouring box that's the same real employer (the first company
+					// continuing up from a shared box above, or the last continuing down
+					// into one below — see continuation.ts): no join/leave happened there,
+					// so that marker is suppressed. An ongoing ("Present") stint has no
+					// leave event yet either.
+					const { start, end } = parseDateRange(company.dateRange);
+					const isFirst = companyIndex === 0;
+					const isLast = companyIndex === track.companies.length - 1;
+					const showStart = !(isFirst && track.continuesAbove);
+					const showEnd = !(isLast && track.continuesBelow) && !isOngoing(end);
+					return (
 					<div
 						class="track-company"
 						data-company-id={company.id}
@@ -127,23 +141,24 @@ const tracks = await Promise.all(
 						class:list={{
 							emphasized: company.underMentor === true,
 							/* Each company is always its own separate, fully-rounded,
-							   self-contained box — the name/date header always shows, and
-							   consecutive companies within the same track get their own
-							   normal spacing rather than being fused into one continuous
-							   card. The edge seam into a TrackConnector (first/last company,
-							   matching the entry outside this ApartBlock — see
-							   Timeline.astro) only squares this individual card off when
-							   there's no enclosing envelope to do it instead (see
-							   under-mentor above) — an under-mentor track's envelope is what
-							   flows into the connector, not the card sitting inside it. */
+							   self-contained box — consecutive companies within the same
+							   track get their own normal spacing rather than being fused
+							   into one continuous card. The edge seam into a TrackConnector
+							   (first/last company, matching the entry outside this
+							   ApartBlock — see Timeline.astro) only squares this individual
+							   card off when there's no enclosing envelope to do it instead
+							   (see under-mentor above) — an under-mentor track's envelope is
+							   what flows into the connector, not the card sitting inside it. */
 							'continues-above': !underMentor && companyIndex === 0 && track.continuesAbove,
 							'continues-below': !underMentor && companyIndex === track.companies.length - 1 && track.continuesBelow,
 						}}
 					>
-						<div class={`track-header track-header--${track.side}`}>
-							<span class="track-year">{company.dateRange}</span>
-							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-						</div>
+						{showStart && (
+							<div class={`track-header track-header--${track.side}`}>
+								<span class="track-year">{start}</span>
+								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+							</div>
+						)}
 						<div class="track-projects">
 							{projects.map(({ project, cards, modalId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
@@ -221,8 +236,14 @@ const tracks = await Promise.all(
 								</div>
 							))}
 						</div>
+						{showEnd && (
+							<div class={`track-footer track-footer--${track.side}`}>
+								<span class="track-year">{end}</span>
+							</div>
+						)}
 					</div>
-				))}
+					);
+				})}
 			</div>
 			);
 		})
@@ -385,6 +406,23 @@ const tracks = await Promise.all(
 	.track-header--right {
 		align-items: flex-end;
 		text-align: right;
+	}
+
+	/* The end year sits at the very bottom of the card, on this person's own
+	   side — the leave event for this stint. .track-projects' flex:1 (above)
+	   pushes it flush to the bottom edge even when the box is stretched taller
+	   than its content (see CompanyDef.stretchToMiddleOf). */
+	.track-footer {
+		display: flex;
+		padding: 0.75rem 0 0;
+	}
+
+	.track-footer--left {
+		justify-content: flex-start;
+	}
+
+	.track-footer--right {
+		justify-content: flex-end;
 	}
 
 	.track-header h4 {
