@@ -576,8 +576,13 @@ const adam = getPerson('adam');
 		   its height/opacity open, so the card's size change reads as one smooth
 		   settle at the end of the About→Timeline hand-off. The discrete `display`
 		   keeps it out of flow (no residual gap in the intro card) until it opens;
-		   @starting-style gives the entry its from-state. */
-		overflow: hidden;
+		   @starting-style gives the entry its from-state.
+		   `clip` (not `hidden`) with a clip-margin still clips the row's height for
+		   that grow-in wipe, but lets the Skills button's hover glow bleed past the
+		   top and bottom edges instead of being sliced flat — the button fills the
+		   row exactly, so plain `hidden` cut its glow off. */
+		overflow: clip;
+		overflow-clip-margin: 22px;
 		height: auto;
 		opacity: 1;
 		transition:
@@ -655,7 +660,8 @@ const adam = getPerson('adam');
 		transition: transform 0.2s ease;
 	}
 
-	.side-panel.is-open .panel-toggle-chev {
+	.side-panel.is-open .panel-toggle-chev,
+	.person-bar-inner.locked .panel-toggle-chev {
 		transform: rotate(180deg);
 	}
 
