@@ -513,10 +513,10 @@ const adam = getPerson('adam');
 		padding: 0.9rem 1rem 0.4rem;
 	}
 
-	/* Hidden while the card rests — the CV pill only reads as relevant once the
-	   card is engaged, so it follows the same reveal as the skills panel: hover
-	   (.reveal), keyboard focus, the touch toggle (.is-open), or contact mode
-	   (further down). Otherwise the un-hovered card shows no CV button. */
+	/* The CV pill is deliberately absent from the skills-revealed card — it only
+	   appears once the bar flips into contact mode (further down), where the two
+	   cards become the contact cards above the Contact section. So it stays fully
+	   hidden on hover, keyboard focus, and the touch toggle. */
 	.side-panel-cv {
 		display: none;
 		height: 0;
@@ -524,46 +524,14 @@ const adam = getPerson('adam');
 		overflow: hidden;
 		justify-content: flex-start;
 		padding: 0 1rem;
-		/* Eases its height/opacity open whenever it's revealed — on hover/focus,
-		   when a card is touch-opened, and (the one the eye catches most) when the
-		   bar flips into contact mode on the way into the Contact section — instead
-		   of snapping the card taller. Discrete `display` keeps it out of flow (no
-		   residual gap in the resting card) until it opens; @starting-style below
-		   supplies the from-state for each reveal path. */
+		/* Eases its height/opacity open when the bar flips into contact mode on the
+		   way into the Contact section — instead of snapping the card taller.
+		   Discrete `display` keeps it out of flow (no residual gap) until it opens;
+		   the @starting-style beside the contact-mode rule supplies the from-state. */
 		transition:
 			height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
 			opacity 0.4s ease,
 			display 0.4s allow-discrete;
-	}
-
-	.side-panel.is-open .side-panel-cv {
-		display: flex;
-		height: auto;
-		opacity: 1;
-	}
-
-	@starting-style {
-		.side-panel.is-open .side-panel-cv {
-			height: 0;
-			opacity: 0;
-		}
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.person-bar-inner.reveal .side-panel-cv,
-		.person-bar-inner:focus-within .side-panel-cv {
-			display: flex;
-			height: auto;
-			opacity: 1;
-		}
-
-		@starting-style {
-			.person-bar-inner.reveal .side-panel-cv,
-			.person-bar-inner:focus-within .side-panel-cv {
-				height: 0;
-				opacity: 0;
-			}
-		}
 	}
 
 	/* Toggle and LinkedIn share one cell and crossfade between each other when
@@ -648,8 +616,13 @@ const adam = getPerson('adam');
 			opacity 0.4s ease;
 	}
 
+	/* Clicking Skills locks the paired reveal open (see panelToggle.client.ts,
+	   which sets .locked on the bar). While locked, both cards' buttons hold the
+	   same filled "stronger" state as hover — together, so the pair reads as one
+	   pinned-open unit even after the pointer leaves. */
 	.panel-toggle:hover,
-	.panel-toggle:focus-visible {
+	.panel-toggle:focus-visible,
+	.person-bar-inner.locked .panel-toggle {
 		color: var(--bg);
 		background: var(--person-color);
 		border-color: var(--person-color);
