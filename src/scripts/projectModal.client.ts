@@ -83,8 +83,23 @@ function loadYouTubeApi(): Promise<any> {
 	return ytApiPromise;
 }
 
+/**
+ * A YouTube frame is "live" only when it's actually on screen. In a modal every
+ * frame is; in the filter-results panel, though, a frame sits inside a Project
+ * card that the active tag may have hidden, or is itself a `.shot` the tag
+ * filtered out (`.fr-hidden`) — those must not spin up a (muted-)playing
+ * background player. In the modal there's no `.fr-hidden`/hidden card ancestor,
+ * so this always passes there.
+ */
+function isFrameLive(frame: HTMLElement): boolean {
+	if (frame.closest('.shot')?.classList.contains('fr-hidden')) return false;
+	const card = frame.closest<HTMLElement>('[data-fr-card]');
+	if (card && card.hidden) return false;
+	return true;
+}
+
 async function activateYouTube(scope: HTMLElement): Promise<void> {
-	const frames = scope.querySelectorAll<HTMLElement>('.shot-frame--youtube');
+	const frames = Array.from(scope.querySelectorAll<HTMLElement>('.shot-frame--youtube')).filter(isFrameLive);
 	if (frames.length === 0) return;
 	const YT = await loadYouTubeApi();
 	frames.forEach((frame) => {
@@ -186,6 +201,18 @@ function init(): void {
 		});
 
 		observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
+	});
+
+	// The filter-results panel isn't a <dialog>, so drive its YouTube embeds off
+	// the filter state instead: on every change, pause every player in the panel,
+	// then (re)activate just the ones the new filter leaves visible. Fired on each
+	// tag switch — not only open/close — so swapping directly from one tag to
+	// another retargets which clips play (see tagFilter.client.ts).
+	document.addEventListener('filter:change', (event) => {
+		const results = document.getElementById('filter-results');
+		if (!results) return;
+		pauseYouTube(results);
+		if ((event as CustomEvent<{ active: boolean }>).detail?.active) void activateYouTube(results);
 	});
 }
 

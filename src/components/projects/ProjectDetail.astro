@@ -1,0 +1,336 @@
+---
+import type { ProjectMedia } from '../../data/projects';
+import ExternalLink from '../common/ExternalLink.astro';
+
+/**
+ * The inner detail of a Project — head, meta, tag pills, a body slot, and the
+ * showcase gallery. Rendered in two places:
+ *   - inside a <dialog> by ProjectModal.astro (the click-to-open detail on the
+ *     timeline), and
+ *   - inline by FilterResults.astro (the skill-tag filter's detailed results).
+ *
+ * Each gallery figure carries `data-media-tags` (its media item's `tagIds`) so
+ * the filter can show only the media matching the active tag; that attribute is
+ * inert inside the always-fully-shown modal.
+ */
+interface Props {
+	title: string;
+	/** Strap-line under the title (a project's `detail`/`info`). */
+	subtitle?: string;
+	/** Year or year range the work spans, e.g. "2026" or "2024 – Present". */
+	dateRange?: string;
+	/** Who worked on it, e.g. "Mitko & Ádám". */
+	people?: string;
+	/** Tag labels rendered as pills. */
+	tags?: string[];
+	media?: ProjectMedia[];
+	url?: string;
+	urlLabel?: string;
+	titleId?: string;
+	/** Heading level for the title — h3 in a modal, h4 when nested in the results view. */
+	as?: 'h3' | 'h4';
+}
+
+const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel = 'Visit project', titleId, as = 'h3' } = Astro.props;
+const Title = as;
+
+/**
+ * Facebook embed URL — the video plugin's iframe form, so no Facebook SDK or
+ * script is needed on the page. `href` is the public page URL of a Facebook
+ * video (facebook.com/watch/?v=…) or reel (facebook.com/reel/…) — the plugin
+ * handles both. The 640×360 base is a 16:9 landscape box; the iframe is then
+ * CSS-transform-scaled to exactly fill its container width (see .shot-video +
+ * the scaler in projectModal.client.ts), so it fills the card horizontally
+ * with no letterboxing at any width.
+ */
+const VIDEO_BASE_W = 640;
+const VIDEO_BASE_H = 360;
+function facebookVideoEmbed(pageUrl: string): string {
+	const params = new URLSearchParams({ href: pageUrl, show_text: 'false', width: String(VIDEO_BASE_W), height: String(VIDEO_BASE_H) });
+	return `https://www.facebook.com/plugins/video.php?${params.toString()}`;
+}
+
+/** Both Facebook kinds render identically (same plugin) — only the badge differs. */
+const isFacebookEmbed = (kind: string) => kind === 'facebook-reel' || kind === 'facebook-video';
+
+/** Pull the 11-char video id out of any YouTube URL form (or pass through a bare id). */
+function youtubeId(src: string): string {
+	try {
+		const u = new URL(src);
+		const host = u.hostname.replace(/^www\./, '');
+		if (host === 'youtu.be') return u.pathname.slice(1);
+		if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+			if (u.pathname === '/watch') return u.searchParams.get('v') ?? src;
+			const m = u.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/);
+			if (m) return m[1];
+		}
+	} catch {
+		/* not a URL — assume it's already an id */
+	}
+	return src;
+}
+
+function mediaTags(m: ProjectMedia): string {
+	return (m.tagIds ?? []).join(' ');
+}
+---
+
+<header class="project-modal__head">
+	<Title id={titleId} class="project-modal__title">{title}</Title>
+	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
+	{
+		(dateRange || people) && (
+			<p class="project-modal__meta">
+				{dateRange && <span class="project-modal__year">{dateRange}</span>}
+				{dateRange && people && <span class="project-modal__meta-sep" aria-hidden="true">·</span>}
+				{people && <span>{people}</span>}
+			</p>
+		)
+	}
+</header>
+
+{
+	tags.length > 0 && (
+		<ul class="project-modal__tags">
+			{tags.map((label: string) => (
+				<li class="tag">{label}</li>
+			))}
+		</ul>
+	)
+}
+
+<div class="project-modal__body">
+	<slot />
+</div>
+
+{
+	media.length > 0 && (
+		<section class="project-modal__gallery" aria-label="Showcase gallery" data-gallery>
+			{media.map((m: ProjectMedia) =>
+				m.kind === 'youtube' ? (
+					<figure class="shot" data-media-tags={mediaTags(m)}>
+						<div class="shot-frame shot-frame--youtube">
+							<div
+								class="shot-youtube"
+								data-yt-id={youtubeId(m.src)}
+								data-start={m.start != null ? String(m.start) : undefined}
+								data-end={m.end != null ? String(m.end) : undefined}
+								title={m.alt ?? m.caption}
+							/>
+							<span class="shot-badge">YOUTUBE</span>
+						</div>
+						<figcaption>{m.caption}</figcaption>
+					</figure>
+				) : isFacebookEmbed(m.kind) ? (
+					<figure class="shot shot--video" data-media-tags={mediaTags(m)}>
+						<div class="shot-frame shot-frame--video">
+							<iframe
+								class="shot-video"
+								src={facebookVideoEmbed(m.src)}
+								title={m.alt ?? m.caption}
+								loading="lazy"
+								scrolling="no"
+								allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+								allowfullscreen
+							/>
+							<span class="shot-badge">{m.kind === 'facebook-reel' ? 'REEL' : 'VIDEO'}</span>
+						</div>
+						<figcaption>{m.caption}</figcaption>
+					</figure>
+				) : (
+					<figure class="shot" data-media-tags={mediaTags(m)}>
+						<div class="shot-frame">
+							<img src={m.src} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
+							{m.kind === 'gif' && <span class="shot-badge">GIF</span>}
+						</div>
+						<figcaption>{m.caption}</figcaption>
+					</figure>
+				),
+			)}
+		</section>
+	)
+}
+
+{
+	url && (
+		<div class="project-modal__actions">
+			<ExternalLink href={url} class="project-link">
+				{urlLabel}
+			</ExternalLink>
+		</div>
+	)
+}
+
+<style>
+	.project-modal__head {
+		padding-right: 2.5rem;
+	}
+
+	.project-modal__title {
+		margin: 0;
+		font-size: 1.4rem;
+	}
+
+	.project-modal__detail {
+		margin: 0.4rem 0 0;
+		font-size: 0.92rem;
+		color: var(--accent-3);
+	}
+
+	.project-modal__meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.3rem 0 0;
+		font-size: 0.8rem;
+		color: var(--fg-muted);
+	}
+
+	/* The work's timeframe, called out in the person accent so it reads as a
+	   distinct fact rather than blending into the muted people line. */
+	.project-modal__year {
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.03em;
+		font-weight: 600;
+		color: var(--accent-3);
+	}
+
+	.project-modal__meta-sep {
+		color: var(--border);
+	}
+
+	.project-modal__tags {
+		list-style: none;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: 1rem 0 0;
+		padding: 0;
+	}
+
+	.tag {
+		font-size: 0.75rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 999px;
+		background: var(--accent-soft);
+		color: var(--accent-3);
+		border: 1px solid rgba(255, 122, 0, 0.3);
+	}
+
+	.project-modal__body {
+		margin-top: 1.1rem;
+	}
+
+	/* Base prose styling for whatever a caller slots in — a plain description
+	   paragraph or several rendered experience blocks. `pre-line` preserves the
+	   intentional line breaks in the Projects descriptions; harmless elsewhere. */
+	.project-modal__body :global(p) {
+		margin: 0;
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: var(--fg);
+		white-space: pre-line;
+	}
+
+	.project-modal__body :global(p + p) {
+		margin-top: 0.75rem;
+	}
+
+	/* One media item per row, each spanning the full width — so videos (and
+	   shots) use up all the horizontal space rather than being squeezed
+	   several-to-a-line. */
+	.project-modal__gallery {
+		margin-top: 1.5rem;
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.25rem;
+	}
+
+	.shot {
+		margin: 0;
+	}
+
+	.shot-frame {
+		position: relative;
+		border-radius: 10px;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		background: var(--bg);
+	}
+
+	.shot-frame img {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+	}
+
+	/* A Facebook video/reel embed — a full-width 16:9 frame, with the fixed-size
+	   plugin iframe absolutely positioned inside and transform-scaled by JS to
+	   exactly fill it (see projectModal.client.ts). `overflow: hidden` (from
+	   .shot-frame) clips the scaled iframe to the rounded frame. */
+	.shot-frame--video {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #000;
+	}
+
+	.shot-video {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 640px;
+		height: 360px;
+		border: 0;
+		transform-origin: top left;
+	}
+
+	/* YouTube embeds via the IFrame API (see projectModal.client.ts) are natively
+	   responsive, so — unlike the fixed-size Facebook plugin — the iframe just
+	   fills a full-width 16:9 frame directly, no transform-scaling needed. */
+	.shot-frame--youtube {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #000;
+	}
+
+	.shot-frame--youtube :global(iframe),
+	.shot-youtube {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+	}
+
+	.shot-badge {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		padding: 0.1rem 0.4rem;
+		border-radius: 6px;
+		background: rgba(11, 13, 18, 0.8);
+		color: var(--accent-2);
+	}
+
+	.shot figcaption {
+		margin-top: 0.5rem;
+		font-size: 0.8rem;
+		line-height: 1.45;
+		color: var(--fg-muted);
+	}
+
+	.project-modal__actions {
+		margin-top: 1.5rem;
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.project-link {
+		font-size: 0.85rem;
+	}
+</style>

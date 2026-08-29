@@ -23,6 +23,7 @@ import PersonCard from './personal/PersonCard.astro';
 import CvDownloadLink from './personal/CvDownloadLink.astro';
 import ExternalLink from './common/ExternalLink.astro';
 import Timeline from './timeline/Timeline.astro';
+import FilterResults from './projects/FilterResults.astro';
 import Contact from './sections/Contact.astro';
 
 const mitko = getPerson('mitko');
@@ -109,6 +110,10 @@ const adam = getPerson('adam');
 
 	<div class="timeline-area" id="timeline-area">
 		<Timeline />
+		<!-- The skill-tag filter's detailed results — hidden until a filter turns
+		     on, when it replaces the timeline inside this lifted modal (see the
+		     body.filter-active rules below and FilterResults.astro). -->
+		<FilterResults />
 	</div>
 
 	<Contact />
@@ -745,17 +750,16 @@ const adam = getPerson('adam');
 		pointer-events: auto;
 	}
 
-	/* In the filtered modal, drop every heading/label from the original page
-	   layout — the "Timeline"/"Projects" section titles, the company/date
-	   headers, and the Mentor-era label — so the panel reads as just the flat
-	   collection of matching project cards, not a stripped-down copy of the
-	   whole site. The filter chip ("Filtered by: …") and each project's own
-	   name stay. */
-	:global(body.filter-active .section-title),
-	:global(body.filter-active .company-header),
-	:global(body.filter-active .track-header),
-	:global(body.filter-active .mentor-heading) {
-		display: none !important;
+	/* Filtering no longer collapses the timeline in place — it hides the whole
+	   timeline (its company/fork layout is tied to *where* work happened, which
+	   the filter deliberately drops) and shows FilterResults instead, grouped
+	   only by who worked on each project. Both live inside .timeline-area, which
+	   is what gets lifted into the modal below. */
+	/* #timeline is rendered by the child Timeline component, so the whole
+	   selector must be :global — a scoped `#timeline` would carry this
+	   component's scope hash and never match it. */
+	:global(body.filter-active #timeline) {
+		display: none;
 	}
 
 	:global(body.filter-active) .timeline-area {
@@ -791,6 +795,58 @@ const adam = getPerson('adam');
 	@media (prefers-reduced-motion: reduce) {
 		:global(body.filter-active) .timeline-area {
 			animation: none;
+		}
+	}
+
+	/* ---- Filter view framing (desktop) --------------------------------------
+	   The two people stay on as a quiet frame around the filtered results — the
+	   same edge cards as the timeline, pinned to their sides, but stripped to
+	   just name + role: no Skills/CV/LinkedIn buttons, no skills panel, no
+	   headshot, no hover reveal, nothing clickable — like the About→Timeline
+	   intro phase, a label rather than a control. The results modal narrows to
+	   sit in the gap between them. Desktop only; on a phone the bar stacks above
+	   (see the max-width block below). */
+	@media (min-width: 901px) {
+		:global(body.filter-active) .person-bar {
+			position: fixed;
+			top: 3rem;
+			left: 0;
+			right: 0;
+			z-index: 27;
+			/* Purely a frame now — let clicks fall through to the backdrop/modal. */
+			pointer-events: none;
+		}
+
+		/* Rest the cards at their docked edge positions regardless of the
+		   scroll-driven --split (personPhotos.client.ts), so they reliably flank
+		   the results instead of sitting wherever the page happened to be
+		   scrolled to. */
+		:global(body.filter-active) .person-slot {
+			transform: none !important;
+		}
+
+		/* Minimal: drop the headshots and every control, leaving only the
+		   name/role header. */
+		:global(body.filter-active) .person-photo {
+			display: none;
+		}
+
+		:global(body.filter-active) .side-panel-action,
+		:global(body.filter-active) .side-panel-cv,
+		:global(body.filter-active) .side-panel-stack,
+		:global(body.filter-active) .card-filter {
+			display: none !important;
+		}
+
+		/* No skills-reveal backdrop here — the filter backdrop already dims the page. */
+		:global(body.filter-active) .person-backdrop {
+			display: none;
+		}
+
+		/* Narrow the results modal into the gap between the two edge cards (each
+		   ~340px wide inside the ≤1600px bar), leaving ~24px either side. */
+		:global(body.filter-active) .timeline-area {
+			width: min(824px, calc(100vw - 776px));
 		}
 	}
 
