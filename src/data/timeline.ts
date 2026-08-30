@@ -240,14 +240,14 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'exigo',
 						name: 'Armies of Exigo',
-						info: 'RTS campaign & multiplayer level design, contributions to the proprietary script editor.',
+						info: 'Real-time strategy game with asymmetric factions and two-level scenarios',
 						media: exigoMedia,
 						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['systems-level-design'] }],
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
 						name: 'Warhammer: Mark of Chaos & Battle March',
-						info: 'RTS campaign & multiplayer maps, including the siege game mode.',
+						info: 'Real-time tactics game set in the Warhammer universe',
 						media: warhammerMarkOfChaosMedia,
 						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', tagIds: ['systems-level-design'] }],
 					},
@@ -265,7 +265,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'heroes6',
 					name: 'Might & Magic: Heroes VI',
-					info: 'Turn-based fantasy strategy — campaign AI, tutorial system, hero abilities & boss encounters.',
+					info: 'Turn-based fantasy strategy-RPG combining exploration, army management, hero progression, and tactical combat',
 					media: heroes6Media,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['gameplay-ai'] },
@@ -308,7 +308,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'supernova',
 					name: 'Supernova',
-					info: 'Wave army movement, status-effect system, tech tree, and hero ability kits.',
+					info: 'Supernova takes an innovative approach to the multiplayer online battle arena (MOBA) genre by adding real-time strategy (RTS) elements and promises an exciting science fiction setting with vast potential',
 					media: supernovaMedia,
 					experiences: [
 						{
@@ -322,7 +322,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'lol-universe',
 					name: 'League of Legends Universe',
-					info: 'Products in the League of Legends universe, built alongside Riot Games designers.',
+					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
 					media: lolUniverseMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-lol-universe' },
@@ -332,7 +332,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'around-mitko',
 					name: 'Around',
-					info: 'Narrative-driven, point-and-click adventure built in UE4 Blueprint.',
+					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
 					rowSpan: 2,
 					squareBottomRight: true,
 					// The two "Around" rows are one project split for layout — this half
@@ -349,14 +349,14 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'beasts-of-brawlia',
 					name: 'Beasts of Brawlia',
-					info: 'Fun-oriented arena brawler born from an in-house pitch contest.',
+					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
 					media: beastsOfBrawliaMedia,
 					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
 				},
 				{
 					id: 'around-adam',
 					name: 'Around',
-					info: 'Narrative-driven, point-and-click adventure built in UE4 Blueprint.',
+					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
 					bridgeLeft: true,
 					// The other half of the same "Around" project — opens the shared
 					// modal owned by `around-mitko` above; renders none of its own.
@@ -374,7 +374,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'mandragora-early',
 					name: 'Mandragora: Whispers of the Witch Tree',
-					info: 'Action-RPG — joining the team as the project continued in production.',
+					info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
 					media: mandragoraMedia,
 					experiences: [{ person: 'adam', slug: 'adam-mandragora-joins' }],
 				},
@@ -450,7 +450,7 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
-						info: 'Action-RPG — final two years: UI/UX, boss encounters, abilities & talent trees.',
+						info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
 						media: mandragoraMedia,
 						experiences: [{ person: 'adam', slug: 'adam-mandragora', tagIds: ['ui-ux-design', 'encounter-design'] }],
 					},
@@ -465,14 +465,14 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'hypha',
 						name: 'Hypha: The Wood Wide Web',
-						info: 'Network-building strategy board game — waging the underground territorial war of fungi.',
+						info: 'Network-building strategy board game, waging the underground territorial war of fungi',
 						media: hyphaMedia,
 						experiences: [{ person: 'adam', slug: 'adam-personal-project', tagIds: ['tabletop'] }],
 					},
 					{
 						id: 'biobot',
 						name: 'Biobot',
-						info: 'Award-winning card game fusing organic tissue and robotics through transparent, stackable cards.',
+						info: 'Tableau-building strategic card game with innovative systemic mechanics',
 						dateRange: '2026',
 						media: biobotMedia,
 						experiences: [{ person: 'adam', slug: 'adam-biobot', tagIds: ['tabletop', 'card-game', 'qubit-spring-1st-place'] }],

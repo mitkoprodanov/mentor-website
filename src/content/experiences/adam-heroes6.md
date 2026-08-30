@@ -4,4 +4,4 @@ project: heroes6
 category: content
 ---
 
-Worked alongside Mitko on that same campaign AI framework, tutorial system, and ability/boss content. Also proposed innovations that led to a promotion to Senior Game Designer, and designed UI & combat-arena randomization — 5 campaign maps, several multiplayer maps, 280+ combat maps.
+Co-developed the campaign AI framework with Mitko that let level designers shape enemy behavior in line with narrative pacing and player progression, as well as the tutorial system, the end game screen, hero abilities, spells, units & boss encounters. Also proposed innovations that led to a promotion to Senior Game Designer, and designed UI, combat-arena randomization, 5 campaign levels, several multiplayer maps, and 280 combat maps.

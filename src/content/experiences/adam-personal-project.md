@@ -4,4 +4,4 @@ project: personal-project
 category: content
 ---
 
-Designing and prototyping original tabletop games independently, including Hypha: The Wood Wide Web — one of two board games in development outside of any studio.
+Designed from scratch; an original 2-4 player confrontational strategy board game. Currently in the final fine-tuning phase with a physical prototype, backed by 240+ playtest sessions focused on systemic balance, rule clarity, and UX. Next major milestone: upcoming Gamefound crowdfunding campaign.
