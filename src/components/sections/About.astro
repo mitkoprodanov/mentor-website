@@ -1,5 +1,6 @@
 ---
 import Section from '../Section.astro';
+import ThoughtCloud from './ThoughtCloud.astro';
 ---
 
 <Section id="about" class="about">
@@ -11,6 +12,7 @@ import Section from '../Section.astro';
 		<p class="tagline">Battle-tested game developer team built for collaboration.</p>
 		<p class="vision">Expanding our network to bring on more specialized talent as we grow.</p>
 	</div>
+	<ThoughtCloud />
 	<a href="#timeline" class="scroll-cue" aria-label="Scroll to timeline section">↓</a>
 </Section>
 
@@ -216,4 +218,5 @@ import Section from '../Section.astro';
 
 <script>
 	import '../../scripts/heroReveal.client';
+	import '../../scripts/thoughtCloud.client';
 </script>
