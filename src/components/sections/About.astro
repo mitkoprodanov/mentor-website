@@ -9,10 +9,10 @@ import ThoughtCloud from './ThoughtCloud.astro';
 			<img src="/logo/primary.png" alt="Mentor Game Studio" class="hero-logo" />
 			<span class="hero-shine" aria-hidden="true"></span>
 		</h1>
-		<p class="tagline">Battle-tested game developer team built for collaboration.</p>
-		<p class="vision">Expanding our network to bring on more specialized talent as we grow.</p>
+		{/* The pitch sentence with clickable value-prop parts, in place of the old
+		    tagline + vision lines. */}
+		<ThoughtCloud />
 	</div>
-	<ThoughtCloud />
 	<a href="#timeline" class="scroll-cue" aria-label="Scroll to timeline section">↓</a>
 </Section>
 
@@ -24,11 +24,6 @@ import ThoughtCloud from './ThoughtCloud.astro';
 		}
 		.hero-shine {
 			display: none !important;
-		}
-		.tagline,
-		.vision {
-			opacity: 1 !important;
-			transform: none !important;
 		}
 	</style>
 </noscript>
@@ -96,42 +91,16 @@ import ThoughtCloud from './ThoughtCloud.astro';
 		pointer-events: none;
 	}
 
-	.tagline {
-		color: var(--fg-muted);
-		font-size: clamp(1rem, 2vw, 1.35rem);
-		margin-top: 1rem;
-		opacity: 0;
-		transform: translateY(10px);
-	}
-
-	.vision {
-		color: var(--fg-muted);
-		font-size: 0.9rem;
-		margin-top: 0.5rem;
-		opacity: 0;
-		transform: translateY(10px);
-	}
-
-	/* Reveal sequence, replayed by heroReveal.client.ts whenever the hero
-	   scrolls into view (including on first load): the logo fades/scales
-	   in, then as the light shine starts sweeping across it, the tagline
-	   and vision line start fading up right alongside it (staggered
-	   200ms apart from each other), rather than waiting for the shine to
-	   finish first. */
+	/* Reveal sequence, replayed by heroReveal.client.ts whenever the hero scrolls
+	   into view (including on first load): the logo fades/scales in, then a light
+	   shine sweeps across it. The pitch sentence has its own fade-in (in
+	   ThoughtCloud.astro). */
 	.hero-content.is-revealed .hero-logo {
 		animation: hero-logo-fade-in 1250ms cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 
 	.hero-content.is-revealed .hero-shine {
 		animation: hero-shine-sweep 700ms ease-out 1100ms both;
-	}
-
-	.hero-content.is-revealed .tagline {
-		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 1400ms both;
-	}
-
-	.hero-content.is-revealed .vision {
-		animation: hero-line-in 450ms cubic-bezier(0.22, 1, 0.36, 1) 1600ms both;
 	}
 
 	@keyframes hero-logo-fade-in {
@@ -162,17 +131,6 @@ import ThoughtCloud from './ThoughtCloud.astro';
 		}
 	}
 
-	@keyframes hero-line-in {
-		from {
-			opacity: 0;
-			transform: translateY(10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
 	@media (prefers-reduced-motion: reduce) {
 		.hero-logo {
 			animation: none !important;
@@ -182,12 +140,6 @@ import ThoughtCloud from './ThoughtCloud.astro';
 		.hero-shine {
 			animation: none !important;
 			opacity: 0 !important;
-		}
-		.tagline,
-		.vision {
-			animation: none !important;
-			opacity: 1 !important;
-			transform: none !important;
 		}
 	}
 

@@ -1,310 +1,231 @@
 ---
 /**
- * The "thought cloud" over the About hero: six category pills that float in a
- * loose grid below the logo, each revealing a fuller description on hover /
- * click / keyboard focus. Copy lives in data/thoughts.ts.
- *
- * Layout & motion (desktop):
- *   • The cloud is position:fixed, so it stays "on top" across the About→Timeline
- *     hand-off — it isn't tied to the About section's own scroll. Each pill is
- *     absolutely anchored on its own point and grows *around that point* when
- *     opened, so opening one never nudges the others ("non-interfering").
- *   • thoughtCloud.client.ts scrubs a three-beat sequence off the scroll
- *     position (per-pill CSS vars --mx/--my/--op/--s), so the beats land in
- *     order: the hero logo + text scrolls out, THEN the pills sweep in from the
- *     left/right edges to their cradle and hold, THEN the person cards begin
- *     their split (personPhotos.client.ts, whose start is tuned to fire just
- *     after) while the pills drift up and fade. A small idle wander (a slow
- *     Lissajous drift ≈ a random unit-circle direction) rides on top throughout.
- *   • The pill background is semi-solid tinted glass so the titles read over the
- *     busy hero without fully hiding it.
- *
- * On a phone (≤900px, matching ScrollyRegion's breakpoint) the cloud drops the
- * fixed floating behaviour entirely and renders as a simple in-flow stack of
- * the same expandable pills — see the media block below and the mobile guard in
- * the client script.
+ * The hero pitch: one sentence under the logo whose value-prop phrases are
+ * clickable "thought parts". Clicking a part reveals that thought's detail in a
+ * panel just below the sentence (copy lives in data/thoughts.ts). Static,
+ * readable hero copy — it simply scrolls away with the rest of the hero (see
+ * the scroll order in About.astro); the click behaviour is in
+ * thoughtCloud.client.ts.
  */
 import { thoughts } from '../../data/thoughts';
 
-// ─── Thought-cluster layout — TWEAK THESE FOUR NUMBERS ───────────────────────
-// All values are viewport percentages. The six pills form a tight cluster: a
-// stacked pair on each side and a horizontal middle pair on the band's centre
-// line, riding just above the person cards between the logo/texts and timeline.
-//
-//   BAND_Y      vertical centre of the whole cluster. SMALLER = HIGHER up the
-//               screen. Raise this (smaller number) if the pills spawn too low /
-//               too close to the headshots; lower it (bigger) to sit them deeper.
-//   ROW_SPREAD  vertical gap between the top & bottom pill of each side pair
-//               (they sit at BAND_Y ∓ ROW_SPREAD/2; the middle pair is on BAND_Y).
-//   SIDE_X      how far the side pairs sit in from the left/right edge. BIGGER =
-//               narrower cluster / side pills closer to the centre (smaller gap
-//               to the headshots); smaller = pushed further out to the edges.
-//   MID_SPREAD  horizontal gap of the middle pair around centre (each middle pill
-//               sits at 50 ∓ MID_SPREAD/2). Smaller = the two sit closer together.
-const BAND_Y = 62;
-const ROW_SPREAD = 9;
-const SIDE_X = 24;
-const MID_SPREAD = 16;
-// ─────────────────────────────────────────────────────────────────────────────
+const byId = Object.fromEntries(thoughts.map((t) => [t.id, t]));
 
-const anchors = [
-	{ tx: `${SIDE_X}%`, ty: `${BAND_Y - ROW_SPREAD / 2}%` }, // left pair, top
-	{ tx: `${SIDE_X}%`, ty: `${BAND_Y + ROW_SPREAD / 2}%` }, // left pair, bottom
-	{ tx: `${50 - MID_SPREAD / 2}%`, ty: `${BAND_Y}%` }, // middle pair, left  — on the centre line
-	{ tx: `${50 + MID_SPREAD / 2}%`, ty: `${BAND_Y}%` }, // middle pair, right
-	{ tx: `${100 - SIDE_X}%`, ty: `${BAND_Y - ROW_SPREAD / 2}%` }, // right pair, top
-	{ tx: `${100 - SIDE_X}%`, ty: `${BAND_Y + ROW_SPREAD / 2}%` }, // right pair, bottom
+// A warm, on-brand tint per part so the clickable phrases read as distinct.
+const hueFor: Record<string, string> = {
+	'in-sync': 'var(--accent)',
+	'shipped-experiences': 'var(--accent-2)',
+	'easy-integration': 'var(--accent-3)',
+	'true-ownership': 'var(--mentor)',
+	'complete-development': 'var(--accent-2)',
+	'built-to-scale': 'var(--accent-3)',
+};
+
+// The sentence as segments: plain strings are static text; objects are the
+// clickable parts, each tied to a thought id for its detail.
+type Seg = string | { id: string; text: string };
+const sentence: Seg[] = [
+	'A ',
+	{ id: 'in-sync', text: 'battle-tested duo' },
+	' with ',
+	{ id: 'shipped-experiences', text: 'shipped experience' },
+	' to build on, we offer ',
+	{ id: 'easy-integration', text: 'easy integration' },
+	' while taking ',
+	{ id: 'true-ownership', text: 'true ownership' },
+	' of our work seriously — bringing together ',
+	{ id: 'complete-development', text: 'complete development' },
+	' that’s ',
+	{ id: 'built-to-scale', text: 'built to scale' },
+	' as we grow.',
 ];
-
-// A warm, on-brand tint per pill so the six categories read as distinct without
-// leaving the site's orange/amber family.
-const hues = ['var(--accent)', 'var(--accent-2)', 'var(--accent-3)', 'var(--mentor)', 'var(--accent-2)', 'var(--accent-3)'];
 ---
 
-<div class="thought-cloud" aria-label="What we bring">
-	{
-		thoughts.map((thought, i) => (
-			<div
-				class="thought btn-sheen"
-				data-thought
-				style={`--tx:${anchors[i % anchors.length].tx};--ty:${anchors[i % anchors.length].ty};--hue:${hues[i % hues.length]};--i:${i}`}
-			>
-				<button
-					class="thought-toggle"
-					type="button"
-					aria-expanded="false"
-					aria-controls={`thought-desc-${thought.id}`}
-				>
-					<span class="thought-title">{thought.title}</span>
-				</button>
-				<div class="thought-desc" id={`thought-desc-${thought.id}`} role="region">
-					<p>{thought.description}</p>
+<div class="thought-sentence">
+	<p class="sentence">
+		{
+			sentence.map((seg) =>
+				typeof seg === 'string' ? (
+					seg
+				) : (
+					<button
+						class="part"
+						type="button"
+						data-thought-part
+						aria-expanded="false"
+						aria-controls={`thought-detail-${seg.id}`}
+						style={`--hue:${hueFor[seg.id]}`}
+					>
+						{seg.text}
+					</button>
+				),
+			)
+		}
+	</p>
+
+	{/* One shared area below the sentence; the clicked part's detail shows here.
+	    Absolutely placed so opening it never shifts the logo or the person cards. */}
+	<div class="sentence-detail" aria-live="polite">
+		{
+			thoughts.map((t) => (
+				<div class="detail" id={`thought-detail-${t.id}`} data-detail style={`--hue:${hueFor[t.id]}`} hidden>
+					<span class="detail-title">{t.title}</span>
+					<span class="detail-text">{byId[t.id].description}</span>
 				</div>
-			</div>
-		))
-	}
+			))
+		}
+	</div>
 </div>
 
 <style>
-	/* The fixed field. The client script slides the whole cloud as one block
-	   (translateY) for the parallax and fades it via opacity, so no per-pill
-	   motion is needed. pointer-events:none so only the pills catch the pointer,
-	   and only while the block is live (.is-live). Sits above the person bar
-	   (z-index 4) but below the navbar (z-index 10). Starts hidden so there's no
-	   pre-JS flash before the script positions it. */
-	.thought-cloud {
-		position: fixed;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		z-index: 6;
-		opacity: 0;
-		pointer-events: none;
-		will-change: transform, opacity;
+	.thought-sentence {
+		position: relative;
+		max-width: 40rem;
+		margin: 1.6rem auto 0;
+		/* Fades up on load, a beat after the logo's reveal. Self-contained (plays
+		   with or without JS); `both` holds it hidden through the delay. */
+		animation: sentence-in 550ms cubic-bezier(0.22, 1, 0.36, 1) 1250ms both;
 	}
 
-	.thought-cloud.is-live .thought {
-		pointer-events: auto;
+	@keyframes sentence-in {
+		from {
+			opacity: 0;
+			transform: translateY(9px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
 
-	/* The whole thought is one semi-solid tinted-glass card, anchored by its
-	   centre on its grid point — so revealing its description grows the box
-	   symmetrically around that point and never shifts its neighbours. The pill
-	   itself doesn't move; the parent cloud carries the parallax. overflow:hidden
-	   clips the collapsed description and the sheen to the radius. */
-	.thought {
-		position: absolute;
-		left: var(--tx);
-		top: var(--ty);
-		width: 190px;
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		overflow: hidden;
-		color: var(--fg);
-		background: color-mix(in srgb, var(--hue) 15%, color-mix(in srgb, var(--bg-alt) 78%, transparent));
-		border: 1px solid color-mix(in srgb, var(--hue) 45%, var(--border));
-		border-radius: 14px;
-		-webkit-backdrop-filter: blur(7px);
-		backdrop-filter: blur(7px);
-		box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.6);
-		transform: translate(-50%, -50%);
-		pointer-events: none;
-		/* Faint on-brand glint drifting across the card, staggered per pill so
-		   they never flash in unison — the shared "this is clickable" cue. */
-		--sheen-color: var(--hue);
-		--sheen-strength: 0.14;
-		--sheen-delay: calc(var(--i) * -1.5s);
-		transition:
-			background 0.25s ease,
-			border-color 0.25s ease,
-			box-shadow 0.25s ease;
+	@media (prefers-reduced-motion: reduce) {
+		.thought-sentence {
+			animation: none;
+		}
 	}
 
-	/* The always-visible title, and the interaction target (a real button, for
-	   click + keyboard). Transparent — the card behind it carries the fill. */
-	.thought-toggle {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		min-height: 2.6rem;
-		padding: 0.5rem 0.9rem;
+	.sentence {
+		margin: 0;
+		font-size: clamp(1.15rem, 0.85rem + 1.35vw, 1.7rem);
+		line-height: 1.6;
+		color: var(--fg-muted);
+		text-wrap: balance;
+	}
+
+	/* A clickable phrase: brighter, tinted, weight-lifted, with a soft underline
+	   so it reads as interactive within the muted sentence. Inline button reset. */
+	.part {
 		font: inherit;
-		font-size: 0.9rem;
 		font-weight: 600;
-		text-align: center;
-		cursor: pointer;
-		color: inherit;
+		color: color-mix(in srgb, var(--hue) 55%, var(--fg));
 		background: none;
 		border: none;
-		border-radius: 14px;
-	}
-
-	.thought-title {
-		/* Warm tint on the label, brightening to full fg when the pill opens. */
-		color: color-mix(in srgb, var(--hue) 55%, var(--fg));
-		transition: color 0.2s ease;
-	}
-
-	/* The revealed description: collapsed to nothing at rest, easing open below
-	   the title when the pill is engaged. `interpolate-size` lets the max-height
-	   animate to its natural content height rather than snapping. */
-	.thought-desc {
-		max-height: 0;
-		opacity: 0;
-		overflow: hidden;
-		interpolate-size: allow-keywords;
+		padding: 0.05em 0.14em;
+		margin: 0 -0.02em;
+		border-radius: 6px;
+		cursor: pointer;
+		white-space: nowrap;
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+		box-shadow: inset 0 -0.09em 0 color-mix(in srgb, var(--hue) 55%, transparent);
 		transition:
-			max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-			opacity 0.3s ease,
-			margin-top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+			color 0.18s ease,
+			background 0.18s ease,
+			box-shadow 0.18s ease;
 	}
 
-	.thought-desc p {
-		margin: 0;
-		padding: 0.7rem 0.9rem 0.85rem;
-		font-size: 0.78rem;
-		line-height: 1.5;
+	@media (hover: hover) and (pointer: fine) {
+		.part:hover {
+			color: var(--fg);
+			background: color-mix(in srgb, var(--hue) 16%, transparent);
+			box-shadow: inset 0 -0.09em 0 var(--hue);
+		}
+	}
+
+	.part:focus-visible {
+		outline: 2px solid color-mix(in srgb, var(--hue) 70%, transparent);
+		outline-offset: 1px;
+	}
+
+	/* Active (opened) part: filled pill, so the sentence shows which detail is up. */
+	.part.is-active {
+		color: var(--bg);
+		background: var(--hue);
+		box-shadow: 0 0 16px -2px color-mix(in srgb, var(--hue) 55%, transparent);
+	}
+
+	/* The detail panel sits just under the sentence, absolutely placed so it
+	   overlays the gap before the person cards rather than pushing layout. */
+	.sentence-detail {
+		position: absolute;
+		top: calc(100% + 0.9rem);
+		left: 50%;
+		transform: translateX(-50%);
+		width: min(34rem, 92vw);
+		z-index: 5;
+	}
+
+	.detail {
+		text-align: left;
+		background: color-mix(in srgb, var(--hue) 8%, var(--bg-alt));
+		border: 1px solid color-mix(in srgb, var(--hue) 45%, var(--border));
+		border-radius: 14px;
+		padding: 0.85rem 1.1rem;
+		box-shadow:
+			0 16px 34px -14px rgba(0, 0, 0, 0.75),
+			0 0 24px -6px color-mix(in srgb, var(--hue) 30%, transparent);
+		animation: detail-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	.detail[hidden] {
+		display: none;
+	}
+
+	.detail-title {
+		display: block;
+		font-weight: 700;
+		font-size: 0.95rem;
+		color: color-mix(in srgb, var(--hue) 55%, var(--fg));
+		margin-bottom: 0.25rem;
+	}
+
+	.detail-text {
+		display: block;
+		font-size: 0.85rem;
+		line-height: 1.55;
 		color: var(--fg-muted);
 	}
 
-	/* Engaged = hover (on hover-capable pointers), keyboard focus, or the
-	   click/tap toggle (.is-open). Raise the pill above its neighbours, solidify
-	   its glass, and ease the description open. */
-	.thought:focus-within,
-	.thought.is-open {
-		z-index: 3;
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.thought:hover {
-			z-index: 3;
+	@keyframes detail-in {
+		from {
+			opacity: 0;
+			transform: translateY(-6px);
 		}
-	}
-
-	.thought:focus-within,
-	.thought.is-open,
-	.thought:hover {
-		background: color-mix(in srgb, var(--hue) 20%, var(--bg-alt));
-		border-color: color-mix(in srgb, var(--hue) 70%, var(--border));
-		box-shadow: 0 0 24px -2px color-mix(in srgb, var(--hue) 45%, transparent);
-	}
-
-	.thought:focus-within .thought-title,
-	.thought.is-open .thought-title,
-	.thought:hover .thought-title {
-		color: var(--fg);
-	}
-
-	/* Only the hovered/opened pill reveals its text — but reveal on hover only
-	   where hover is real (so a tap doesn't leave a stuck-open panel on touch,
-	   which uses .is-open instead). */
-	.thought.is-open .thought-desc,
-	.thought:focus-within .thought-desc {
-		max-height: 16rem;
-		opacity: 1;
-		margin-top: 0.4rem;
-	}
-
-	@media (hover: hover) and (pointer: fine) {
-		.thought:hover .thought-desc {
-			max-height: 16rem;
+		to {
 			opacity: 1;
-			margin-top: 0.4rem;
+			transform: translateY(0);
 		}
 	}
 
-	/* ---- Reduced motion --------------------------------------------------
-	   No parallax — the cloud just sits parked, its pills clickable, and the
-	   script only shows/hides it by scroll zone. */
 	@media (prefers-reduced-motion: reduce) {
-		.thought-cloud {
-			opacity: 1;
-		}
-		.thought {
-			pointer-events: auto;
+		.detail {
+			animation: none;
 		}
 	}
 
-	/* ---- Phone (≤900px): drop the fixed parallax -------------------------
-	   No room to slide a fixed field over a single-column timeline, so the
-	   cloud becomes a normal in-flow, centred stack of the same expandable
-	   pills. The client script skips all motion at this width. */
 	@media (max-width: 900px) {
-		.thought-cloud {
+		.thought-sentence {
+			margin-top: 1.25rem;
+		}
+		.sentence {
+			font-size: clamp(1.05rem, 3.6vw, 1.35rem);
+		}
+		/* On a phone let the detail push the page (no fixed hero gap to overlay). */
+		.sentence-detail {
 			position: static;
 			transform: none;
 			width: 100%;
-			max-width: 420px;
-			height: auto;
-			margin: 2.5rem auto 0;
-			display: flex;
-			flex-direction: column;
-			gap: 0.7rem;
-			opacity: 1;
-			pointer-events: auto;
-		}
-
-		.thought {
-			position: static;
-			left: auto;
-			top: auto;
-			width: 100%;
-			transform: none !important;
-			opacity: 1 !important;
-			pointer-events: auto;
-			animation: none !important;
-		}
-
-		.thought-toggle {
-			min-height: 2.8rem;
+			margin-top: 0.9rem;
 		}
 	}
 </style>
-
-<noscript>
-	<style>
-		/* Without JS there's no scroll choreography — render the cloud as a plain
-		   centred, in-flow list of the expandable pills (like the phone layout),
-		   fully visible. */
-		.thought-cloud {
-			position: static !important;
-			height: auto !important;
-			display: flex !important;
-			flex-wrap: wrap;
-			justify-content: center;
-			gap: 0.7rem;
-			max-width: 900px;
-			margin: 2rem auto 0;
-			opacity: 1 !important;
-			pointer-events: auto !important;
-		}
-		.thought {
-			position: static !important;
-			transform: none !important;
-			opacity: 1 !important;
-			pointer-events: auto !important;
-		}
-	</style>
-</noscript>

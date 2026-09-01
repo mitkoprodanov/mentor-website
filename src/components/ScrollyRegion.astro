@@ -70,15 +70,11 @@ const adam = getPerson('adam');
 						        up behind the navbar.
 						    Both are left–right symmetric, so the same markup serves both cards. */}
 						<div class="slot-decor" aria-hidden="true">
-							<svg class="decor-frame" viewBox="0 0 372 151" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-								<path class="decor-line decor-line--thick" d="M24 9 C130 3 242 3 348 9 C362 11 367 19 365 31 C363 61 367 95 365 124 C364 137 358 143 348 142 C242 148 130 148 24 142 C13 141 8 134 8 122 C9 95 4 61 8 31 C9 19 13 12 24 9 Z" />
-								<path class="decor-line decor-line--thin" d="M8 40 C4 66 4 86 6 112 M364 40 C368 66 368 86 366 112" />
-								<path class="decor-line decor-line--accent" d="M24 9 C13 3 4 8 8 20" />
-								<path class="decor-line decor-line--accent" d="M348 142 C359 148 368 143 364 131" />
-							</svg>
-							<svg class="decor-cradle" viewBox="0 0 340 200" fill="none" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-								<path class="decor-line decor-line--thick" d="M58 192 C38 150 58 90 108 60 C130 45 152 37 170 36 C188 37 210 45 232 60 C282 90 302 150 282 192" />
-								<path class="decor-line decor-line--thin" d="M44 192 C24 146 46 82 100 50 C126 34 150 27 170 26 C190 27 214 34 240 50 C294 82 316 146 296 192" />
+							<span class="decor-glow"></span>
+							<span class="decor-frame"></span>
+							<svg class="decor-cradle" viewBox="0 0 150 168" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<polygon class="decor-line decor-line--outer" points="75,4 146,49 146,126 75,164 4,126 4,49" />
+								<polygon class="decor-line decor-line--inner" points="75,15 136,54 136,120 75,153 14,120 14,54" />
 							</svg>
 						</div>
 						<div class="side-panel btn-sheen">
@@ -354,13 +350,13 @@ const adam = getPerson('adam');
 	   a modal — a blurred/desaturated backdrop drops over the rest of the page
 	   (see .person-backdrop) and the card itself scrolls if its content
 	   overflows the viewport (see .side-panel-stack) rather than the page. */
-	/* ---- Curvy person-tinted flourishes --------------------------------
-	   Person-coloured curvy lines that lift each card off the busy timeline
-	   behind it — a crisp, graphic separation where the soft blur ring reads
-	   as depth, these read as identity/frame. Two layers (see the markup):
-	   a loop around the whole card, and arcs cupping the photo above it. The
-	   card panel is opaque and sits above (z-index below), so only the parts
-	   that reach past the card ever show. */
+	/* ---- Person-tinted flourishes --------------------------------------
+	   Geometric double-hairline framing + a soft tinted glow that lift each card
+	   off the busy timeline — matching the site's rounded-rect / hairline
+	   language rather than the old hand-drawn loop. Three layers (see markup):
+	   a soft glow halo, a double-line rounded frame around the card, and a
+	   double-line hexagon around the photo above it. The card panel is opaque and
+	   sits above (z-index below), so only the parts past it ever show. */
 	.slot-decor {
 		position: absolute;
 		inset: 0;
@@ -369,64 +365,88 @@ const adam = getPerson('adam');
 		color: var(--person-color);
 	}
 
-	/* The card loop: inset OUTSIDE the card on every side, stretched to the
-	   slot so it frames the card at any height (resting or skills-expanded).
-	   preserveAspectRatio=none + non-scaling strokes keep the line crisp while
-	   the box stretches. */
-	.decor-frame {
+	/* Soft person-tinted halo lifting the card + headshot off the timeline — the
+	   "glow". Two blurred blobs: the lower behind the card, the upper (smaller)
+	   behind the photo above it. */
+	.decor-glow {
 		position: absolute;
-		/* Explicit size (not auto) so the loop fills — and stretches with — the
-		   inset box; leaving width/height auto lets the SVG's intrinsic aspect
-		   ratio pin its height and it stops tracking the card. */
-		left: -16px;
-		top: -16px;
-		width: calc(100% + 32px);
-		height: calc(100% + 32px);
-		filter: drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 45%, transparent));
+		left: 50%;
+		top: -158px;
+		transform: translateX(-50%);
+		width: calc(100% + 90px);
+		height: calc(100% + 214px);
+		z-index: -1;
+		background:
+			radial-gradient(44% 38% at 50% 78%, color-mix(in srgb, var(--person-color) 24%, transparent), transparent 72%),
+			radial-gradient(32% 21% at 50% 18%, color-mix(in srgb, var(--person-color) 20%, transparent), transparent 70%);
+		filter: blur(5px);
 		transition: opacity 0.25s ease;
 	}
 
-	/* The photo cradle: a fixed band directly above the card, sized to the
-	   photo. Tied to --photo-opacity (published on .person-bar-inner) so it
-	   fades out exactly as the headshot does when the pair docks. */
+	/* The card frame: a double hairline just outside the card, stretching with it
+	   at any height. Clean CSS corners (not a stretched SVG) so the rounding stays
+	   true, matching the pills/cards; a soft tinted edge-glow backs the halo. The
+	   inner hairline (::before) traces a fainter line inside the outer one. */
+	.decor-frame {
+		position: absolute;
+		left: -15px;
+		top: -15px;
+		width: calc(100% + 30px);
+		height: calc(100% + 30px);
+		border: 1px solid color-mix(in srgb, var(--person-color) 62%, transparent);
+		border-radius: 20px;
+		box-shadow: 0 0 20px -2px color-mix(in srgb, var(--person-color) 28%, transparent);
+		transition: opacity 0.25s ease;
+	}
+
+	.decor-frame::before {
+		content: '';
+		position: absolute;
+		inset: 5px;
+		border: 1px solid color-mix(in srgb, var(--person-color) 30%, transparent);
+		border-radius: 15px;
+	}
+
+	/* The photo hexagon: fixed-size and centred so its double outline tracks the
+	   fixed-width headshot, echoing the hex crop and the logo's geometry. Tied to
+	   --photo-opacity (published on .person-bar-inner) so it fades out with the
+	   headshot as the pair docks. */
 	.decor-cradle {
 		position: absolute;
-		left: 0;
-		top: -200px;
-		width: 100%;
-		height: 200px;
+		left: 50%;
+		top: -173px;
+		transform: translateX(-50%);
+		width: 150px;
+		height: 168px;
 		opacity: var(--photo-opacity, 1);
 		filter: drop-shadow(0 0 5px color-mix(in srgb, var(--person-color) 45%, transparent));
 	}
 
 	.decor-line {
 		stroke: currentColor;
-		stroke-linecap: round;
+		stroke-linejoin: round;
 		fill: none;
 		vector-effect: non-scaling-stroke;
 	}
 
-	.decor-line--thick {
-		stroke-width: 2.4;
+	.decor-line--outer {
+		stroke-width: 1.4;
 		opacity: 0.9;
 	}
 
-	.decor-line--thin {
-		stroke-width: 1.2;
-		opacity: 0.5;
-	}
-
-	.decor-line--accent {
-		stroke-width: 3.2;
-		opacity: 0.8;
+	.decor-line--inner {
+		stroke-width: 1;
+		opacity: 0.45;
 	}
 
 	/* When the skills reveal (hover / open) the full-page backdrop takes over
-	   separation and the card grows tall — ease the card loop back so it
-	   doesn't compete with the expanded modal, mirroring the blur ring's fade.
-	   (The cradle is already gone by then: the photo has faded on docking.) */
+	   separation and the card grows tall — ease the frame + glow back so they
+	   don't compete with the expanded modal, mirroring the blur ring's fade.
+	   (The hexagon is already gone by then: the photo has faded on docking.) */
 	.person-bar-inner.reveal .decor-frame,
-	.person-bar-inner:has(.side-panel.is-open) .decor-frame {
+	.person-bar-inner.reveal .decor-glow,
+	.person-bar-inner:has(.side-panel.is-open) .decor-frame,
+	.person-bar-inner:has(.side-panel.is-open) .decor-glow {
 		opacity: 0.4;
 	}
 
