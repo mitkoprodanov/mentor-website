@@ -153,6 +153,17 @@ const adam = getPerson('adam');
 		z-index: 4;
 	}
 
+	/* During the About→Timeline intro lift (thoughtCloud.client.ts translates the
+	   whole .scrolly to crawl the cards/timeline up), the bar must ride that
+	   transform as normal flow rather than sticking — otherwise it clamps to its
+	   sticky top while the timeline slides past it. `relative` (not `static`)
+	   keeps its z-index:4 stacking over the timeline; top:0 cancels the sticky
+	   offset. The class is removed the instant the lift ends, restoring sticky. */
+	:global(body.tl-lifted) .person-bar {
+		position: relative;
+		top: 0;
+	}
+
 	.person-bar-inner {
 		display: flex;
 		justify-content: space-between;

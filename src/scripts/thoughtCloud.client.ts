@@ -98,7 +98,15 @@ if (cloud && pills.length) {
 		// Only apply a real transform while it's meaningfully non-zero — at ~0 we
 		// clear it entirely so .scrolly never becomes a containing block for its
 		// own fixed children (the modal backdrops) once past the intro.
-		if (scrolly) scrolly.style.transform = off > 0.5 ? `translateY(${off.toFixed(1)}px)` : '';
+		const lifted = off > 0.5;
+		if (scrolly) scrolly.style.transform = lifted ? `translateY(${off.toFixed(1)}px)` : '';
+		// While the lift is active the person bar must NOT stick — otherwise it
+		// would clamp to its sticky top and the timeline would slide past it. Un-
+		// sticking it (see body.tl-lifted in ScrollyRegion) makes the bar ride the
+		// same transform as the timeline, so cards + timeline rise as one rigid
+		// block; the class drops the instant off hits 0 (bar just below its dock),
+		// handing off seamlessly to normal sticky scrolling.
+		document.body.classList.toggle('tl-lifted', lifted);
 
 		// Thoughts: ride the same half speed, then detach and accelerate up.
 		let thY: number;
@@ -151,6 +159,7 @@ if (cloud && pills.length) {
 		cloud!.style.display = '';
 		cloud!.classList.remove('is-live');
 		if (scrolly) scrolly.style.transform = '';
+		document.body.classList.remove('tl-lifted');
 	}
 
 	function enableMotion(): void {

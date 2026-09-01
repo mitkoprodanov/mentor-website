@@ -26,18 +26,34 @@
  */
 import { thoughts } from '../../data/thoughts';
 
-// Resting anchor for each pill, as (left, top) in *viewport* percentages (the
-// cloud fills the screen; the client script then slides the whole cloud as one
-// block for the parallax). A dense 3×2 grid — the pills sit close, almost
-// touching, as a single tight cluster riding just above the person cards in the
-// band between the logo/texts and the timeline.
+// ─── Thought-cluster layout — TWEAK THESE FOUR NUMBERS ───────────────────────
+// All values are viewport percentages. The six pills form a tight cluster: a
+// stacked pair on each side and a horizontal middle pair on the band's centre
+// line, riding just above the person cards between the logo/texts and timeline.
+//
+//   BAND_Y      vertical centre of the whole cluster. SMALLER = HIGHER up the
+//               screen. Raise this (smaller number) if the pills spawn too low /
+//               too close to the headshots; lower it (bigger) to sit them deeper.
+//   ROW_SPREAD  vertical gap between the top & bottom pill of each side pair
+//               (they sit at BAND_Y ∓ ROW_SPREAD/2; the middle pair is on BAND_Y).
+//   SIDE_X      how far the side pairs sit in from the left/right edge. BIGGER =
+//               narrower cluster / side pills closer to the centre (smaller gap
+//               to the headshots); smaller = pushed further out to the edges.
+//   MID_SPREAD  horizontal gap of the middle pair around centre (each middle pill
+//               sits at 50 ∓ MID_SPREAD/2). Smaller = the two sit closer together.
+const BAND_Y = 62;
+const ROW_SPREAD = 9;
+const SIDE_X = 24;
+const MID_SPREAD = 16;
+// ─────────────────────────────────────────────────────────────────────────────
+
 const anchors = [
-	{ tx: '35%', ty: '66%' },
-	{ tx: '50%', ty: '66%' },
-	{ tx: '65%', ty: '66%' },
-	{ tx: '35%', ty: '74%' },
-	{ tx: '50%', ty: '74%' },
-	{ tx: '65%', ty: '74%' },
+	{ tx: `${SIDE_X}%`, ty: `${BAND_Y - ROW_SPREAD / 2}%` }, // left pair, top
+	{ tx: `${SIDE_X}%`, ty: `${BAND_Y + ROW_SPREAD / 2}%` }, // left pair, bottom
+	{ tx: `${50 - MID_SPREAD / 2}%`, ty: `${BAND_Y}%` }, // middle pair, left  — on the centre line
+	{ tx: `${50 + MID_SPREAD / 2}%`, ty: `${BAND_Y}%` }, // middle pair, right
+	{ tx: `${100 - SIDE_X}%`, ty: `${BAND_Y - ROW_SPREAD / 2}%` }, // right pair, top
+	{ tx: `${100 - SIDE_X}%`, ty: `${BAND_Y + ROW_SPREAD / 2}%` }, // right pair, bottom
 ];
 
 // A warm, on-brand tint per pill so the six categories read as distinct without
