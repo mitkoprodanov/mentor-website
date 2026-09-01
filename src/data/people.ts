@@ -25,7 +25,7 @@ export const people: Person[] = [
 	{
 		id: 'mitko',
 		name: 'Mitko Prodanov',
-		role: 'Senior Gameplay & AI Programmer',
+		role: 'Senior Gameplay Engineer',
 		since: 2009,
 		education: 'MSc Computer Engineering, BUTE',
 		linkedin: 'https://www.linkedin.com/in/mitko-prodanov-920b55b7/',
