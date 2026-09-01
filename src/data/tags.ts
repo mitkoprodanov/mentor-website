@@ -16,56 +16,43 @@ export interface WorkTag {
 }
 
 export const tags: WorkTag[] = [
-	// Languages
-	{ id: 'c', label: 'C', category: 'Languages' },
-	{ id: 'cpp', label: 'C++', category: 'Languages' },
-	{ id: 'csharp', label: 'C#', category: 'Languages' },
-
-	// Unreal
-	{ id: 'gas', label: 'Gameplay Ability System (GAS)', category: 'Unreal' },
-	{ id: 'ue-blueprint', label: 'UE Blueprint', category: 'Unreal' },
-
-	// Engines
-	{ id: 'unity', label: 'Unity', category: 'Engines' },
-	{ id: 'lumberyard', label: 'Lumberyard', category: 'Engines' },
-	{ id: 'tabletop', label: 'Tabletop', category: 'Engines' },
-
-	// AI
-	{ id: 'gameplay-ai', label: 'Gameplay AI', category: 'AI' },
-	{ id: 'crowd-sim-pathfinding', label: 'Crowd Simulation & Pathfinding', category: 'AI' },
-	{ id: 'tensorflow-dl', label: 'TensorFlow / Deep Learning', category: 'AI' },
-
-	// Gameplay
-	{ id: 'abilities-status-effects', label: 'Abilities & Status Effects', category: 'Gameplay' },
-	{ id: 'tech-trees-progression', label: 'Tech Trees & Progression', category: 'Gameplay' },
-
-	// Graphics
-	{ id: 'shader-programming', label: 'Shader Programming (HLSL/GLSL/Cg)', category: 'Graphics' },
-	{ id: 'opengl', label: 'OpenGL', category: 'Graphics' },
-	{ id: 'directx', label: 'DirectX', category: 'Graphics' },
-
-	// Practices
-	{ id: 'mobile-dev', label: 'Mobile Development', category: 'Practices' },
-	{ id: 'solid-clean-code', label: 'SOLID / Clean Code', category: 'Practices' },
-	{ id: 'agile', label: 'Agile', category: 'Practices' },
-
 	// Design
-	{ id: 'systems-level-design', label: 'Systems & Level Design', category: 'Design' },
-	{ id: 'encounter-design', label: 'Encounter Design', category: 'Design' },
+	{ id: 'ip-critical-design', label: 'IP-Critical Design', category: 'Design' },
+	{ id: 'ux-design', label: 'UX Design', category: 'Design' },
+	{ id: 'balance', label: 'Balance', category: 'Design' },
+	{ id: 'level-design', label: 'Level Design', category: 'Design' },
+	{ id: 'systems-design', label: 'Systems Design', category: 'Design' },
+	{ id: 'narrative-design', label: 'Narrative Design', category: 'Design' },
+	{ id: 'puzzle-design', label: 'Puzzle Design', category: 'Design' },
+	{ id: 'board-game-design', label: 'Board Game Design', category: 'Design' },
 
-	// UI
-	{ id: 'ui-ux-design', label: 'UI/UX Design', category: 'UI' },
+	// Game Systems
+	{ id: 'metagame', label: 'Metagame', category: 'Game Systems' },
+	{ id: 'progression', label: 'Progression', category: 'Game Systems' },
+	{ id: 'gameplay', label: 'Gameplay', category: 'Game Systems' },
+	{ id: 'ability', label: 'Ability', category: 'Game Systems' },
+	{ id: 'encounter', label: 'Encounter', category: 'Game Systems' },
+	{ id: 'navigation', label: 'Navigation', category: 'Game Systems' },
+	{ id: 'ai', label: 'AI', category: 'Game Systems' },
+	{ id: 'ui', label: 'UI', category: 'Game Systems' },
+	{ id: 'devtools', label: 'DevTools', category: 'Game Systems' },
+
+	// Platform
+	{ id: 'proprietary-engine', label: 'Proprietary Engine', category: 'Platform' },
+	{ id: 'unreal-engine', label: 'Unreal Engine', category: 'Platform' },
+	{ id: 'board-game', label: 'Board Game', category: 'Platform' },
 
 	// Process
-	{ id: 'agile-scrum', label: 'Agile/Scrum', category: 'Process' },
+	{ id: 'co-dev-teams', label: 'Co-dev Teams', category: 'Process' },
+	{ id: 'prototyping', label: 'Prototyping', category: 'Process' },
+	{ id: 'playtesting', label: 'Playtesting', category: 'Process' },
+	{ id: 'agile', label: 'Agile', category: 'Process' },
 
-	// Genre (Projects)
-	{ id: 'strategy', label: 'Strategy', category: 'Genre' },
-	{ id: 'board-game', label: 'Board Game', category: 'Genre' },
-	{ id: 'card-game', label: 'Card Game', category: 'Genre' },
-
-	// Award
-	{ id: 'qubit-spring-1st-place', label: '1st Place — Qubit Spring Card Game Design Competition', category: 'Award' },
+	// Tech
+	{ id: 'unreal-gas', label: 'Unreal GAS', category: 'Tech' },
+	{ id: 'blueprint-scripting', label: 'Blueprint Scripting', category: 'Tech' },
+	{ id: 'mobile-development', label: 'Mobile Development', category: 'Tech' },
+	{ id: 'clean-code', label: 'Clean Code', category: 'Tech' },
 ];
 
 const tagsById = new Map(tags.map((tag) => [tag.id, tag]));

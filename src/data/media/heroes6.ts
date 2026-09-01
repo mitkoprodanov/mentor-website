@@ -8,18 +8,18 @@ export const heroes6Media: ProjectMedia[] = [
 		start: 62,
 		end: 120,
 		caption: 'Might & Magic: Heroes VI — gameplay.',
-		tagIds: ['gameplay-ai'],
+		tagIds: ['ai'],
 	},
 	{
 		src: '/projects/heroes6/ai.gif',
 		kind: 'gif',
 		caption: 'Campaign AI planning a turn.',
-		tagIds: ['gameplay-ai'],
+		tagIds: ['ai'],
 	},
 	{
 		src: '/projects/heroes6/abilities.jpg',
 		kind: 'image',
 		caption: 'Hero abilities and the tutorial system.',
-		tagIds: ['ui-ux-design', 'systems-level-design'],
+		tagIds: ['ux-design', 'ui', 'systems-design', 'level-design'],
 	},
 ];

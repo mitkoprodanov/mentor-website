@@ -1,60 +1,81 @@
 ---
 /**
  * The hero pitch: one sentence under the logo whose value-prop phrases are
- * clickable "thought parts". Clicking a part reveals that thought's detail in a
- * panel just below the sentence (copy lives in data/thoughts.ts). Static,
- * readable hero copy — it simply scrolls away with the rest of the hero (see
- * the scroll order in About.astro); the click behaviour is in
- * thoughtCloud.client.ts.
+ * hoverable "thought parts". Each line has one left-side part and one right-side
+ * part; hovering reveals that thought's detail in a panel flanking the sentence
+ * (left parts → left panel, right parts → right panel). Below 1180px both panels
+ * fall back to a centred card below the sentence. Copy lives in data/thoughts.ts.
  */
 import { thoughts } from '../../data/thoughts';
 
 const byId = Object.fromEntries(thoughts.map((t) => [t.id, t]));
 
-// A warm, on-brand tint per part so the clickable phrases read as distinct.
-const hueFor: Record<string, string> = {
-	'in-sync': 'var(--accent)',
-	'shipped-experiences': 'var(--accent-2)',
-	'easy-integration': 'var(--accent-3)',
-	'true-ownership': 'var(--mentor)',
-	'complete-development': 'var(--accent-2)',
-	'built-to-scale': 'var(--accent-3)',
+// Label shown in the detail card title — matches the sentence phrasing, not thoughts.ts titles.
+const labelFor: Record<string, string> = {
+	'in-sync':            'battle-tested duo',
+	'shipped-experiences': 'proven experience',
+	'easy-integration':   'easy integration',
+	'true-ownership':     'true ownership',
+	'complete-development': 'complete development',
+	'built-to-scale':     'ready to scale',
 };
 
-// The sentence as segments: plain strings are static text; objects are the
-// clickable parts, each tied to a thought id for its detail.
-type Seg = string | { id: string; text: string };
+// Sentence segments: plain strings, { br } for line breaks, or clickable parts
+// tagged with the id of their thought and which side their detail panel appears on.
+type Seg = string | { br: true } | { id: string; text: string; side: 'left' | 'right' };
+
 const sentence: Seg[] = [
 	'A ',
-	{ id: 'in-sync', text: 'battle-tested duo' },
+	{ id: 'in-sync',            text: 'battle-tested duo',    side: 'left'  },
 	' with ',
-	{ id: 'shipped-experiences', text: 'shipped experience' },
-	' to build on, we offer ',
-	{ id: 'easy-integration', text: 'easy integration' },
+	{ id: 'shipped-experiences', text: 'proven experience',   side: 'right' },
+	' to build on,',
+	{ br: true },
+	'we offer ',
+	{ id: 'easy-integration',   text: 'easy integration',     side: 'left'  },
 	' while taking ',
-	{ id: 'true-ownership', text: 'true ownership' },
-	' of our work seriously — bringing together ',
-	{ id: 'complete-development', text: 'complete development' },
-	' that’s ',
-	{ id: 'built-to-scale', text: 'built to scale' },
-	' as we grow.',
+	{ id: 'true-ownership',     text: 'true ownership',       side: 'right' },
+	' of our work seriously',
+	{ br: true },
+	'— bringing together ',
+	{ id: 'complete-development', text: 'complete development', side: 'left' },
+	" that's ",
+	{ id: 'built-to-scale',     text: 'ready to scale',       side: 'right' },
+	'.',
 ];
+
+const leftIds  = ['in-sync', 'easy-integration', 'complete-development'];
+const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 ---
 
 <div class="thought-sentence">
+	{/* Left detail panel — shown to the left of the sentence on wide screens */}
+	<div class="sentence-detail detail-left" aria-live="polite">
+		{
+			leftIds.map((id) => (
+				<div class="detail" id={`thought-detail-${id}`} data-detail hidden>
+					<span class="detail-title">{labelFor[id]}</span>
+					<span class="detail-text">{byId[id].description}</span>
+				</div>
+			))
+		}
+	</div>
+
 	<p class="sentence">
 		{
 			sentence.map((seg) =>
 				typeof seg === 'string' ? (
 					seg
+				) : 'br' in seg ? (
+					<br />
 				) : (
 					<button
 						class="part"
 						type="button"
 						data-thought-part
+						data-side={seg.side}
 						aria-expanded="false"
 						aria-controls={`thought-detail-${seg.id}`}
-						style={`--hue:${hueFor[seg.id]}`}
 					>
 						{seg.text}
 					</button>
@@ -63,14 +84,13 @@ const sentence: Seg[] = [
 		}
 	</p>
 
-	{/* One shared area below the sentence; the clicked part's detail shows here.
-	    Absolutely placed so opening it never shifts the logo or the person cards. */}
-	<div class="sentence-detail" aria-live="polite">
+	{/* Right detail panel — shown to the right of the sentence on wide screens */}
+	<div class="sentence-detail detail-right" aria-live="polite">
 		{
-			thoughts.map((t) => (
-				<div class="detail" id={`thought-detail-${t.id}`} data-detail style={`--hue:${hueFor[t.id]}`} hidden>
-					<span class="detail-title">{t.title}</span>
-					<span class="detail-text">{byId[t.id].description}</span>
+			rightIds.map((id) => (
+				<div class="detail" id={`thought-detail-${id}`} data-detail hidden>
+					<span class="detail-title">{labelFor[id]}</span>
+					<span class="detail-text">{byId[id].description}</span>
 				</div>
 			))
 		}
@@ -80,10 +100,8 @@ const sentence: Seg[] = [
 <style>
 	.thought-sentence {
 		position: relative;
-		max-width: 40rem;
+		max-width: 44rem;
 		margin: 1.6rem auto 0;
-		/* Fades up on load, a beat after the logo's reveal. Self-contained (plays
-		   with or without JS); `both` holds it hidden through the delay. */
 		animation: sentence-in 550ms cubic-bezier(0.22, 1, 0.36, 1) 1250ms both;
 	}
 
@@ -104,102 +122,136 @@ const sentence: Seg[] = [
 		}
 	}
 
+	/* ── Sentence ──────────────────────────────────────────────────────────── */
+
 	.sentence {
 		margin: 0;
-		font-size: clamp(1.15rem, 0.85rem + 1.35vw, 1.7rem);
-		line-height: 1.6;
+		/* Capped a touch lower than before so the long middle line still fits on one
+		   line (three lines total) at the small-caps width, without a sprawl-wide
+		   container. */
+		font-size: clamp(0.95rem, 0.82rem + 0.55vw, 1.05rem);
+		line-height: 1.9;
 		color: var(--fg-muted);
-		text-wrap: balance;
+		/* Render as capital and smaller-capital letters only — no plain lowercase —
+		   echoing the all-caps logo type directly above. */
+		font-variant-caps: small-caps;
+		letter-spacing: 0.02em;
 	}
 
-	/* A clickable phrase: brighter, tinted, weight-lifted, with a soft underline
-	   so it reads as interactive within the muted sentence. Inline button reset. */
+	/* ── Part (hoverable phrase) ───────────────────────────────────────────── */
+
 	.part {
+		/* Inherit the sentence's font including small-caps. */
 		font: inherit;
 		font-weight: 600;
-		color: color-mix(in srgb, var(--hue) 55%, var(--fg));
-		background: none;
-		border: none;
-		padding: 0.05em 0.14em;
-		margin: 0 -0.02em;
-		border-radius: 6px;
 		cursor: pointer;
 		white-space: nowrap;
-		box-decoration-break: clone;
-		-webkit-box-decoration-break: clone;
-		box-shadow: inset 0 -0.09em 0 color-mix(in srgb, var(--hue) 55%, transparent);
+
+		/* Not a solid material — a soft radial glow that's brightest behind the
+		   letters and fades out to the sides (no box edge), plus a faint halo on
+		   the glyphs themselves. A whisper of warmth over the dark hero. */
+		color: var(--fg);
+		background: radial-gradient(
+			ellipse 74% 155% at 50% 50%,
+			color-mix(in srgb, var(--accent) 15%, rgba(255, 255, 255, 0.08)) 0%,
+			color-mix(in srgb, var(--accent) 6%, rgba(255, 255, 255, 0.02)) 48%,
+			transparent 80%
+		);
+		text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 16%, transparent);
+		border: 0;
+		border-radius: 6px;
+		padding: 0.04rem 0.36rem 0.08rem;
+		vertical-align: baseline;
 		transition:
-			color 0.18s ease,
-			background 0.18s ease,
-			box-shadow 0.18s ease;
+			background 0.22s ease,
+			text-shadow 0.22s ease;
 	}
 
 	@media (hover: hover) and (pointer: fine) {
 		.part:hover {
-			color: var(--fg);
-			background: color-mix(in srgb, var(--hue) 16%, transparent);
-			box-shadow: inset 0 -0.09em 0 var(--hue);
+			background: radial-gradient(
+				ellipse 80% 160% at 50% 50%,
+				color-mix(in srgb, var(--accent) 26%, rgba(255, 255, 255, 0.14)) 0%,
+				color-mix(in srgb, var(--accent) 9%, rgba(255, 255, 255, 0.03)) 48%,
+				transparent 82%
+			);
+			text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
 		}
 	}
 
 	.part:focus-visible {
-		outline: 2px solid color-mix(in srgb, var(--hue) 70%, transparent);
-		outline-offset: 1px;
+		outline: 2px solid rgba(255, 255, 255, 0.3);
+		outline-offset: 2px;
 	}
 
-	/* Active (opened) part: filled pill, so the sentence shows which detail is up. */
+	/* Active (detail is open) */
 	.part.is-active {
-		color: var(--bg);
-		background: var(--hue);
-		box-shadow: 0 0 16px -2px color-mix(in srgb, var(--hue) 55%, transparent);
+		background: radial-gradient(
+			ellipse 80% 160% at 50% 50%,
+			color-mix(in srgb, var(--accent) 26%, rgba(255, 255, 255, 0.14)) 0%,
+			color-mix(in srgb, var(--accent) 9%, rgba(255, 255, 255, 0.03)) 48%,
+			transparent 82%
+		);
+		text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
 	}
 
-	/* The detail panel sits just under the sentence, absolutely placed so it
-	   overlays the gap before the person cards rather than pushing layout. */
+	/* ── Side detail panels ────────────────────────────────────────────────── */
+
 	.sentence-detail {
 		position: absolute;
-		top: calc(100% + 0.9rem);
-		left: 50%;
-		transform: translateX(-50%);
-		width: min(34rem, 92vw);
-		z-index: 5;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 15.5rem;
+		text-align: left;
+		z-index: 10;
 	}
 
+	.detail-left  { right: calc(100% + 1.5rem); }
+	.detail-right { left:  calc(100% + 1.5rem); }
+
+	/* ── Detail card ───────────────────────────────────────────────────────── */
+
 	.detail {
-		text-align: left;
-		background: color-mix(in srgb, var(--hue) 8%, var(--bg-alt));
-		border: 1px solid color-mix(in srgb, var(--hue) 45%, var(--border));
-		border-radius: 14px;
-		padding: 0.85rem 1.1rem;
+		background: rgba(12, 15, 20, 0.82);
+		-webkit-backdrop-filter: blur(14px);
+		backdrop-filter: blur(14px);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 12px;
+		padding: 0.8rem 1rem;
 		box-shadow:
 			0 16px 34px -14px rgba(0, 0, 0, 0.75),
-			0 0 24px -6px color-mix(in srgb, var(--hue) 30%, transparent);
-		animation: detail-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+			0 4px 12px -6px rgba(0, 0, 0, 0.4);
+		animation: detail-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 	}
 
 	.detail[hidden] {
 		display: none;
 	}
 
+	/* Title matches the sentence phrase — small-caps for visual continuity. */
 	.detail-title {
 		display: block;
-		font-weight: 700;
-		font-size: 0.95rem;
-		color: color-mix(in srgb, var(--hue) 55%, var(--fg));
-		margin-bottom: 0.25rem;
+		font-size: 0.88rem;
+		font-weight: 600;
+		font-variant-caps: small-caps;
+		letter-spacing: 0.02em;
+		color: var(--fg);
+		margin-bottom: 0.3rem;
 	}
 
 	.detail-text {
 		display: block;
-		font-size: 0.85rem;
-		line-height: 1.55;
+		font-size: 0.8rem;
+		font-variant-caps: normal;
+		letter-spacing: 0;
+		line-height: 1.6;
 		color: var(--fg-muted);
 	}
 
 	@keyframes detail-in {
 		from {
 			opacity: 0;
-			transform: translateY(-6px);
+			transform: translateY(-5px);
 		}
 		to {
 			opacity: 1;
@@ -213,14 +265,25 @@ const sentence: Seg[] = [
 		}
 	}
 
+	/* ── Responsive fallback ────────────────────────────────────────────────── */
+
+	/* Not enough room for side panels — both drop to a centred card below the sentence. */
+	@media (max-width: 1250px) {
+		.sentence-detail {
+			top: calc(100% + 1rem);
+			left: 50%;
+			right: auto;
+			transform: translateX(-50%);
+			width: min(30rem, 90vw);
+		}
+	}
+
+	/* On a phone let the detail push the page in normal flow. */
 	@media (max-width: 900px) {
 		.thought-sentence {
 			margin-top: 1.25rem;
 		}
-		.sentence {
-			font-size: clamp(1.05rem, 3.6vw, 1.35rem);
-		}
-		/* On a phone let the detail push the page (no fixed hero gap to overlay). */
+
 		.sentence-detail {
 			position: static;
 			transform: none;

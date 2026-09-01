@@ -1,10 +1,10 @@
 /**
- * Click behaviour for the hero sentence (see components/sections/ThoughtCloud.astro).
+ * Thought-cloud interactivity (see components/sections/ThoughtCloud.astro).
  *
- * Each value-prop phrase is a `[data-thought-part]` button whose `aria-controls`
- * names a `[data-detail]` panel below the sentence. Clicking a part reveals its
- * detail (single-open); clicking it again, clicking outside, or pressing Escape
- * closes it. That's all — the sentence is static hero copy, no scroll motion.
+ * Hovering a [data-thought-part] reveals its detail panel (single-open).
+ * Moving into the detail keeps it visible; leaving the .thought-sentence
+ * container closes it. Click/tap toggles for touch devices.
+ * Escape or clicking outside also closes.
  */
 
 const root = document.querySelector<HTMLElement>('.thought-sentence');
@@ -25,32 +25,42 @@ if (root && parts.length) {
 		}
 	}
 
+	function openDetail(part: HTMLElement): void {
+		const detail = detailFor(part);
+		closeAll(part);
+		part.classList.add('is-active');
+		part.setAttribute('aria-expanded', 'true');
+		if (detail) {
+			detail.removeAttribute('hidden');
+			// Re-trigger the entrance animation each time.
+			detail.style.animation = 'none';
+			void detail.offsetWidth;
+			detail.style.animation = '';
+		}
+	}
+
 	for (const part of parts) {
+		// Hover — primary interaction on pointer devices.
+		part.addEventListener('mouseenter', () => openDetail(part));
+		// Focus — keyboard / accessibility.
+		part.addEventListener('focus', () => openDetail(part));
+		// Click — toggle for touch devices (no hover event on touch).
 		part.addEventListener('click', () => {
-			const detail = detailFor(part);
-			const willOpen = part.getAttribute('aria-expanded') !== 'true';
-			closeAll(part);
-			part.classList.toggle('is-active', willOpen);
-			part.setAttribute('aria-expanded', String(willOpen));
-			if (detail) {
-				if (willOpen) {
-					// Re-trigger the entrance animation each time it opens.
-					detail.removeAttribute('hidden');
-					detail.style.animation = 'none';
-					void detail.offsetWidth;
-					detail.style.animation = '';
-				} else {
-					detail.setAttribute('hidden', '');
-				}
+			if (part.classList.contains('is-active')) {
+				closeAll();
+			} else {
+				openDetail(part);
 			}
 		});
 	}
 
-	document.addEventListener('click', (e) => {
-		if (!root!.contains(e.target as Node)) closeAll();
-	});
+	// Leaving the sentence container closes the open detail.
+	root.addEventListener('mouseleave', () => closeAll());
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape') closeAll();
+	});
+	document.addEventListener('click', (e) => {
+		if (!root!.contains(e.target as Node)) closeAll();
 	});
 }
 
