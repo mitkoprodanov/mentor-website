@@ -284,25 +284,30 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 		}
 	}
 
-	/* ── Preview variant — always drop the detail below, never flank. Also
-	   ensures Vision in a project-row preview never overflows sideways. ── */
-	.vision--preview .sentence-detail,
-	.vision--preview .detail {
-		text-align: center;
-	}
-
+	/* ── Preview variant — flank the detail to the left/right of the sentence,
+	   the same as the hero/About layout, only sized narrower and pulled in
+	   tighter so both panels stay inside the project-row box. On narrower
+	   screens (where the box no longer has the side room) it drops below the
+	   sentence instead — see the responsive block. ── */
 	.vision--preview .sentence-detail {
-		position: static;
+		width: 12.5rem;
+		/* The detail is taller than this compact sentence, and the experience
+		   cards sit right beneath it — so instead of centring on the sentence
+		   (which would dip over the cards' top corners), anchor the panel's
+		   bottom to the sentence's bottom and let it grow UP into the empty
+		   gutter beside the centred title, clear of the cards below. */
+		top: auto;
+		bottom: 0;
 		transform: none;
-		width: 100%;
-		margin-top: 0.75rem;
 	}
 
-	.vision--preview .sentence-detail:empty {
-		display: none;
-	}
+	.vision--preview .detail-left  { right: calc(100% + 1rem); }
+	.vision--preview .detail-right { left:  calc(100% + 1rem); }
 
-	/* ── Responsive fallback (hero variant) ─────────────────────────────────── */
+	/* ── Responsive fallback — once there's no longer side room, the detail
+	   drops below the sentence. The preview goes fully in-flow (static) so it
+	   pushes the experience cards beneath it down rather than floating over
+	   them; the hero has nothing below it, so it can stay absolute. ────────── */
 
 	@media (max-width: 1250px) {
 		.vision--hero .sentence-detail {
@@ -311,6 +316,18 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 			right: auto;
 			transform: translateX(-50%);
 			width: min(30rem, 90vw);
+		}
+
+		.vision--preview .sentence-detail,
+		.vision--preview .detail {
+			text-align: center;
+		}
+
+		.vision--preview .sentence-detail {
+			position: static;
+			transform: none;
+			width: 100%;
+			margin-top: 0.75rem;
 		}
 	}
 

@@ -90,7 +90,6 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 	{
 		project.name && (
 			<div class="node">
-				<span class="dot" class:list={{ emphasized }} />
 				<div class="node-text">
 					<h5 class="node-label">{project.name}</h5>
 					{project.info && <p class="node-info">{project.info}</p>}
@@ -368,21 +367,6 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		font-size: 0.8rem;
 		font-weight: 600;
 		color: var(--person-color, var(--accent));
-	}
-
-	.dot {
-		flex-shrink: 0;
-		margin-top: 0.4rem;
-		width: 10px;
-		height: 10px;
-		border-radius: 50%;
-		background: var(--project-dot);
-		box-shadow: 0 0 10px var(--project-dot-soft);
-	}
-
-	.dot.emphasized {
-		background: var(--mentor);
-		box-shadow: 0 0 12px 3px var(--mentor-soft);
 	}
 
 	.node-text {
