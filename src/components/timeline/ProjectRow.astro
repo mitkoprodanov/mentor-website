@@ -6,6 +6,7 @@ import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import type { ProjectDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
 import ProjectModal from '../projects/ProjectModal.astro';
+import Vision from '../common/Vision.astro';
 
 interface Props {
 	project: ProjectDef;
@@ -94,6 +95,13 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 					<h5 class="node-label">{project.name}</h5>
 					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
+			</div>
+		)
+	}
+	{
+		project.showVision && (
+			<div class="project-vision">
+				<Vision variant="preview" scopeId={`tl-${project.id}`} />
 			</div>
 		)
 	}
@@ -207,10 +215,17 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		padding: 1.25rem;
 	}
 
+	/* The project name (and its dot) sits centered in the row — the label
+	   reads as the row's headline rather than as a left-anchored tag. */
 	.node {
 		display: flex;
 		align-items: flex-start;
+		justify-content: center;
 		gap: 0.6rem;
+	}
+
+	.node-text {
+		text-align: center;
 	}
 
 	/* The whole boxed row is the click target: a transparent <button> stretched
@@ -391,6 +406,15 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		font-size: 0.82rem;
 		line-height: 1.4;
 		color: var(--fg-muted);
+	}
+
+	/* The embedded Vision sentence sits between the node label and the
+	   experience cards on the Together Again row (see `showVision` in
+	   data/timeline.ts). Its inner .part buttons carry z-index:2 already
+	   (see components/common/Vision.astro), so they float above the row's
+	   click-overlay and stay independently clickable. */
+	.project-vision {
+		margin-top: 0.25rem;
 	}
 
 	.experience-row {

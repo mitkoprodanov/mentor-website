@@ -1,6 +1,6 @@
 ---
 import Section from '../Section.astro';
-import ThoughtCloud from './ThoughtCloud.astro';
+import Vision from '../common/Vision.astro';
 ---
 
 <Section id="about" class="about">
@@ -11,7 +11,7 @@ import ThoughtCloud from './ThoughtCloud.astro';
 		</h1>
 		{/* The pitch sentence with clickable value-prop parts, in place of the old
 		    tagline + vision lines. */}
-		<ThoughtCloud />
+		<Vision variant="hero" scopeId="hero" />
 	</div>
 	<a href="#timeline" class="scroll-cue" aria-label="Scroll to timeline section">↓</a>
 </Section>
@@ -170,5 +170,5 @@ import ThoughtCloud from './ThoughtCloud.astro';
 
 <script>
 	import '../../scripts/heroReveal.client';
-	import '../../scripts/thoughtCloud.client';
+	import '../../scripts/vision.client';
 </script>

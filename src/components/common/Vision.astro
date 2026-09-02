@@ -1,12 +1,32 @@
 ---
 /**
- * The hero pitch: one sentence under the logo whose value-prop phrases are
- * hoverable "thought parts". Each line has one left-side part and one right-side
- * part; hovering reveals that thought's detail in a panel flanking the sentence
- * (left parts → left panel, right parts → right panel). Below 1180px both panels
- * fall back to a centred card below the sentence. Copy lives in data/thoughts.ts.
+ * The Vision — one sentence of value-prop copy whose phrases are clickable
+ * "thought parts". Hovering (or tapping) a part reveals the fuller detail
+ * for that phrase in a side/below panel.
+ *
+ * Reusable in place of the previous ThoughtCloud: About.astro renders it as
+ * the hero pitch below the logo (`variant="hero"`, side panels flanking on
+ * wide screens), and a Timeline project can embed it inside its preview
+ * (`variant="preview"`, always-below layout — see ProjectRow.astro).
+ *
+ * Copy lives in data/thoughts.ts. Interactivity comes from vision.client.ts,
+ * which scopes its listeners per `.vision` root so multiple instances on one
+ * page each work independently. Detail element ids are scoped with `scopeId`
+ * to keep multiple instances from colliding on the same DOM id.
  */
 import { thoughts } from '../../data/thoughts';
+
+interface Props {
+	/** `hero` — the big landing pitch with side panels flanking the sentence on
+	 *  wide screens. `preview` — the compact inline version for a project card:
+	 *  no flanking panels, the detail always drops below the sentence. */
+	variant?: 'hero' | 'preview';
+	/** Prefix used for detail element ids so multiple Vision instances on one
+	 *  page don't collide (e.g. `hero` → `hero-detail-in-sync`). */
+	scopeId?: string;
+}
+
+const { variant = 'hero', scopeId = 'vision' } = Astro.props;
 
 const byId = Object.fromEntries(thoughts.map((t) => [t.id, t]));
 
@@ -46,14 +66,16 @@ const sentence: Seg[] = [
 
 const leftIds  = ['in-sync', 'easy-integration', 'complete-development'];
 const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
+
+const detailId = (id: string) => `${scopeId}-detail-${id}`;
 ---
 
-<div class="thought-sentence">
-	{/* Left detail panel — shown to the left of the sentence on wide screens */}
+<div class:list={['vision', 'thought-sentence', `vision--${variant}`]}>
+	{/* Left detail panel — shown to the left of the sentence on wide screens (hero variant). */}
 	<div class="sentence-detail detail-left" aria-live="polite">
 		{
 			leftIds.map((id) => (
-				<div class="detail" id={`thought-detail-${id}`} data-detail hidden>
+				<div class="detail" id={detailId(id)} data-detail hidden>
 					<span class="detail-title">{labelFor[id]}</span>
 					<span class="detail-text">{byId[id].description}</span>
 				</div>
@@ -75,7 +97,7 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 						data-thought-part
 						data-side={seg.side}
 						aria-expanded="false"
-						aria-controls={`thought-detail-${seg.id}`}
+						aria-controls={detailId(seg.id)}
 					>
 						{seg.text}
 					</button>
@@ -84,11 +106,11 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		}
 	</p>
 
-	{/* Right detail panel — shown to the right of the sentence on wide screens */}
+	{/* Right detail panel — shown to the right of the sentence on wide screens (hero variant). */}
 	<div class="sentence-detail detail-right" aria-live="polite">
 		{
 			rightIds.map((id) => (
-				<div class="detail" id={`thought-detail-${id}`} data-detail hidden>
+				<div class="detail" id={detailId(id)} data-detail hidden>
 					<span class="detail-title">{labelFor[id]}</span>
 					<span class="detail-text">{byId[id].description}</span>
 				</div>
@@ -98,31 +120,43 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 </div>
 
 <style>
-	.thought-sentence {
+	.vision {
 		position: relative;
 		max-width: 44rem;
 		margin: 1.6rem auto 0;
+	}
+
+	.vision--hero {
 		animation: sentence-in 550ms cubic-bezier(0.22, 1, 0.36, 1) 1250ms both;
 	}
 
 	@keyframes sentence-in {
-		from {
-			opacity: 0;
-			transform: translateY(9px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+		from { opacity: 0; transform: translateY(9px); }
+		to   { opacity: 1; transform: translateY(0); }
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.thought-sentence {
+		.vision--hero {
 			animation: none;
 		}
 	}
 
 	/* ── Sentence ──────────────────────────────────────────────────────────── */
+
+	.sentence {
+		margin: 0;
+		font-size: clamp(0.95rem, 0.82rem + 0.55vw, 1.05rem);
+		line-height: 1.9;
+		color: var(--fg-muted);
+		font-variant-caps: small-caps;
+		letter-spacing: var(--letter-open);
+		text-align: center;
+	}
+
+	.vision--preview .sentence {
+		font-size: 0.9rem;
+		line-height: 1.7;
+	}
 
 	/* Stagger the drifting sheen so the six thought parts never glint in unison. */
 	.part:nth-of-type(2) { --sheen-delay: -1.5s; }
@@ -131,37 +165,15 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 	.part:nth-of-type(5) { --sheen-delay: -6s; }
 	.part:nth-of-type(6) { --sheen-delay: -7.5s; }
 
-	.sentence {
-		margin: 0;
-		/* Capped a touch lower than before so the long middle line still fits on one
-		   line (three lines total) at the small-caps width, without a sprawl-wide
-		   container. */
-		font-size: clamp(0.95rem, 0.82rem + 0.55vw, 1.05rem);
-		line-height: 1.9;
-		color: var(--fg-muted);
-		/* Render as capital and smaller-capital letters only — no plain lowercase —
-		   echoing the all-caps logo type directly above. */
-		font-variant-caps: small-caps;
-		letter-spacing: 0.02em;
-	}
-
 	/* ── Part (hoverable phrase) ───────────────────────────────────────────── */
 
 	.part {
-		/* Inherit the sentence's font including small-caps. */
 		font: inherit;
 		font-weight: 600;
 		cursor: pointer;
 		white-space: nowrap;
-		/* Same idle-life glint the other clickable surfaces carry (see
-		   `.btn-sheen` in Layout.astro). Warm accent, staggered per element so
-		   neighbours never flash in unison. */
 		--sheen-color: var(--accent-3);
 		--sheen-strength: 0.18;
-
-		/* Not a solid material — a soft radial glow that's brightest behind the
-		   letters and fades out to the sides (no box edge), plus a faint halo on
-		   the glyphs themselves. A whisper of warmth over the dark hero. */
 		color: var(--fg);
 		background: radial-gradient(
 			ellipse 74% 155% at 50% 50%,
@@ -174,6 +186,11 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		border-radius: 6px;
 		padding: 0.04rem 0.36rem 0.08rem;
 		vertical-align: baseline;
+		position: relative;
+		/* Sit above the enclosing project row's transparent click-overlay
+		   (see ProjectRow.astro's `.row-open`) so the thought part stays
+		   independently clickable when Vision is embedded in a preview. */
+		z-index: 2;
 		transition:
 			background 0.22s ease,
 			text-shadow 0.22s ease;
@@ -196,7 +213,6 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		outline-offset: 2px;
 	}
 
-	/* Active (detail is open) */
 	.part.is-active {
 		background: radial-gradient(
 			ellipse 80% 160% at 50% 50%,
@@ -221,8 +237,6 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 	.detail-left  { right: calc(100% + 1.5rem); }
 	.detail-right { left:  calc(100% + 1.5rem); }
 
-	/* ── Detail card ───────────────────────────────────────────────────────── */
-
 	.detail {
 		background: rgba(12, 15, 20, 0.82);
 		-webkit-backdrop-filter: blur(14px);
@@ -240,13 +254,12 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		display: none;
 	}
 
-	/* Title matches the sentence phrase — small-caps for visual continuity. */
 	.detail-title {
 		display: block;
 		font-size: 0.88rem;
 		font-weight: 600;
 		font-variant-caps: small-caps;
-		letter-spacing: 0.02em;
+		letter-spacing: var(--letter-open);
 		color: var(--fg);
 		margin-bottom: 0.3rem;
 	}
@@ -261,14 +274,8 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 	}
 
 	@keyframes detail-in {
-		from {
-			opacity: 0;
-			transform: translateY(-5px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
+		from { opacity: 0; transform: translateY(-5px); }
+		to   { opacity: 1; transform: translateY(0); }
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -277,11 +284,28 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		}
 	}
 
-	/* ── Responsive fallback ────────────────────────────────────────────────── */
+	/* ── Preview variant — always drop the detail below, never flank. Also
+	   ensures Vision in a project-row preview never overflows sideways. ── */
+	.vision--preview .sentence-detail,
+	.vision--preview .detail {
+		text-align: center;
+	}
 
-	/* Not enough room for side panels — both drop to a centred card below the sentence. */
+	.vision--preview .sentence-detail {
+		position: static;
+		transform: none;
+		width: 100%;
+		margin-top: 0.75rem;
+	}
+
+	.vision--preview .sentence-detail:empty {
+		display: none;
+	}
+
+	/* ── Responsive fallback (hero variant) ─────────────────────────────────── */
+
 	@media (max-width: 1250px) {
-		.sentence-detail {
+		.vision--hero .sentence-detail {
 			top: calc(100% + 1rem);
 			left: 50%;
 			right: auto;
@@ -290,13 +314,12 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		}
 	}
 
-	/* On a phone let the detail push the page in normal flow. */
 	@media (max-width: 900px) {
-		.thought-sentence {
+		.vision--hero {
 			margin-top: 1.25rem;
 		}
 
-		.sentence-detail {
+		.vision--hero .sentence-detail {
 			position: static;
 			transform: none;
 			width: 100%;

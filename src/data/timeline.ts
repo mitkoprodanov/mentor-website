@@ -160,6 +160,11 @@ export interface ProjectDef {
 	 * longer card text happens to need that much room — see ProjectRow.astro).
 	 */
 	bridgeLeft?: boolean;
+	/** Renders the reusable Vision sentence (see components/common/Vision.astro)
+	 *  right inside this project's preview box — used on the Together Again
+	 *  project so the studio's pitch reads as *part of* the reunion project
+	 *  card, not just a hero-only element. */
+	showVision?: boolean;
 }
 
 export interface CompanyDef {
@@ -373,6 +378,12 @@ export const timeline: TimelineEntry[] = [
 				},
 				{
 					id: 'mandragora-early',
+					// Shares its modal identity with the later `mandragora` entry
+					// (see the file-level comment above on why Mandragora is
+					// split across two timeline boxes) — the filter view merges
+					// the pair back into one card by modalId so it only appears
+					// once, with both experiences and the union of their tags.
+					modalId: 'mandragora',
 					name: 'Mandragora: Whispers of the Witch Tree',
 					info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
 					media: mandragoraMedia,
@@ -449,6 +460,9 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'mandragora',
+						// See `mandragora-early` above — same modalId collapses
+						// the split pair into one card in the filter view.
+						modalId: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
 						info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
 						media: mandragoraMedia,
@@ -493,6 +507,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'mentor',
 					name: 'Original Game Project',
 					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',
+					showVision: true,
 					media: mentorMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-mentor' },

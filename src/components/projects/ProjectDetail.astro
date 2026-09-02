@@ -98,7 +98,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 
 ---
 
-<header class="project-modal__head">
+<header class:list={['project-modal__head', { 'project-modal__head--shared': Boolean(people) }]}>
 	<Title id={titleId} class="project-modal__title">{title}</Title>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
 	{
@@ -166,7 +166,11 @@ function personStyle(m: ProjectMedia): string | undefined {
 					</figure>
 				) : m.kind === 'video' ? (
 					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
-						<div class="shot-frame shot-frame--video">
+						<div class="shot-frame shot-frame--native-video">
+							{/* No forced aspect-ratio on this frame — the browser sizes
+							    the <video> at 100% width and its intrinsic aspect
+							    ratio, so a non-16:9 clip fits horizontally and the
+							    frame's height follows, without cropping or letterbox. */}
 							<video class="shot-video-native" src={m.src} controls autoplay muted loop playsinline preload="auto" title={m.alt ?? m.caption} />
 							<span class="shot-badge">VIDEO</span>
 						</div>
@@ -209,6 +213,19 @@ function personStyle(m: ProjectMedia): string | undefined {
 <style>
 	.project-modal__head {
 		padding-right: 2.5rem;
+	}
+
+	/* Shared projects — the ones with both people on the byline — center
+	   their head so the title reads as belonging to the pair, not to
+	   either side. Solo projects keep the default left alignment,
+	   matching the left-aligned rest of the modal. */
+	.project-modal__head--shared {
+		padding-right: 0;
+		text-align: center;
+	}
+
+	.project-modal__head--shared .project-modal__meta {
+		justify-content: center;
 	}
 
 	.project-modal__title {
@@ -349,17 +366,19 @@ function personStyle(m: ProjectMedia): string | undefined {
 		margin-right: 0.4rem;
 	}
 
-	/* A native <video> tag fills its 16:9 frame like an image would; no
-	   transform-scaling needed (that trick is only for the fixed-size
-	   Facebook plugin iframe — see .shot-video). */
-	.shot-video-native {
-		position: absolute;
-		inset: 0;
-		width: 100%;
-		height: 100%;
-		border: 0;
+	/* A native <video> sizes at its intrinsic aspect ratio like an image
+	   would — 100% width, height follows. The frame around it doesn't
+	   force any aspect (see .shot-frame--native-video below), so a 4:3 or
+	   ultrawide clip fits horizontally and shows in full. */
+	.shot-frame--native-video {
 		background: #000;
-		object-fit: contain;
+	}
+
+	.shot-video-native {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 0;
 	}
 
 	/* A text-only media item — no frame, no aspect ratio, just prose in a
@@ -414,11 +433,15 @@ function personStyle(m: ProjectMedia): string | undefined {
 		background: var(--bg);
 	}
 
+	/* Images (and gifs) size at their intrinsic aspect ratio — width fills
+	   the gallery, height follows so the whole frame is visible with no
+	   cropping. A tall portrait or wide banner therefore keeps its own
+	   shape. Only iframe embeds (which have no intrinsic size) still force
+	   a 16:9 frame — see .shot-frame--video / --youtube below. */
 	.shot-frame img {
 		display: block;
 		width: 100%;
-		aspect-ratio: 16 / 9;
-		object-fit: cover;
+		height: auto;
 	}
 
 	/* A Facebook video/reel embed — a full-width 16:9 frame, with the fixed-size

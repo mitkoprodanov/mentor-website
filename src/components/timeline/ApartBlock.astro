@@ -80,7 +80,19 @@ const tracks = await Promise.all(
 );
 ---
 
-<div class="apart">
+<div
+	class:list={[
+		'apart',
+		{
+			/* One side of this apart row is structurally empty (e.g.
+			   Mandragora-only, or Mentor-only) — the sole present track
+			   extends its inner edge to the site's centre line, so a lone
+			   company card doesn't sit floating off in its own outer column. */
+			'apart--solo-left': mitko.length > 0 && adam.length === 0,
+			'apart--solo-right': adam.length > 0 && mitko.length === 0,
+		},
+	]}
+>
 	{
 		tracks.map((track) => {
 			const underMentor = track.companies.length > 0 && track.companies.every((c) => c.company.underMentor === true);
@@ -255,6 +267,21 @@ const tracks = await Promise.all(
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		column-gap: 2rem;
+	}
+
+	/* When only one person has a company in this row (the other side is
+	   structurally empty — Mandragora-only or Mentor-only, see the
+	   file-level comment in data/timeline.ts), the lone track extends
+	   inward to the site's centre line so its inner edge sits exactly at
+	   the middle instead of floating off in its own outer column. */
+	.apart--solo-left .track-left {
+		grid-column: 1 / -1;
+		padding-right: 50%;
+	}
+
+	.apart--solo-right .track-right {
+		grid-column: 1 / -1;
+		padding-left: 50%;
 	}
 
 	.track {
@@ -502,10 +529,17 @@ const tracks = await Promise.all(
 		gap: 0.85rem;
 	}
 
+	/* The project name (and its dot) sits centered in the row — see the
+	   matching block in ProjectRow.astro. */
 	.node {
 		display: flex;
 		align-items: flex-start;
+		justify-content: center;
 		gap: 0.6rem;
+	}
+
+	.node-text {
+		text-align: center;
 	}
 
 	/* The whole boxed row is the click target: a transparent <button> stretched

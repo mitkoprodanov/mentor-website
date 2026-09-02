@@ -81,10 +81,34 @@ function buildProject(project: ProjectDef, company: CompanyDef): CatalogProject 
 	};
 }
 
-/** Every project in the timeline, flattened and de-duplicated by key. */
+/** Merge a second appearance of the same project (see the Mandragora split
+ *  in data/timeline.ts) into an existing catalog entry: union the
+ *  experiences, media, and tag sets so the filter view still surfaces every
+ *  tag from either half. Later dates and side re-derived after merging. */
+function mergeInto(target: CatalogProject, extra: CatalogProject): void {
+	const experiences = [...target.experiences];
+	for (const ref of extra.experiences) {
+		if (!experiences.some((e) => e.slug === ref.slug)) experiences.push(ref);
+	}
+	const media = [...target.media];
+	for (const m of extra.media) {
+		if (!media.some((existing) => existing.src === m.src && existing.kind === m.kind)) media.push(m);
+	}
+	target.experiences = experiences;
+	target.media = media;
+	target.experienceTagIds = uniq([...target.experienceTagIds, ...extra.experienceTagIds]);
+	target.mediaTagIds = uniq([...target.mediaTagIds, ...extra.mediaTagIds]);
+	target.allTagIds = uniq([...target.allTagIds, ...extra.allTagIds]);
+	target.side = sideForPeople(new Set(experiences.map((ref) => ref.person)));
+	if (extra.startYear < target.startYear) target.startYear = extra.startYear;
+}
+
+/** Every project in the timeline, flattened. A project split across timeline
+ *  boxes (same `modalId`) is merged into one catalog entry so the filter view
+ *  only shows it once, with the union of both halves' experiences and tags. */
 export function getCatalogProjects(): CatalogProject[] {
-	const seen = new Set<string>();
-	const projects: CatalogProject[] = [];
+	const byKey = new Map<string, CatalogProject>();
+	const order: string[] = [];
 
 	const collect = (company: CompanyDef) => {
 		for (const project of company.projects) {
@@ -93,9 +117,14 @@ export function getCatalogProjects(): CatalogProject[] {
 			// full, merged experience/media set under the shared modalId.
 			if (project.noModal) continue;
 			const key = project.modalId ?? project.id;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			projects.push(buildProject(project, company));
+			const built = buildProject(project, company);
+			const existing = byKey.get(key);
+			if (existing) {
+				mergeInto(existing, built);
+				continue;
+			}
+			byKey.set(key, built);
+			order.push(key);
 		}
 	};
 
@@ -107,7 +136,7 @@ export function getCatalogProjects(): CatalogProject[] {
 		}
 	}
 
-	return projects;
+	return order.map((key) => byKey.get(key)!);
 }
 
 export interface CatalogGroups {
