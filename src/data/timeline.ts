@@ -274,7 +274,7 @@ export const timeline: TimelineEntry[] = [
 					media: heroes6Media,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['ai'] },
-						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['ux-design', 'ui', 'systems-design', 'level-design'] },
+						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['systems-design', 'level-design', 'ip-critical-design', 'ui', 'ai', 'encounter', 'ability', 'progression', 'proprietary-engine', 'devtools'] },
 					],
 				},
 			],
@@ -481,7 +481,7 @@ export const timeline: TimelineEntry[] = [
 						name: 'Hypha: The Wood Wide Web',
 						info: 'Network-building strategy board game, waging the underground territorial war of fungi',
 						media: hyphaMedia,
-						experiences: [{ person: 'adam', slug: 'adam-personal-project', tagIds: ['board-game', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'ui', 'ux-design'] }],
+						experiences: [{ person: 'adam', slug: 'adam-personal-project', tagIds: ['board-game', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design'] }],
 					},
 					{
 						id: 'biobot',
@@ -489,7 +489,7 @@ export const timeline: TimelineEntry[] = [
 						info: 'Tableau-building strategic card game with innovative systemic mechanics',
 						dateRange: '2026',
 						media: biobotMedia,
-						experiences: [{ person: 'adam', slug: 'adam-biobot', tagIds: ['board-game', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'ui', 'ux-design', 'puzzle-design'] }],
+						experiences: [{ person: 'adam', slug: 'adam-biobot', tagIds: ['board-game', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'puzzle-design'] }],
 					},
 				],
 			},
