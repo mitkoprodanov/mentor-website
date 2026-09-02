@@ -17,7 +17,7 @@ export const biobotMedia: ProjectMedia[] = [
 	{
 		src: '/projects/biobot/tableau.jpg',
 		kind: 'image',
-		caption: 'A completed 3x3 end-game tableau, showcasing the player\'s character and the unique stacking mechanic. It highlights how transparent plant (organic) cards are layered over robot (mechanical) base cards to create systemic synergies.',
+		caption: 'A completed 3x3 end-game tableau, showcasing the player’s character and the unique stacking mechanic. It highlights how transparent plant (organic) cards are layered over robot (mechanical) base cards to create systemic synergies.',
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ui', 'ux-design', 'puzzle-design'],
 	},
 ];
