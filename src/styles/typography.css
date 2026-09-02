@@ -1,0 +1,78 @@
+/**
+ * Site-wide typography — the single source of truth for every font family,
+ * weight, and shared typographic treatment used anywhere on the site.
+ * Named font-stack tokens declare the raw stacks once; the semantic tokens
+ * below map roles onto those names. Tweak here and everything downstream
+ * picks it up (see also styles/palette.css for the sibling color tokens).
+ */
+
+:root {
+	/* ------------------------------------------------------------------ */
+	/* Named font stacks — raw font-family lists, addressable by name.    */
+	/* Nothing outside this block should hardcode a font list.            */
+	/* ------------------------------------------------------------------ */
+
+	--font-stack-sans:
+		Inter,
+		Roboto,
+		'Helvetica Neue',
+		'Arial Nova',
+		'Nimbus Sans',
+		Arial,
+		sans-serif;
+
+	--font-stack-mono:
+		ui-monospace,
+		SFMono-Regular,
+		Menlo,
+		Consolas,
+		'Liberation Mono',
+		monospace;
+
+	/* ------------------------------------------------------------------ */
+	/* Semantic role tokens — the fonts the rest of the site reads.       */
+	/* Point role → named stack; do not hardcode raw lists here.          */
+	/* ------------------------------------------------------------------ */
+
+	--font-body: var(--font-stack-sans);
+	--font-heading: var(--font-stack-sans);
+	--font-mono: var(--font-stack-mono);
+
+	/* Shared weights — the site uses three weight steps. Keeping them named
+	   here lets a whole tier (all body text, all headings) shift together. */
+	--font-weight-regular: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--font-weight-bold: 700;
+
+	/* Shared letter-spacing steps — the site's three tightening / opening
+	   levels, used everywhere from headings (tight) to small-caps captions
+	   (open) to the brand heading (very open). */
+	--letter-tight: -0.01em;
+	--letter-normal: 0;
+	--letter-open: 0.02em;
+	--letter-wide: 0.08em;
+	--letter-brand: 0.15em;
+}
+
+/* Base body / headings — read from the semantic tokens above. */
+
+body {
+	font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-heading);
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: var(--letter-tight);
+}
+
+/* Brand marks (studio name, wordmark) — all-caps and very open, as set here. */
+.brand-heading {
+	font-family: var(--font-heading);
+	text-transform: uppercase;
+	letter-spacing: var(--letter-brand);
+	font-weight: var(--font-weight-bold);
+}

@@ -94,7 +94,6 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 					<h5 class="node-label">{project.name}</h5>
 					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
-				<span class="node-hint" aria-hidden="true">Details →</span>
 			</div>
 		)
 	}
@@ -375,11 +374,16 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		min-width: 0;
 	}
 
+	/* Project preview names render as small-and-large capitals — capitals
+	   stay as capitals, lowercase becomes small caps — echoing the same
+	   treatment as the hero sentence's thought phrases. */
 	.node-label {
 		margin: 0;
 		font-size: 1rem;
 		font-weight: 600;
 		color: var(--fg);
+		font-variant-caps: small-caps;
+		letter-spacing: var(--letter-open);
 	}
 
 	.node-info {

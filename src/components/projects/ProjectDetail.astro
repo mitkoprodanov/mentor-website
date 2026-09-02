@@ -167,7 +167,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 				) : m.kind === 'video' ? (
 					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
 						<div class="shot-frame shot-frame--video">
-							<video class="shot-video-native" src={m.src} controls preload="metadata" title={m.alt ?? m.caption} />
+							<video class="shot-video-native" src={m.src} controls autoplay muted loop playsinline preload="auto" title={m.alt ?? m.caption} />
 							<span class="shot-badge">VIDEO</span>
 						</div>
 						<figcaption>

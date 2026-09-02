@@ -183,7 +183,6 @@ const tracks = await Promise.all(
 													<h5 class="node-label">{project.name}</h5>
 													{project.info && <p class="node-info">{project.info}</p>}
 												</div>
-												<span class="node-hint" aria-hidden="true">Details →</span>
 											</div>
 										)
 									}
@@ -345,12 +344,13 @@ const tracks = await Promise.all(
 		padding: 1rem 1rem 1.25rem;
 	}
 
-	/* Mentor-era stints fill with the lighter, warm-tinted panel too, on top
-	   of the enclosing .track.under-mentor envelope — the region reads as
-	   its own studio from both the envelope and each card inside it. */
+	/* Mentor-era companies live inside the warm-tinted `.track.under-mentor`
+	   envelope, so the inner company box drops back to the neutral
+	   default — the envelope carries the studio's colour; the inner card
+	   reads like any other company slot within it. */
 	.track-company.emphasized {
-		background: var(--mentor-bg);
-		border-color: var(--mentor-border);
+		background: var(--bg-alt);
+		border-color: var(--border);
 	}
 
 	/* Date range (with the name) at the top, aligned to this person's own
@@ -642,11 +642,14 @@ const tracks = await Promise.all(
 		min-width: 0;
 	}
 
+	/* Small-and-large capitals — see the matching block in ProjectRow.astro. */
 	.node-label {
 		margin: 0;
 		font-size: 0.9rem;
 		font-weight: 600;
 		color: var(--fg);
+		font-variant-caps: small-caps;
+		letter-spacing: var(--letter-open);
 	}
 
 	.node-info {

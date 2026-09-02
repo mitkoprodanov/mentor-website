@@ -70,7 +70,7 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 					<br />
 				) : (
 					<button
-						class="part"
+						class="part btn-sheen"
 						type="button"
 						data-thought-part
 						data-side={seg.side}
@@ -124,6 +124,13 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 
 	/* ── Sentence ──────────────────────────────────────────────────────────── */
 
+	/* Stagger the drifting sheen so the six thought parts never glint in unison. */
+	.part:nth-of-type(2) { --sheen-delay: -1.5s; }
+	.part:nth-of-type(3) { --sheen-delay: -3s; }
+	.part:nth-of-type(4) { --sheen-delay: -4.5s; }
+	.part:nth-of-type(5) { --sheen-delay: -6s; }
+	.part:nth-of-type(6) { --sheen-delay: -7.5s; }
+
 	.sentence {
 		margin: 0;
 		/* Capped a touch lower than before so the long middle line still fits on one
@@ -146,6 +153,11 @@ const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 		font-weight: 600;
 		cursor: pointer;
 		white-space: nowrap;
+		/* Same idle-life glint the other clickable surfaces carry (see
+		   `.btn-sheen` in Layout.astro). Warm accent, staggered per element so
+		   neighbours never flash in unison. */
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.18;
 
 		/* Not a solid material — a soft radial glow that's brightest behind the
 		   letters and fades out to the sides (no box edge), plus a faint halo on

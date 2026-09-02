@@ -10,7 +10,6 @@ export const exigoMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'balance', 'proprietary-engine'],
 	},
 	{
-		src: '/projects/exigo/exigo.mp4',
 		kind: 'text',
 		person: 'adam',
 		caption: 'This is a text type media content. Gameplay excerpt captured from the project — highlighting the strategy loop and asymmetric factions.',
