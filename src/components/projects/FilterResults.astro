@@ -2,7 +2,7 @@
 import { getEntry, render } from 'astro:content';
 import { getPerson } from '../../data/people';
 import { getTag } from '../../data/tags';
-import { getCatalogGroups, COLUMN_PERSON, type CatalogProject } from '../../data/projectCatalog';
+import { getCatalogGroups, type CatalogProject } from '../../data/projectCatalog';
 import ProjectDetail from './ProjectDetail.astro';
 
 /**
@@ -55,9 +55,15 @@ const [both, left, right] = await Promise.all([
 	Promise.all(groups.right.map(loadProject)),
 ]);
 
-const columns = [
-	{ side: 'left' as const, person: getPerson(COLUMN_PERSON.left), projects: left },
-	{ side: 'right' as const, person: getPerson(COLUMN_PERSON.right), projects: right },
+// One flat stack — same visual language as the media items inside a Project
+// detail: a shared item stays centered, a solo item translates toward its
+// person's side. Shared "worked on together" first, then Mitko's, then Ádám's,
+// each oldest-first (see data/projectCatalog.ts).
+type ResultCard = { lp: LoadedProject; side: 'both' | 'left' | 'right' };
+const stack: ResultCard[] = [
+	...both.map((lp) => ({ lp, side: 'both' as const })),
+	...left.map((lp) => ({ lp, side: 'left' as const })),
+	...right.map((lp) => ({ lp, side: 'right' as const })),
 ];
 ---
 
@@ -69,65 +75,42 @@ const columns = [
 
 	<p class="fr-empty" data-fr-empty hidden>No projects match this skill yet.</p>
 
-	<section class="fr-group fr-group--both" data-fr-group="both" hidden={both.length === 0}>
-		<h3 class="fr-group-title">Worked on together</h3>
-		<div class="fr-stack">
-			{
-				both.map((lp) => (
-					<article class="fr-card fr-card--both" data-fr-card data-project-tags={lp.project.allTagIds.join(' ')}>
+	<div class="fr-stack">
+		{
+			stack.map(({ lp, side }) => {
+				// Single-person cards translate toward their person's side and pick
+				// up their accent color; shared cards stay centered on the neutral
+				// warm accent. Same visual language as .shot--person in ProjectDetail.
+				const personId = side === 'both' ? null : lp.cards[0]?.personId;
+				return (
+					<article
+						class:list={['fr-card', `fr-card--${side}`, side !== 'both' && 'fr-card--person']}
+						data-fr-card
+						data-fr-side={side}
+						data-project-tags={lp.project.allTagIds.join(' ')}
+						style={personId ? `--person-color: var(--${personId}-color)` : undefined}
+					>
 						<ProjectDetail
 							title={lp.project.title}
 							subtitle={lp.project.info}
 							dateRange={lp.project.dateRange}
-							people={lp.peopleLabel}
+							people={lp.cards.length > 1 ? lp.peopleLabel : undefined}
 							tags={lp.tagLabels}
 							media={lp.project.media}
 							as="h4"
 						>
 							{lp.cards.map((c) => (
-								<div class="modal-exp" style={`--person-color: var(--${c.personId}-color)`}>
-									<p class="modal-exp__person">{c.personName}</p>
+								<div class="modal-exp" data-person={c.personId} style={`--person-color: var(--${c.personId}-color)`}>
+									{lp.cards.length > 1 && <p class="modal-exp__person">{c.personName}</p>}
 									<c.Content />
 								</div>
 							))}
 						</ProjectDetail>
 					</article>
-				))
-			}
-		</div>
-	</section>
-
-	<section class="fr-solo" data-fr-solo hidden={left.length === 0 && right.length === 0}>
-		{
-			columns.map((col) => (
-				<div class={`fr-col fr-col--${col.side}`} data-fr-col={col.side} style={`--person-color: var(--${col.person.id}-color)`} hidden={col.projects.length === 0}>
-					<h3 class="fr-group-title fr-group-title--person">{col.person.name}</h3>
-					<div class="fr-stack">
-						{col.projects.map((lp) => (
-							<article class="fr-card" data-fr-card data-project-tags={lp.project.allTagIds.join(' ')}>
-								<ProjectDetail
-									title={lp.project.title}
-									subtitle={lp.project.info}
-									dateRange={lp.project.dateRange}
-									people={lp.peopleLabel}
-									tags={lp.tagLabels}
-									media={lp.project.media}
-									as="h4"
-								>
-									{lp.cards.map((c) => (
-										<div class="modal-exp" style={`--person-color: var(--${c.personId}-color)`}>
-											<p class="modal-exp__person">{c.personName}</p>
-											<c.Content />
-										</div>
-									))}
-								</ProjectDetail>
-							</article>
-						))}
-					</div>
-				</div>
-			))
+				);
+			})
 		}
-	</section>
+	</div>
 </div>
 
 <style>
@@ -144,52 +127,17 @@ const columns = [
 		display: block;
 	}
 
-	.fr-group + .fr-solo {
-		margin-top: 2rem;
-	}
-
-	.fr-group-title {
-		font-size: 0.8rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: var(--fg-muted);
-		margin: 0 0 1rem;
-	}
-
-	.fr-group-title--person {
-		color: var(--person-color, var(--accent-3));
-	}
-
+	/* One flat vertical stack — same visual language as the media items
+	   inside a Project detail: shared cards stay centered, solo cards
+	   translate toward their person's side into the surrounding gutter
+	   (see .fr-card--person-* below). Every card keeps the same width;
+	   the container's padding-inline is what bears the translation. */
 	.fr-stack {
+		--stack-gutter: 44px;
 		display: flex;
 		flex-direction: column;
 		gap: 1.25rem;
-	}
-
-	/* The remaining solo projects, the two people side by side — Mitko's column
-	   on the left, Ádám's on the right, mirroring the timeline's own sides. */
-	.fr-solo {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
-		align-items: start;
-	}
-
-	/* Each column is pinned to its own half — Mitko left, Ádám right — so a solo
-	   project sits only in its person's half with the other half empty, even when
-	   the opposite column has no matches at all (rather than sliding over to fill
-	   the row). Mirrors the timeline's own left/right sides. */
-	.fr-col--left {
-		grid-column: 1;
-	}
-
-	.fr-col--right {
-		grid-column: 2;
-	}
-
-	.fr-col[hidden] {
-		display: none;
+		padding-inline: var(--stack-gutter);
 	}
 
 	/* A detailed project card — the same warm-accent boxed language as the
@@ -208,11 +156,35 @@ const columns = [
 		--person-color: var(--accent-3);
 	}
 
+	/* Solo cards keep the same width as shared cards; they just translate
+	   exactly one stack-gutter into the surrounding gutter, mirroring
+	   .shot--person-* in ProjectDetail.astro. Plus a person-color rule on
+	   their own edge so the attribution reads at a glance. */
+	.fr-card--left {
+		transform: translateX(calc(-1 * var(--stack-gutter)));
+		border-left: 3px solid var(--person-color, var(--accent));
+	}
+
+	.fr-card--right {
+		transform: translateX(var(--stack-gutter));
+		border-right: 3px solid var(--person-color, var(--accent));
+	}
+
 	/* One person's experience prose inside a card — same lightweight treatment
 	   as the modal's slotted experiences (a person-tinted left rule). */
+	/* Person-color rule sits on the person's own side — see the matching
+	   block in components/timeline/ProjectRow.astro. */
 	.modal-exp {
 		padding-left: 0.85rem;
 		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.modal-exp[data-person='adam'] {
+		padding-left: 0;
+		padding-right: 0.85rem;
+		border-left: none;
+		border-right: 2px solid var(--person-color, var(--accent));
+		text-align: right;
 	}
 
 	.modal-exp + .modal-exp {
@@ -294,17 +266,15 @@ const columns = [
 	}
 
 	@media (max-width: 900px) {
-		/* No side-by-side columns on a phone — the two solo columns stack, each
-		   still headed by its person so the split stays legible. The single track
-		   also means the desktop column-pinning must be released, or a pinned
-		   `grid-column: 2` would spawn a phantom second column. */
-		.fr-solo {
-			grid-template-columns: 1fr;
+		/* No horizontal offset on a phone — the viewport is too narrow for a
+		   sideways shift to still read as an offset rather than a truncation. */
+		.fr-stack {
+			padding-inline: 0;
 		}
 
-		.fr-col--left,
-		.fr-col--right {
-			grid-column: auto;
+		.fr-card--left,
+		.fr-card--right {
+			transform: none;
 		}
 
 		.fr-card {

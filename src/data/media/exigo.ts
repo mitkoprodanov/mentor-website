@@ -3,6 +3,20 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Armies of Exigo (see data/timeline.ts). */
 export const exigoMedia: ProjectMedia[] = [
 	{
+		src: '/projects/exigo/exigo.mp4',
+		kind: 'video',
+		person: 'adam',
+		caption: 'Gameplay excerpt captured from the project — highlighting the strategy loop and asymmetric factions.',
+		tagIds: ['level-design', 'balance', 'proprietary-engine'],
+	},
+	{
+		src: '/projects/exigo/exigo.mp4',
+		kind: 'text',
+		person: 'adam',
+		caption: 'This is a text type media content. Gameplay excerpt captured from the project — highlighting the strategy loop and asymmetric factions.',
+		tagIds: ['level-design', 'balance', 'proprietary-engine'],
+	},
+	{
 		src: 'https://youtu.be/6Ovup2D5ojo',
 		kind: 'youtube',
 		start: 305,

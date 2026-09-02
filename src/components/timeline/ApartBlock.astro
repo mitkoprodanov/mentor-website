@@ -220,13 +220,13 @@ const tracks = await Promise.all(
 												title={project.name}
 												subtitle={project.info}
 												dateRange={modalDateRange}
-												people={peopleLabel}
+												people={cards.length > 1 ? peopleLabel : undefined}
 												tags={modalTagLabels}
 												media={modalMedia}
 											>
 												{cards.map((c) => (
-													<div class="modal-exp" style={`--person-color: var(--${c.person.id}-color)`}>
-														<p class="modal-exp__person">{c.person.name}</p>
+													<div class="modal-exp" data-person={c.person?.id ?? c.personId} style={`--person-color: var(--${c.person?.id ?? c.personId}-color)`}>
+														{cards.length > 1 && <p class="modal-exp__person">{c.person.name}</p>}
 														<c.Content />
 													</div>
 												))}
@@ -596,9 +596,20 @@ const tracks = await Promise.all(
 	}
 
 	/* One person's experience prose inside the modal — see ProjectRow.astro. */
+	/* Person-color rule sits on the person's own side — Mitko (left) → left
+	   edge, Ádám (right) → right edge — mirroring the timeline's own
+	   columns. See the matching block in ProjectRow.astro. */
 	.modal-exp {
 		padding-left: 0.85rem;
 		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.modal-exp[data-person='adam'] {
+		padding-left: 0;
+		padding-right: 0.85rem;
+		border-left: none;
+		border-right: 2px solid var(--person-color, var(--accent));
+		text-align: right;
 	}
 
 	.modal-exp + .modal-exp {

@@ -1,0 +1,90 @@
+/**
+ * Site-wide color palette — the single source of truth for every color used
+ * anywhere on the site. Named tokens (`--color-*`) declare the raw palette
+ * once; the semantic tokens below map roles onto those names. Rename or
+ * retint here and everything downstream picks it up.
+ *
+ * Adding a color:
+ *   1. Define its named token in the "Named palette" block.
+ *   2. Map it into the semantic role it fills (or add a new role token).
+ *
+ * Adjusting a color:
+ *   Change the value under "Named palette" — leave the semantic mapping alone
+ *   unless the *role* is what you're changing.
+ */
+
+:root {
+	/* ------------------------------------------------------------------ */
+	/* Named palette — raw color values, addressable by human-readable    */
+	/* names. Nothing outside this block should hardcode a hex or rgba.   */
+	/* ------------------------------------------------------------------ */
+
+	/* Neutrals — the dark UI ground and its ink. */
+	--color-ink-black: #0b0d12;
+	--color-charcoal: #12151c;
+	--color-paper: #e9ecf1;
+	--color-slate: #9aa3b2;
+	--color-shadow-hairline: rgba(255, 255, 255, 0.08);
+	--color-shadow-deep: rgba(4, 6, 10, 0.66);
+	--color-shadow-drop: rgba(0, 0, 0, 0.7);
+
+	/* Warm accents — the studio's core orange/amber family. */
+	--color-ember: #ff7a00;          /* studio primary (Mitko) */
+	--color-marigold: #ffa500;       /* studio secondary       */
+	--color-honey: #ffd166;          /* studio highlight (Ádám) */
+	--color-ember-soft: rgba(255, 122, 0, 0.15);
+
+	/* Mentor Game Studio — the "us" era's own hero tone. */
+	--color-amber: #ffb703;
+	--color-amber-bright: #ffc633;
+	--color-amber-soft: rgba(255, 183, 3, 0.22);
+
+	/* Support — the neutral project marker (deliberately outside the warm
+	   family, so it never gets mistaken for either person's accent). */
+	--color-crimson: #ef4444;
+	--color-crimson-soft: rgba(239, 68, 68, 0.25);
+
+	/* ------------------------------------------------------------------ */
+	/* Semantic tokens — the roles the rest of the site actually reads.   */
+	/* These reference the named palette above; do not put raw values     */
+	/* here.                                                              */
+	/* ------------------------------------------------------------------ */
+
+	--bg: var(--color-ink-black);
+	--bg-alt: var(--color-charcoal);
+	--fg: var(--color-paper);
+	--fg-muted: var(--color-slate);
+	--border: var(--color-shadow-hairline);
+
+	--accent: var(--color-ember);
+	--accent-2: var(--color-marigold);
+	--accent-3: var(--color-honey);
+	--accent-soft: var(--color-ember-soft);
+
+	/* Mentor Game Studio — the studio itself, "us". Its own hero color,
+	   stronger and more saturated than either person's accent so the
+	   Mentor era clearly reads as the most important thread. */
+	--mentor: var(--color-amber);
+	--mentor-strong: var(--color-amber-bright);
+	--mentor-soft: var(--color-amber-soft);
+	/* Lighter, warm-tinted panel that fills Mentor-era cards so the era
+	   reads as its own region — not just the glowing rail beside it. */
+	--mentor-bg: color-mix(in oklab, var(--mentor) 12%, var(--bg-alt));
+	--mentor-border: color-mix(in oklab, var(--mentor) 45%, var(--border));
+
+	/* Per-person accent, used to color-code the timeline thread and skill tags. */
+	--mitko-color: var(--accent);
+	--adam-color: var(--accent-3);
+
+	/* Generic timeline project marker (see the note on --color-crimson). */
+	--project-dot: var(--color-crimson);
+	--project-dot-soft: var(--color-crimson-soft);
+
+	/* One on-brand scrollbar shared by the whole site — soft translucent
+	   thumb at rest that warms to the accent on hover, on an invisible track. */
+	--scrollbar-thumb: color-mix(in oklab, var(--fg-muted) 45%, transparent);
+	--scrollbar-thumb-hover: color-mix(in oklab, var(--accent) 70%, var(--fg-muted));
+
+	/* Native form controls / default scrollbars render dark. */
+	color-scheme: dark;
+}

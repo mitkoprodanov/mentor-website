@@ -174,7 +174,10 @@ const afterItems = buildRenderList(after);
 		display: flex;
 		flex-direction: column;
 		gap: 2rem;
-		max-width: 1200px;
+		/* Slightly wider than the rest of the site so single-person items
+		   (an ApartBlock track, or a person-attributed media card) can offset
+		   toward their own side and still leave breathing room on the other. */
+		max-width: 1360px;
 		width: 100%;
 	}
 </style>

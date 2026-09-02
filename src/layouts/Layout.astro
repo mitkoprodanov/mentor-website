@@ -1,4 +1,6 @@
 ---
+import '../styles/palette.css';
+
 interface Props {
 	title?: string;
 	description?: string;
@@ -27,50 +29,9 @@ const {
 </html>
 
 <style is:global>
-	:root {
-		--bg: #0b0d12;
-		--bg-alt: #12151c;
-		--fg: #e9ecf1;
-		--fg-muted: #9aa3b2;
-		--accent: #ff7a00;
-		--accent-2: #ffa500;
-		--accent-3: #ffd166;
-		--accent-soft: rgba(255, 122, 0, 0.15);
-		--border: rgba(255, 255, 255, 0.08);
-
-		/* Mentor Game Studio — the studio itself, "us". Its own hero color,
-		   stronger and more saturated than either person's accent so the
-		   Mentor era clearly reads as the most important thread. */
-		--mentor: #ffb703;
-		--mentor-strong: #ffc633;
-		--mentor-soft: rgba(255, 183, 3, 0.22);
-		/* Lighter, warm-tinted panel that fills Mentor-era cards so the era
-		   reads as its own region — not just the glowing rail beside it. */
-		--mentor-bg: color-mix(in oklab, var(--mentor) 12%, var(--bg-alt));
-		--mentor-border: color-mix(in oklab, var(--mentor) 45%, var(--border));
-
-		/* Per-person accent, used to color-code the timeline thread and skill tags. */
-		--mitko-color: var(--accent);
-		--adam-color: var(--accent-3);
-
-		/* Generic timeline project marker (the small dot beside a project
-		   name) — deliberately outside the warm orange/yellow person-accent
-		   family, so it reads as "just a project marker" and never gets
-		   mistaken for either person's color. */
-		--project-dot: #ef4444;
-		--project-dot-soft: rgba(239, 68, 68, 0.25);
-
-		/* One on-brand scrollbar shared by the whole site — the page itself and
-		   every inner scroll area (the project detail modal, a person card's
-		   revealed skills, the filtered results panel). A soft translucent thumb
-		   at rest that warms to the accent on hover, on an invisible track, so it
-		   reads as part of the dark UI rather than the OS default. */
-		--scrollbar-thumb: color-mix(in oklab, var(--fg-muted) 45%, transparent);
-		--scrollbar-thumb-hover: color-mix(in oklab, var(--accent) 70%, var(--fg-muted));
-
-		/* Native form controls / default scrollbars render dark. */
-		color-scheme: dark;
-	}
+	/* Palette + semantic color tokens live in styles/palette.css (imported
+	   from the frontmatter above). This block owns everything else — resets,
+	   typography, scrollbar geometry, shared animations. */
 
 	* {
 		box-sizing: border-box;

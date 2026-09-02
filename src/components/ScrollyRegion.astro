@@ -939,10 +939,15 @@ const adam = getPerson('adam');
 			display: none;
 		}
 
-		/* Narrow the results modal into the gap between the two edge cards (each
-		   ~340px wide inside the ≤1600px bar), leaving ~24px either side. */
+		/* Wide enough to bear translated content — the single flat stack of
+		   project cards keeps every card at the same width, and solo cards
+		   translate into the surrounding gutter (see .fr-stack /
+		   .fr-card--left/--right in FilterResults.astro). Sized to match the
+		   Project detail modal so both surfaces feel like one system. The
+		   edge person cards sit on top (z-index 27 > 26) and read as a
+		   frame around it. */
 		:global(body.filter-active) .timeline-area {
-			width: min(824px, calc(100vw - 776px));
+			width: min(1080px, calc(100vw - 3rem));
 		}
 	}
 

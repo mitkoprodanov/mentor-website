@@ -164,13 +164,13 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 				title={project.name}
 				subtitle={project.info}
 				dateRange={modalDateRange}
-				people={peopleLabel}
+				people={modalCards.length > 1 ? peopleLabel : undefined}
 				tags={modalTagLabels}
 				media={modalMedia}
 			>
 				{modalCards.map((c) => (
-					<div class="modal-exp" style={`--person-color: var(--${c.person.id}-color)`}>
-						<p class="modal-exp__person">{c.person.name}</p>
+					<div class="modal-exp" data-person={c.person?.id ?? c.personId} style={`--person-color: var(--${c.person?.id ?? c.personId}-color)`}>
+						{modalCards.length > 1 && <p class="modal-exp__person">{c.person.name}</p>}
 						<c.Content />
 					</div>
 				))}
@@ -328,9 +328,21 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 	/* One person's experience prose inside the modal — a lighter-weight stand-in
 	   for the timeline's ExperienceCard, deliberately without the `.card`/
 	   `data-tags` hooks so the tag-filter never treats these as timeline cards. */
+	/* The person-color rule sits on the person's own side of the modal —
+	   Mitko (left column of the site) on the left edge, Ádám (right column)
+	   on the right edge — so the accent points at *them*, not at the empty
+	   middle. Falls back to a left rule for unattributed entries. */
 	.modal-exp {
 		padding-left: 0.85rem;
 		border-left: 2px solid var(--person-color, var(--accent));
+	}
+
+	.modal-exp[data-person='adam'] {
+		padding-left: 0;
+		padding-right: 0.85rem;
+		border-left: none;
+		border-right: 2px solid var(--person-color, var(--accent));
+		text-align: right;
 	}
 
 	.modal-exp + .modal-exp {

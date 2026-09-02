@@ -73,6 +73,29 @@ function youtubeId(src: string): string {
 function mediaTags(m: ProjectMedia): string {
 	return (m.tagIds ?? []).join(' ');
 }
+
+/** Extra classes/attributes that visually attribute a media item to a single
+ *  person — a person-color accent + a slight offset toward their side.
+ *  Undefined `person` = shared, everything stays center-full-width. */
+function personSide(m: ProjectMedia): 'left' | 'right' | null {
+	if (!m.person) return null;
+	// Mitko sits in the left column, Ádám in the right — see data/people.ts.
+	return m.person === 'mitko' ? 'left' : 'right';
+}
+
+function shotClasses(m: ProjectMedia, extra?: string): string {
+	const parts = ['shot'];
+	if (extra) parts.push(extra);
+	const side = personSide(m);
+	if (side) parts.push(`shot--person`, `shot--person-${side}`);
+	return parts.join(' ');
+}
+
+function personStyle(m: ProjectMedia): string | undefined {
+	if (!m.person) return undefined;
+	return `--person-color: var(--${m.person}-color);`;
+}
+
 ---
 
 <header class="project-modal__head">
@@ -108,7 +131,7 @@ function mediaTags(m: ProjectMedia): string {
 		<section class="project-modal__gallery" aria-label="Showcase gallery" data-gallery>
 			{media.map((m: ProjectMedia) =>
 				m.kind === 'youtube' ? (
-					<figure class="shot" data-media-tags={mediaTags(m)}>
+					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
 						<div class="shot-frame shot-frame--youtube">
 							<div
 								class="shot-youtube"
@@ -119,10 +142,12 @@ function mediaTags(m: ProjectMedia): string {
 							/>
 							<span class="shot-badge">YOUTUBE</span>
 						</div>
-						<figcaption>{m.caption}</figcaption>
+						<figcaption>
+							{m.caption}
+						</figcaption>
 					</figure>
 				) : isFacebookEmbed(m.kind) ? (
-					<figure class="shot shot--video" data-media-tags={mediaTags(m)}>
+					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
 						<div class="shot-frame shot-frame--video">
 							<iframe
 								class="shot-video"
@@ -135,15 +160,35 @@ function mediaTags(m: ProjectMedia): string {
 							/>
 							<span class="shot-badge">{m.kind === 'facebook-reel' ? 'REEL' : 'VIDEO'}</span>
 						</div>
-						<figcaption>{m.caption}</figcaption>
+						<figcaption>
+							{m.caption}
+						</figcaption>
+					</figure>
+				) : m.kind === 'video' ? (
+					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+						<div class="shot-frame shot-frame--video">
+							<video class="shot-video-native" src={m.src} controls preload="metadata" title={m.alt ?? m.caption} />
+							<span class="shot-badge">VIDEO</span>
+						</div>
+						<figcaption>
+							{m.caption}
+						</figcaption>
+					</figure>
+				) : m.kind === 'text' ? (
+					<figure class={shotClasses(m, 'shot--text')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+						<div class="shot-text">
+							<p class="shot-text__body">{m.caption}</p>
+						</div>
 					</figure>
 				) : (
-					<figure class="shot" data-media-tags={mediaTags(m)}>
+					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
 						<div class="shot-frame">
 							<img src={m.src} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
 							{m.kind === 'gif' && <span class="shot-badge">GIF</span>}
 						</div>
-						<figcaption>{m.caption}</figcaption>
+						<figcaption>
+							{m.caption}
+						</figcaption>
 					</figure>
 				),
 			)}
@@ -239,16 +284,126 @@ function mediaTags(m: ProjectMedia): string {
 
 	/* One media item per row, each spanning the full width — so videos (and
 	   shots) use up all the horizontal space rather than being squeezed
-	   several-to-a-line. */
+	   several-to-a-line. The horizontal padding here creates a *gutter*
+	   inside the gallery: shots stay 100% wide inside the padded area, and
+	   a person-attributed item translates into that same gutter without
+	   ever spilling past the panel. Widen --gallery-gutter to give solo
+	   items more travel; the modal itself is wide enough to bear it. */
 	.project-modal__gallery {
+		/* Side gutter around every shot. Shared shots sit in the padded
+		   inner area; solo shots translate by exactly this amount into the
+		   gutter (via `transform: translateX(...)`, see .shot--person-*
+		   below), so the offset lands the shot right against the panel's
+		   inner edge without ever spilling past it. Fixed pixels so the
+		   gallery padding and the translate distance stay in sync — a %
+		   translate resolves against the shot's own width, not the
+		   gallery's. */
+		--gallery-gutter: 44px;
 		margin-top: 1.5rem;
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: 1.25rem;
+		padding-inline: var(--gallery-gutter);
 	}
 
+	/* Every shot has the SAME width — the full width of the padded gallery
+	   inner area — whether shared or person-attributed. A solo shot slides
+	   into the gallery's outer gutter (see .project-modal__gallery's
+	   --gallery-gutter above), so the offset is visible but the frame
+	   never crosses the panel's own edge. */
 	.shot {
 		margin: 0;
+	}
+
+	/* Solo shots translate exactly one gallery-gutter into the surrounding
+	   gutter — same width as any shared shot, just visibly offset toward
+	   their person's side. `transform` shifts the paint only, so the grid
+	   track stays perfectly sized. */
+	.shot--person-left {
+		transform: translateX(calc(-1 * var(--gallery-gutter)));
+	}
+
+	.shot--person-right {
+		transform: translateX(var(--gallery-gutter));
+	}
+
+	.shot--person .shot-frame {
+		border-color: color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+	}
+
+	.shot--person-left .shot-frame {
+		border-left: 3px solid var(--person-color, var(--accent));
+	}
+
+	.shot--person-right .shot-frame {
+		border-right: 3px solid var(--person-color, var(--accent));
+	}
+
+	.shot-person {
+		display: inline-block;
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--person-color, var(--accent-3));
+		margin-right: 0.4rem;
+	}
+
+	/* A native <video> tag fills its 16:9 frame like an image would; no
+	   transform-scaling needed (that trick is only for the fixed-size
+	   Facebook plugin iframe — see .shot-video). */
+	.shot-video-native {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+		background: #000;
+		object-fit: contain;
+	}
+
+	/* A text-only media item — no frame, no aspect ratio, just prose in a
+	   soft-tinted card. Attributed items pick up the person-color rule on
+	   their own side (see .shot--person-* above) and a tinted background. */
+	.shot--text {
+		max-width: 100%;
+	}
+
+	.shot-text {
+		padding: 1rem 1.15rem;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+		background: color-mix(in oklab, var(--accent) 4%, var(--bg));
+	}
+
+	.shot--person.shot--text .shot-text {
+		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
+		border-color: color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+	}
+
+	.shot--person-left.shot--text .shot-text {
+		border-left: 3px solid var(--person-color, var(--accent));
+	}
+
+	.shot--person-right.shot--text .shot-text {
+		border-right: 3px solid var(--person-color, var(--accent));
+	}
+
+	.shot-text__person {
+		margin: 0 0 0.35rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--person-color, var(--accent-3));
+	}
+
+	.shot-text__body {
+		margin: 0;
+		font-size: 0.9rem;
+		line-height: 1.55;
+		color: var(--fg);
+		white-space: pre-line;
 	}
 
 	.shot-frame {

@@ -44,18 +44,9 @@ function applyResults(filter: Filter): void {
 		if (gallery) gallery.classList.toggle('fr-gallery-empty', visibleShots === 0);
 	});
 
-	// Collapse away any column / group left with no visible cards.
-	const cols = Array.from(root.querySelectorAll<HTMLElement>('[data-fr-col]'));
-	cols.forEach((col) => {
-		col.hidden = !col.querySelector('[data-fr-card]:not([hidden])');
-	});
-	const solo = root.querySelector<HTMLElement>('[data-fr-solo]');
-	// Each solo column stays pinned to its own half (see .fr-col--left/right) so a
-	// one-person project always reads on that person's side, the empty half making
-	// the solo attribution unmistakable — even when only one column has matches.
-	if (solo) solo.hidden = !solo.querySelector('[data-fr-card]:not([hidden])');
-	const both = root.querySelector<HTMLElement>('[data-fr-group="both"]');
-	if (both) both.hidden = !both.querySelector('[data-fr-card]:not([hidden])');
+	// All cards live in one flat stack now (see components/projects/FilterResults.astro),
+	// so there are no column / group wrappers to collapse — an unmatched
+	// card just hides itself and the surrounding stack reflows.
 
 	const empty = root.querySelector<HTMLElement>('[data-fr-empty]');
 	if (empty) empty.hidden = anyVisible;

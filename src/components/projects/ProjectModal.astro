@@ -44,7 +44,13 @@ const titleId = `project-modal-title-${modalId}`;
 
 <style>
 	.project-modal {
-		width: min(760px, calc(100vw - 2rem));
+		/* Roomy enough to serve as the *container* for translated content:
+		   media items keep the same width whether shared or solo, and solo
+		   items translate a bit toward their person's side inside the extra
+		   side gutter — the modal is wide enough that the translated frame
+		   still fits without spilling. See .shot / .shot--person in
+		   ProjectDetail.astro. */
+		width: min(1040px, calc(100vw - 2rem));
 		max-height: min(88vh, 900px);
 		padding: 0;
 		border: 1px solid var(--border);

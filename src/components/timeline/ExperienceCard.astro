@@ -85,14 +85,18 @@ const { personId, tagIds, color, side, link, previewImage, interactive = true } 
 	   auto-placement sliding it into the now-empty first column. Harmless
 	   outside a grid context (e.g. ApartBlock's flex .cards list), where
 	   grid-column has no effect. */
+	/* The person-color accent rule sits on the card's *own* outer edge — the
+	   side facing the person's own half of the layout — so the visual thread
+	   stays with them rather than pointing at the empty middle. Mitko (left
+	   column) → left edge; Ádám (right column) → right edge. */
 	.card--left {
 		grid-column: 1;
-		border-right: 2px solid var(--person-color, var(--accent));
+		border-left: 2px solid var(--person-color, var(--accent));
 	}
 
 	.card--right {
 		grid-column: 2;
-		border-left: 2px solid var(--person-color, var(--accent));
+		border-right: 2px solid var(--person-color, var(--accent));
 	}
 
 	.card :global(p) {
@@ -189,9 +193,10 @@ const { personId, tagIds, color, side, link, previewImage, interactive = true } 
 			grid-column: auto;
 		}
 
-		.card--left {
-			border-right: none;
+		.card--left,
+		.card--right {
 			border-left: 2px solid var(--person-color, var(--accent));
+			border-right: 1px solid var(--border);
 		}
 	}
 </style>
