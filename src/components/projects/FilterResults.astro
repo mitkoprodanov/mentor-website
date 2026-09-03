@@ -2,19 +2,22 @@
 import { getEntry, render } from 'astro:content';
 import { getPerson } from '../../data/people';
 import { getTag } from '../../data/tags';
-import { getCatalogGroups, type CatalogProject } from '../../data/projectCatalog';
+import { getCatalogProjectsInOrder, type CatalogProject } from '../../data/projectCatalog';
 import ProjectDetail from './ProjectDetail.astro';
 
 /**
  * The skill-tag filter's detailed results view — the panel shown (lifted into a
  * modal over the dimmed backdrop, see ScrollyRegion.astro) whenever a skill tag
  * is active. Deliberately unlike the timeline: no companies, tracks, or
- * apart/together relations — just the matching Projects, grouped only by who
- * worked on them.
+ * apart/together relations — one flat stack of matching Projects, ordered by
+ * each project's own `order` sort key (see data/timeline.ts and
+ * data/projectCatalog.ts), so shared and solo projects intermingle in the
+ * same linear read instead of clustering by who worked on them.
  *
- *   - "Worked on together" projects first, full-width, oldest first.
- *   - then the solo projects side by side: Mitko's on the left, Ádám's on the
- *     right, each oldest first.
+ * A card's visual side (centered / translated left / translated right) still
+ * comes from who worked on it — that's a per-card style, not an ordering — so
+ * a shared project sits centered while solo projects lean into their own
+ * gutter, but the stack itself follows the flat order.
  *
  * Every project renders its full detail (the same head/prose/gallery its modal
  * shows). Which cards and which individual media items stay visible under the
@@ -48,23 +51,15 @@ async function loadProject(project: CatalogProject): Promise<LoadedProject> {
 	};
 }
 
-const groups = getCatalogGroups();
-const [both, left, right] = await Promise.all([
-	Promise.all(groups.both.map(loadProject)),
-	Promise.all(groups.left.map(loadProject)),
-	Promise.all(groups.right.map(loadProject)),
-]);
-
-// One flat stack — same visual language as the media items inside a Project
-// detail: a shared item stays centered, a solo item translates toward its
-// person's side. Shared "worked on together" first, then Mitko's, then Ádám's,
-// each oldest-first (see data/projectCatalog.ts).
+// One flat stack — every matching project in its own `order` position (see
+// data/projectCatalog.ts). A card's `side` is still carried per-project so it
+// picks up the right visual treatment (a shared card stays centered, a solo
+// card translates toward its person's side and tints in their color — same
+// visual language as the media items inside a Project detail), but the stack
+// order itself no longer clusters by side.
+const loaded = await Promise.all(getCatalogProjectsInOrder().map(loadProject));
 type ResultCard = { lp: LoadedProject; side: 'both' | 'left' | 'right' };
-const stack: ResultCard[] = [
-	...both.map((lp) => ({ lp, side: 'both' as const })),
-	...left.map((lp) => ({ lp, side: 'left' as const })),
-	...right.map((lp) => ({ lp, side: 'right' as const })),
-];
+const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 ---
 
 <div id="filter-results" class="filter-results" aria-hidden="true">
@@ -137,6 +132,15 @@ const stack: ResultCard[] = [
 		flex-direction: column;
 		gap: 1.25rem;
 		padding-inline: var(--stack-gutter);
+	}
+
+	/* Same direction toggle as the timeline: when the site is in "latest
+	   first" mode (see Timeline.astro's direction button, which mirrors its
+	   state onto <html data-reversed>), flip the filter stack too so the
+	   two views read in the same order. Server-side we always render
+	   ascending by the `order` key; the visual reversal is purely CSS. */
+	:global(html[data-reversed='true']) .fr-stack {
+		flex-direction: column-reverse;
 	}
 
 	/* A detailed project card — the same warm-accent boxed language as the

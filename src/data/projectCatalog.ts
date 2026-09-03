@@ -27,6 +27,8 @@ export interface CatalogProject {
 	dateRange?: string;
 	/** First year parsed from `dateRange`, for chronological ordering within a group. */
 	startYear: number;
+	/** Sort key from ProjectDef.order — a year-shaped number driving the filter view's flat ordering. */
+	order: number;
 	side: ProjectSide;
 	/** Experience refs shown in the detail — a split project's `modalExperiences` when set. */
 	experiences: ExperienceRef[];
@@ -72,6 +74,7 @@ function buildProject(project: ProjectDef, company: CompanyDef): CatalogProject 
 		info: project.info,
 		dateRange,
 		startYear: parseStartYear(dateRange),
+		order: project.order,
 		side: sideForPeople(new Set(experiences.map((ref) => ref.person))),
 		experiences,
 		media,
@@ -101,6 +104,9 @@ function mergeInto(target: CatalogProject, extra: CatalogProject): void {
 	target.allTagIds = uniq([...target.allTagIds, ...extra.allTagIds]);
 	target.side = sideForPeople(new Set(experiences.map((ref) => ref.person)));
 	if (extra.startYear < target.startYear) target.startYear = extra.startYear;
+	// Split halves collapse to the earlier half's sort key so the merged
+	// catalog entry sits where the project first appears in the ordering.
+	if (extra.order < target.order) target.order = extra.order;
 }
 
 /** Every project in the timeline, flattened. A project split across timeline
@@ -139,24 +145,13 @@ export function getCatalogProjects(): CatalogProject[] {
 	return order.map((key) => byKey.get(key)!);
 }
 
-export interface CatalogGroups {
-	/** Worked on together — shown first, full-width, oldest first. */
-	both: CatalogProject[];
-	/** Mitko's solo projects — the left column, oldest first. */
-	left: CatalogProject[];
-	/** Ádám's solo projects — the right column, oldest first. */
-	right: CatalogProject[];
-}
-
-/** The catalog split into its three groups, each ordered by start date (oldest first). */
-export function getCatalogGroups(): CatalogGroups {
-	const byStartYear = (a: CatalogProject, b: CatalogProject) => a.startYear - b.startYear;
-	const projects = getCatalogProjects();
-	return {
-		both: projects.filter((p) => p.side === 'both').sort(byStartYear),
-		left: projects.filter((p) => p.side === 'left').sort(byStartYear),
-		right: projects.filter((p) => p.side === 'right').sort(byStartYear),
-	};
+/** Every catalog project, sorted by its `order` sort key — one flat, mixed
+ *  timeline for the filter view. Shared and solo projects intermingle by
+ *  order rather than clustering by who worked on them, since the goal there
+ *  is to see the matching work in one linear read, keyed off the same
+ *  ordering the timeline data itself sets. */
+export function getCatalogProjectsInOrder(): CatalogProject[] {
+	return getCatalogProjects().sort((a, b) => a.order - b.order);
 }
 
 /** The person heading each solo column (used for its label / accent colour). */

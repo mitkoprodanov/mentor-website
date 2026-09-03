@@ -76,6 +76,20 @@ export interface ExperienceRef {
 
 export interface ProjectDef {
 	id: string;
+	/**
+	 * Sort key for anywhere projects need a global linear order across the
+	 * whole timeline — a filtered/flat view, an ordered index, a reverse-
+	 * chronology pass, etc. The number is deliberately year-shaped (roughly
+	 * the range 2004 – 2028), matching each project's real start year most of
+	 * the time and nudging into decimals only to break ties between projects
+	 * that started the same year, so the value stays readable at a glance.
+	 * Gaps of one or two whole years are left between neighbours so a new
+	 * project can be inserted later without renumbering anything else. The
+	 * Timeline layout itself doesn't consume this field — the timeline
+	 * data's own top-to-bottom order still drives the rendered layout — but
+	 * every project has one so downstream views can rely on it.
+	 */
+	order: number;
 	/** Omit for a single-project company — the company name is used instead. */
 	name?: string;
 	/**
@@ -241,6 +255,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'ericsson-consulting',
+						order: 2007,
 						experiences: [{ person: 'mitko', slug: 'mitko-ericsson' }],
 					},
 				],
@@ -254,6 +269,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'exigo',
+						order: 2004,
 						name: 'Armies of Exigo',
 						info: 'Real-time strategy game with asymmetric factions and two-level scenarios',
 						media: exigoMedia,
@@ -261,6 +277,7 @@ export const timeline: TimelineEntry[] = [
 					},
 					{
 						id: 'warhammer-mark-of-chaos',
+						order: 2006,
 						name: 'Warhammer: Mark of Chaos & Battle March',
 						info: 'Real-time tactics game set in the Warhammer universe',
 						media: warhammerMarkOfChaosMedia,
@@ -279,6 +296,7 @@ export const timeline: TimelineEntry[] = [
 			projects: [
 				{
 					id: 'heroes6',
+					order: 2010,
 					name: 'Might & Magic: Heroes VI',
 					info: 'Turn-based fantasy strategy-RPG combining exploration, army management, hero progression, and tactical combat',
 					media: heroes6Media,
@@ -299,6 +317,7 @@ export const timeline: TimelineEntry[] = [
 			projects: [
 				{
 					id: 'supernova',
+					order: 2013,
 					name: 'Supernova',
 					info: 'Supernova takes an innovative approach to the multiplayer online battle arena (MOBA) genre by adding real-time strategy (RTS) elements and promises an exciting science fiction setting with vast potential',
 					media: supernovaMedia,
@@ -313,6 +332,7 @@ export const timeline: TimelineEntry[] = [
 				},
 				{
 					id: 'lol-universe',
+					order: 2015,
 					name: 'League of Legends Universe',
 					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
 					media: lolUniverseMedia,
@@ -323,6 +343,7 @@ export const timeline: TimelineEntry[] = [
 				},
 				{
 					id: 'around',
+					order: 2017,
 					name: 'Around',
 					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
 					media: aroundMedia,
@@ -333,6 +354,7 @@ export const timeline: TimelineEntry[] = [
 				},
 				{
 					id: 'mmo-rework',
+					order: 2019,
 					name: 'MMO Microservices Rework',
 					info: 'Reworked a monolithic MMO server into microservices, Agile-driven.',
 					media: mmoReworkMedia,
@@ -340,6 +362,7 @@ export const timeline: TimelineEntry[] = [
 				},
 				{
 					id: 'beasts-of-brawlia',
+					order: 2020,
 					name: 'Beasts of Brawlia',
 					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
 					media: beastsOfBrawliaMedia,
@@ -359,6 +382,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'space-punks',
+						order: 2022,
 						name: 'Space Punks',
 						info: 'Sci-fi co-op action RPG in Unreal Engine 4 — gameplay features and a deep dive into GAS.',
 						media: spacePunksMedia,
@@ -374,6 +398,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'imagic-labs-project',
+						order: 2025,
 						name: 'Image Gallery Product',
 						info: 'A mobile image-gallery startup product — SOLID and Clean Code in daily practice.',
 						media: imagicLabsMedia,
@@ -395,6 +420,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'kreator-project',
+						order: 2025.5,
 						name: 'Original IP Prototype',
 						info: 'An original pitch taken to a playable prototype — networking foundations and core gameplay.',
 						media: kreatorMedia,
@@ -416,6 +442,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'mandragora',
+						order: 2023,
 						// See `mandragora-early` above — same modalId collapses
 						// the split pair into one card in the filter view.
 						modalId: 'mandragora',
@@ -434,6 +461,7 @@ export const timeline: TimelineEntry[] = [
 				projects: [
 					{
 						id: 'hypha',
+						order: 2024,
 						name: 'Hypha: The Wood Wide Web',
 						info: 'Network-building strategy board game, waging the underground territorial war of fungi',
 						media: hyphaMedia,
@@ -441,6 +469,7 @@ export const timeline: TimelineEntry[] = [
 					},
 					{
 						id: 'biobot',
+						order: 2026,
 						name: 'Biobot',
 						info: 'Tableau-building strategic card game with innovative systemic mechanics',
 						dateRange: '2026',
@@ -461,6 +490,7 @@ export const timeline: TimelineEntry[] = [
 			projects: [
 				{
 					id: 'mentor',
+					order: 2027,
 					name: 'Original Game Project',
 					hideTitle: true,
 					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',

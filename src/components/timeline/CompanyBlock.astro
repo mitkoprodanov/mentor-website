@@ -1,5 +1,5 @@
 ---
-import type { CompanyDef } from '../../data/timeline';
+import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import { parseDateRange, isOngoing } from './dateRange';
 import ProjectRow from './ProjectRow.astro';
 
@@ -65,6 +65,22 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	}}
 	hidden={false}
 >
+{
+	/* The MENTOR GAME STUDIO / dates label rides inside the warm envelope
+	   when the timeline is reversed (see the CSS below) — the era's opening
+	   is Together Again at the top, so the label sits right above the
+	   inner .company card, wrapped by the same yellow envelope background
+	   just like Mitko's Flying Wild Hog envelope carries it in the forward
+	   direction. Hidden by default; revealed when the reversed override
+	   sets `display: flex`. Rendering it unconditionally in the SSR keeps
+	   the toggle purely CSS-driven — no reflow, no flash on load. */
+	emphasized && (
+		<div class="mentor-envelope-heading" aria-hidden="true">
+			<span class="mentor-envelope-dates">{MENTOR_ERA.dateRange}</span>
+			<span class="mentor-envelope-name">{MENTOR_ERA.label}</span>
+		</div>
+	)
+}
 <div
 	class="company"
 	data-company-id={company.id}
@@ -136,6 +152,34 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	.mentor-envelope--on.square-bottom-right {
 		border-bottom-right-radius: 0;
 		border-bottom: none;
+	}
+
+	/* The MENTOR GAME STUDIO label riding inside the warm envelope (see the
+	   markup above). Hidden by default; the reversed-mode CSS in
+	   Timeline.astro reveals it and slots it right above the inner .company
+	   card, matching the way `.mentor-heading` sits at the top of Mitko's
+	   under-mentor track in the forward direction. */
+	.mentor-envelope-heading {
+		display: none;
+		flex-direction: column;
+		gap: 0.1rem;
+		padding: 0 0.5rem 0.75rem;
+	}
+
+	.mentor-envelope-name {
+		text-transform: uppercase;
+		letter-spacing: 0.16em;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--mentor);
+		text-shadow: 0 0 14px var(--mentor-soft);
+	}
+
+	.mentor-envelope-dates {
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.05em;
+		color: var(--fg-muted);
 	}
 
 	.company {

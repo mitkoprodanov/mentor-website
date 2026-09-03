@@ -14,7 +14,11 @@ const {
 ---
 
 <!doctype html>
-<html lang="en">
+<!-- The timeline starts in "latest first" (reversed) order by default — most
+     visitors want the current work above the origin story. Toggling the
+     direction button (see Timeline.astro) flips this attribute; the initial
+     value here is the SSR default so there's no post-load flash. -->
+<html lang="en" data-reversed="true">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
