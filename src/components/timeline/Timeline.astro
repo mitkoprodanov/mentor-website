@@ -385,6 +385,33 @@ const afterItems = buildRenderList(after);
 		justify-content: flex-end;
 	}
 
+	/* Reverse the internal run of each apart-block track so the companies
+	   inside one person's column read bottom-up in step with the outer
+	   timeline. This makes chronologically-latest boxes sit at the top —
+	   Kreator Studios above Imagic above Flying Wild Hog inside Mitko's
+	   Mentor envelope, Personal Project (Hypha/Biobot) above Primal
+	   Continued (Mandragora) on Ádám's side — so the box that meets each
+	   seam is the one the seam is actually about: Mandragora into Primal
+	   2012–2021 below it, Kreator into Together Again above it. */
+	.timeline[data-reversed='true'] :global(.track) {
+		flex-direction: column-reverse;
+	}
+
+	/* `.track.under-mentor` originally has a top nudge (`margin-top: 3rem`,
+	   see ApartBlock) and a smaller `padding-top: 1rem` (leaving room for the
+	   in-envelope "MENTOR GAME STUDIO" heading) than its `padding-bottom:
+	   1.5rem`. Reversed, the seam moves to the top and the breathing room
+	   moves to the bottom — swap both. The in-envelope heading is hidden
+	   here anyway (the container-level `.mentor-era-heading--reversed`
+	   carries the label), so the top padding no longer needs to reserve
+	   space for it. */
+	.timeline[data-reversed='true'] :global(.track.under-mentor) {
+		margin-top: 0;
+		margin-bottom: 3rem;
+		padding-top: 1.5rem;
+		padding-bottom: 1rem;
+	}
+
 	/* Mentor Game Studio label: in the polished forward direction the era's
 	   opening entry (Mitko's Flying Wild Hog envelope) heads the label — see
 	   ApartBlock's `.mentor-heading`. Reversed, the era opens on Together
