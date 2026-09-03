@@ -88,10 +88,10 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		)
 	}
 	{
-		project.name && (
+		project.name && (project.info || !project.hideTitle) && (
 			<div class="node">
 				<div class="node-text">
-					<h5 class="node-label">{project.name}</h5>
+					{!project.hideTitle && <h5 class="node-label">{project.name}</h5>}
 					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
 			</div>

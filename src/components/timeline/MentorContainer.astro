@@ -10,10 +10,21 @@
  * (see CompanyBlock.astro) once both of them are back together — Ádám's
  * side stays plain background for everything in between, since he isn't
  * part of Mentor Game Studio until that point.
+ *
+ * The `.mentor-era-heading--reversed` sibling sits at the visual top of the
+ * container only when the timeline is reversed (see Timeline.astro's
+ * `[data-reversed='true']` overrides): the era's opening moves from Mitko's
+ * Flying Wild Hog envelope to the top of the reunion (Together Again), so
+ * the "MENTOR GAME STUDIO" label rides along.
  */
+import { MENTOR_ERA } from '../../data/timeline';
 ---
 
 <div class="mentor-container">
+	<div class="mentor-era-heading mentor-era-heading--reversed" aria-hidden="true">
+		<span class="mentor-era-dates">{MENTOR_ERA.dateRange}</span>
+		<span class="mentor-era-name">{MENTOR_ERA.label}</span>
+	</div>
 	<div class="mentor-content">
 		<slot />
 	</div>
@@ -28,5 +39,32 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2rem;
+	}
+
+	/* Hidden by default; the reversed-timeline CSS in Timeline.astro flips this
+	   on so the "MENTOR GAME STUDIO" label stays at the visual top of the era
+	   even when Together Again is the entry now sitting there. Mirrors the
+	   `.mentor-heading` markup inside ApartBlock (see there for the base look). */
+	.mentor-era-heading {
+		display: none;
+		flex-direction: column;
+		gap: 0.1rem;
+		padding: 0 1.5rem 0.75rem;
+	}
+
+	.mentor-era-name {
+		text-transform: uppercase;
+		letter-spacing: 0.16em;
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: var(--mentor);
+		text-shadow: 0 0 14px var(--mentor-soft);
+	}
+
+	.mentor-era-dates {
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		letter-spacing: 0.05em;
+		color: var(--fg-muted);
 	}
 </style>

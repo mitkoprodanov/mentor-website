@@ -165,6 +165,16 @@ export interface ProjectDef {
 	 *  project so the studio's pitch reads as *part of* the reunion project
 	 *  card, not just a hero-only element. */
 	showVision?: boolean;
+	/**
+	 * Suppresses just the project's own h5 title inside the row while keeping
+	 * everything else it drives (boxed style, click target, modal, info blurb,
+	 * media). Used on the Together Again project so the "TOGETHER AGAIN"
+	 * company banner reads as the row's sole heading — the studio name and
+	 * the reunion project are one and the same, so a second "Original Game
+	 * Project" line below it just doubled up. The modal still opens on the
+	 * project's own name.
+	 */
+	hideTitle?: boolean;
 }
 
 export interface CompanyDef {
@@ -286,29 +296,6 @@ export const timeline: TimelineEntry[] = [
 			id: 'primal-game-studio',
 			name: 'Primal Game Studio',
 			dateRange: '2012 – 2021',
-			/**
-			 * "Around" is split across two ProjectDef entries (`around-mitko`,
-			 * `around-adam`) purely so the two people's cards can land in
-			 * different grid rows — Mitko's starting alongside "Beasts of
-			 * Brawlia" and running down through Ádám's own "Around" row below
-			 * it, via `rowSpan` (see ProjectDef above) plus `.company-projects`'s
-			 * `grid-auto-flow: dense`, which backfills Ádám's column around the
-			 * span. Both repeat the same `name`/`info` since each is its own
-			 * node in the vertical thread, and both still point at the same two
-			 * experience files as before the split, unchanged.
-			 *
-			 * "Mandragora" similarly reappears here (`mandragora-early`) as a
-			 * separate ProjectDef from its fuller telling in the later apart
-			 * entry (Ádám's "Primal Game Studio" continuing 2022 – 2025) — same
-			 * project starting here, not a different one (see the file-level
-			 * comment above). Ordering it right after `mmo-rework` is what
-			 * lands it in the same row as Mitko's card there (dense packing
-			 * again — supernova and lol-universe are full-width so they consume
-			 * whole rows first, `around-mitko`'s span-2 plus beasts-of-brawlia
-			 * and around-adam consume the next two rows between them, leaving
-			 * mmo-rework and mandragora-early to land side by side in the row
-			 * after that).
-			 */
 			projects: [
 				{
 					id: 'supernova',
@@ -335,39 +322,14 @@ export const timeline: TimelineEntry[] = [
 					],
 				},
 				{
-					id: 'around-mitko',
+					id: 'around',
 					name: 'Around',
 					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
-					rowSpan: 2,
-					squareBottomRight: true,
-					// The two "Around" rows are one project split for layout — this half
-					// owns the shared modal and lists both people so it reads like any
-					// other joint project (see ProjectDef.modalId / modalExperiences).
-					modalId: 'around',
 					media: aroundMedia,
-					modalExperiences: [
+					experiences: [
 						{ person: 'mitko', slug: 'mitko-around' },
 						{ person: 'adam', slug: 'adam-around', tagIds: ['blueprint-scripting'] },
 					],
-					experiences: [{ person: 'mitko', slug: 'mitko-around' }],
-				},
-				{
-					id: 'beasts-of-brawlia',
-					name: 'Beasts of Brawlia',
-					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
-					media: beastsOfBrawliaMedia,
-					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
-				},
-				{
-					id: 'around-adam',
-					name: 'Around',
-					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
-					bridgeLeft: true,
-					// The other half of the same "Around" project — opens the shared
-					// modal owned by `around-mitko` above; renders none of its own.
-					modalId: 'around',
-					noModal: true,
-					experiences: [{ person: 'adam', slug: 'adam-around', tagIds: ['blueprint-scripting'] }],
 				},
 				{
 					id: 'mmo-rework',
@@ -377,17 +339,11 @@ export const timeline: TimelineEntry[] = [
 					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', tagIds: ['agile'] }],
 				},
 				{
-					id: 'mandragora-early',
-					// Shares its modal identity with the later `mandragora` entry
-					// (see the file-level comment above on why Mandragora is
-					// split across two timeline boxes) — the filter view merges
-					// the pair back into one card by modalId so it only appears
-					// once, with both experiences and the union of their tags.
-					modalId: 'mandragora',
-					name: 'Mandragora: Whispers of the Witch Tree',
-					info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
-					media: mandragoraMedia,
-					experiences: [{ person: 'adam', slug: 'adam-mandragora-joins' }],
+					id: 'beasts-of-brawlia',
+					name: 'Beasts of Brawlia',
+					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
+					media: beastsOfBrawliaMedia,
+					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia' }],
 				},
 			],
 		},
@@ -506,6 +462,7 @@ export const timeline: TimelineEntry[] = [
 				{
 					id: 'mentor',
 					name: 'Original Game Project',
+					hideTitle: true,
 					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',
 					showVision: true,
 					media: mentorMedia,

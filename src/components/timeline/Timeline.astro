@@ -141,8 +141,25 @@ const containedItems = buildRenderList(contained);
 const afterItems = buildRenderList(after);
 ---
 
-<Section id="timeline" title="Timeline" compact>
-	<div class="timeline">
+<Section id="timeline" compact>
+	<div class="timeline-header">
+		<h2 class="section-title brand-heading">Timeline</h2>
+		<button
+			type="button"
+			class="direction-toggle"
+			aria-label="Reverse timeline direction"
+			aria-pressed="false"
+			data-timeline-direction-toggle
+		>
+			<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+				<path d="M7 4v13M7 4l-3 3M7 4l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M17 20V7M17 20l-3-3M17 20l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<span class="direction-toggle__label">Reverse order</span>
+		</button>
+	</div>
+	<div class="timeline" data-timeline>
+		<div class="timeline-shimmer" aria-hidden="true"></div>
 		{
 			beforeItems.map((item) =>
 				item.kind === 'node' ? <TimelineNode entry={item.entry} continuation={continuations[item.idx]} /> : <TrackConnector side={item.side} emphasized={item.emphasized} />,
@@ -170,6 +187,73 @@ const afterItems = buildRenderList(after);
 </Section>
 
 <style>
+	.timeline-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		width: 100%;
+		max-width: 1360px;
+		position: relative;
+		margin-bottom: 3rem;
+	}
+
+	.timeline-header .section-title {
+		font-size: clamp(1.75rem, 4vw, 2.5rem);
+		margin: 0;
+		text-align: center;
+	}
+
+	.direction-toggle {
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.75rem;
+		font: inherit;
+		font-size: 0.85rem;
+		color: var(--color-text, currentColor);
+		background: transparent;
+		border: 1px solid currentColor;
+		border-radius: 999px;
+		opacity: 0.65;
+		cursor: pointer;
+		transition:
+			opacity 0.2s ease,
+			background-color 0.2s ease,
+			transform 0.4s ease;
+	}
+
+	.direction-toggle:hover,
+	.direction-toggle:focus-visible {
+		opacity: 1;
+		outline: none;
+	}
+
+	.direction-toggle svg {
+		transition: transform 0.5s ease;
+	}
+
+	.direction-toggle[aria-pressed='true'] svg {
+		transform: rotate(180deg);
+	}
+
+	.direction-toggle__label {
+		white-space: nowrap;
+	}
+
+	@media (max-width: 640px) {
+		.direction-toggle__label {
+			display: none;
+		}
+		.direction-toggle {
+			padding: 0.45rem;
+		}
+	}
+
 	.timeline {
 		display: flex;
 		flex-direction: column;
@@ -179,5 +263,211 @@ const afterItems = buildRenderList(after);
 		   toward their own side and still leave breathing room on the other. */
 		max-width: 1360px;
 		width: 100%;
+		position: relative;
+	}
+
+	.timeline[data-reversed='true'] {
+		flex-direction: column-reverse;
+	}
+
+	/* Reverse the Mentor Game Studio era's inner run so the whole timeline
+	   reads bottom-up as one unit, not one unit with a right-side-up island. */
+	.timeline[data-reversed='true'] :global(.mentor-content) {
+		flex-direction: column-reverse;
+	}
+
+	/* ---- Reversed-order seam fixes ---------------------------------------
+	   The original polished layout squares off the corner where a
+	   TrackConnector meets each box (see CompanyBlock's square-*-* and
+	   ApartBlock's continues-above/below). Reversing the visual order flips
+	   which edge the connector sits against, so every "top" cue needs to
+	   act as a "bottom" cue and vice versa. These overrides swap the paired
+	   sides purely visually — the data-side continuation flags stay put, and
+	   the polished original direction remains the source of truth. */
+
+	/* CompanyBlock corners: a top-squared corner is now the box's bottom
+	   corner (the connector sits below it in reversed order) — and vice
+	   versa. Restore the previously-flat corner's radius and drop the new
+	   touching corner's. */
+	.timeline[data-reversed='true'] :global(.company.square-top-left) {
+		border-top-left-radius: 20px;
+		border-bottom-left-radius: 0;
+	}
+	.timeline[data-reversed='true'] :global(.company.square-top-right) {
+		border-top-right-radius: 20px;
+		border-bottom-right-radius: 0;
+	}
+	.timeline[data-reversed='true'] :global(.company.square-bottom-left) {
+		border-bottom-left-radius: 20px;
+		border-top-left-radius: 0;
+	}
+	.timeline[data-reversed='true'] :global(.company.square-bottom-right) {
+		border-bottom-right-radius: 20px;
+		border-top-right-radius: 0;
+	}
+
+	/* When the .company sits inside a painted `.mentor-envelope--on` (see
+	   CompanyBlock.astro), the seam rides on the envelope's own corners
+	   instead of the .company's — swap top ↔ bottom on the envelope, same
+	   pattern as the .company overrides above. */
+	.timeline[data-reversed='true'] :global(.mentor-envelope--on.square-top-left) {
+		border-top-left-radius: 24px;
+		border-top: 1px solid var(--mentor-border);
+		border-bottom-left-radius: 0;
+		border-bottom: none;
+	}
+	.timeline[data-reversed='true'] :global(.mentor-envelope--on.square-top-right) {
+		border-top-right-radius: 24px;
+		border-top: 1px solid var(--mentor-border);
+		border-bottom-right-radius: 0;
+		border-bottom: none;
+	}
+	.timeline[data-reversed='true'] :global(.mentor-envelope--on.square-bottom-left) {
+		border-bottom-left-radius: 24px;
+		border-bottom: 1px solid var(--mentor-border);
+		border-top-left-radius: 0;
+		border-top: none;
+	}
+	.timeline[data-reversed='true'] :global(.mentor-envelope--on.square-bottom-right) {
+		border-bottom-right-radius: 24px;
+		border-bottom: 1px solid var(--mentor-border);
+		border-top-right-radius: 0;
+		border-top: none;
+	}
+
+	/* ApartBlock's own-column boxes: a `continues-above` box (border+radius
+	   removed on its top, padding-top zeroed) is now meeting its connector on
+	   its BOTTOM edge — swap the two sides. */
+	.timeline[data-reversed='true'] :global(.track-company.continues-above) {
+		border-top: 1px solid var(--border);
+		border-top-left-radius: 16px;
+		border-top-right-radius: 16px;
+		padding-top: 1rem;
+		border-bottom: none;
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+	.timeline[data-reversed='true'] :global(.track-company.continues-above .track-header) {
+		padding-top: 0.25rem;
+	}
+	.timeline[data-reversed='true'] :global(.track-company.continues-below) {
+		border-bottom: 1px solid var(--border);
+		border-bottom-left-radius: 16px;
+		border-bottom-right-radius: 16px;
+		border-top: none;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	/* The Mentor envelope's own edges — same swap. */
+	.timeline[data-reversed='true'] :global(.track.under-mentor.continues-above) {
+		border-top: 1px solid var(--mentor-border);
+		border-top-left-radius: 24px;
+		border-top-right-radius: 24px;
+		border-bottom: none;
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+	}
+	.timeline[data-reversed='true'] :global(.track.under-mentor.continues-below) {
+		border-bottom: 1px solid var(--mentor-border);
+		border-bottom-left-radius: 24px;
+		border-bottom-right-radius: 24px;
+		border-top: none;
+		border-top-left-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	/* A short track stuck to the top of its fork-row (to meet a connector
+	   above) should now sink to the bottom — the connector is below it in
+	   reversed order. Restoring the default `justify-content: flex-end`
+	   does that. */
+	.timeline[data-reversed='true'] :global(.track.align-top) {
+		justify-content: flex-end;
+	}
+
+	/* Mentor Game Studio label: in the polished forward direction the era's
+	   opening entry (Mitko's Flying Wild Hog envelope) heads the label — see
+	   ApartBlock's `.mentor-heading`. Reversed, the era opens on Together
+	   Again instead, so hide the envelope-internal one and reveal the
+	   container-level heading (see MentorContainer's
+	   `.mentor-era-heading--reversed`) sitting flush above the reunion. */
+	.timeline[data-reversed='true'] :global(.mentor-heading) {
+		display: none;
+	}
+	.timeline[data-reversed='true'] :global(.mentor-era-heading--reversed) {
+		display: flex;
+	}
+
+	.timeline-shimmer {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		opacity: 0;
+		z-index: 10;
+		background: linear-gradient(
+			110deg,
+			transparent 0%,
+			transparent 35%,
+			rgba(255, 255, 255, 0.35) 48%,
+			rgba(255, 255, 255, 0.7) 50%,
+			rgba(255, 255, 255, 0.35) 52%,
+			transparent 65%,
+			transparent 100%
+		);
+		background-size: 300% 100%;
+		background-position: 100% 0;
+		mix-blend-mode: screen;
+	}
+
+	.timeline.is-flipping .timeline-shimmer {
+		animation: timeline-glint 600ms ease-in-out;
+	}
+
+	@keyframes timeline-glint {
+		0% {
+			opacity: 0;
+			background-position: 100% 0;
+		}
+		20% {
+			opacity: 1;
+		}
+		80% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+			background-position: 0 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.timeline.is-flipping .timeline-shimmer {
+			animation: none;
+		}
+		.direction-toggle svg,
+		.direction-toggle {
+			transition: none;
+		}
 	}
 </style>
+
+<script>
+	const toggles = document.querySelectorAll<HTMLButtonElement>('[data-timeline-direction-toggle]');
+	toggles.forEach((btn) => {
+		const timeline = btn.closest('section')?.querySelector<HTMLElement>('[data-timeline]');
+		if (!timeline) return;
+		btn.addEventListener('click', () => {
+			const nowReversed = timeline.getAttribute('data-reversed') !== 'true';
+			// Glint sweeps across; halfway through, swap the order so the
+			// reordering happens under the brightest part of the sweep.
+			timeline.classList.add('is-flipping');
+			window.setTimeout(() => {
+				timeline.setAttribute('data-reversed', String(nowReversed));
+				btn.setAttribute('aria-pressed', String(nowReversed));
+			}, 220);
+			window.setTimeout(() => {
+				timeline.classList.remove('is-flipping');
+			}, 650);
+		});
+	});
+</script>

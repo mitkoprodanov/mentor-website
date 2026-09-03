@@ -34,19 +34,48 @@ const rightLeaves = !squareBottomRight && !ongoing;
 // An event shared by both sides sits centered across the full-width box; one
 // that concerns a single person moves to that person's own column; null when
 // neither side has the event (both continue across the seam — nothing to show).
-const startSide = leftJoins && rightJoins ? 'center' : leftJoins ? 'left' : rightJoins ? 'right' : null;
+// A Mentor-era together entry (Together Again) is a reunion in its own right,
+// even though Mitko's mentor stream flows continuously into it from above —
+// the moment reads narratively as both people meeting again, so the header
+// sits centered like Primal 2012's start-together does, not off to Ádám's side
+// alone.
+const startSide = emphasized ? 'center' : leftJoins && rightJoins ? 'center' : leftJoins ? 'left' : rightJoins ? 'right' : null;
 const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rightLeaves ? 'right' : null;
 ---
 
+<div
+	class="mentor-envelope"
+	class:list={{
+		/* The warm-tinted wrapper only paints when this is a Mentor-era
+		   together entry (currently just Together Again). For every other
+		   company the wrapper collapses to a bare passthrough — no bg, no
+		   border, no padding (see the CSS below) — so nothing changes for
+		   non-Mentor entries. */
+		'mentor-envelope--on': emphasized,
+		/* A TrackConnector bridges into this outer envelope, not the inner
+		   .company box (which stays fully rounded like every other neutral
+		   card) — so the square-*-* class rides on the wrapper here (see
+		   .mentor-envelope--on.square-* below). Reversed-mode swaps these
+		   sides via the overrides in Timeline.astro, the same way it does
+		   for the plain .company class. */
+		'square-top-left': emphasized && squareTopLeft,
+		'square-top-right': emphasized && squareTopRight,
+		'square-bottom-left': emphasized && squareBottomLeft,
+		'square-bottom-right': emphasized && squareBottomRight,
+	}}
+	hidden={false}
+>
 <div
 	class="company"
 	data-company-id={company.id}
 	class:list={{
 		emphasized,
-		'square-top-left': squareTopLeft,
-		'square-top-right': squareTopRight,
-		'square-bottom-left': squareBottomLeft,
-		'square-bottom-right': squareBottomRight,
+		/* When the mentor envelope carries the seam (see above), the inner
+		   .company stays fully rounded — nothing squares off here. */
+		'square-top-left': !emphasized && squareTopLeft,
+		'square-top-right': !emphasized && squareTopRight,
+		'square-bottom-left': !emphasized && squareBottomLeft,
+		'square-bottom-right': !emphasized && squareBottomRight,
 	}}
 >
 	{
@@ -68,8 +97,47 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		)
 	}
 </div>
+</div>
 
 <style>
+	/* By default the wrapper is a bare passthrough — no bg, no border, no
+	   padding — so every non-Mentor company renders exactly as before.
+	   `mentor-envelope--on` paints the warm-tinted outer envelope around the
+	   inner .company card, mirroring the way `.track.under-mentor` in
+	   ApartBlock encloses Mitko's Mentor-era employers (Flying Wild Hog etc.)
+	   in their own warm envelope with a neutral card inside. */
+	.mentor-envelope {
+		width: 100%;
+	}
+
+	.mentor-envelope--on {
+		background: var(--mentor-bg);
+		border: 1px solid var(--mentor-border);
+		border-radius: 24px;
+		padding: 1rem;
+	}
+
+	/* A TrackConnector meets the envelope, not the inner card — square off
+	   just the envelope's touching corner and remove that side's border line
+	   so the connector fills flush. Reversed-mode swaps top ↔ bottom via the
+	   overrides in Timeline.astro. */
+	.mentor-envelope--on.square-top-left {
+		border-top-left-radius: 0;
+		border-top: none;
+	}
+	.mentor-envelope--on.square-top-right {
+		border-top-right-radius: 0;
+		border-top: none;
+	}
+	.mentor-envelope--on.square-bottom-left {
+		border-bottom-left-radius: 0;
+		border-bottom: none;
+	}
+	.mentor-envelope--on.square-bottom-right {
+		border-bottom-right-radius: 0;
+		border-bottom: none;
+	}
+
 	.company {
 		width: 100%;
 		border: 1px solid var(--border);
@@ -78,12 +146,16 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		padding: 1.25rem 1.5rem 1.5rem;
 	}
 
-	/* The Mentor era fills its cards with a lighter, warm-tinted panel so the
-	   whole region reads as its own studio — carried by the background, not
-	   only the rail beside it. */
+	/* A Mentor-era together entry (Together Again) belongs to the Mentor
+	   Game Studio container above it — it should read as one of the studio's
+	   employers, not as the studio itself. Same pattern as Flying Wild Hog's
+	   `.track-company` inside the Mitko-side under-mentor envelope (see
+	   ApartBlock.astro): drop the box back to the neutral card background,
+	   let the warm mentor tint stay on the heading text only (see the h3
+	   rule below). */
 	.company.emphasized {
-		background: var(--mentor-bg);
-		border-color: var(--mentor-border);
+		background: var(--bg-alt);
+		border-color: var(--border);
 	}
 
 	.company.square-top-left {
