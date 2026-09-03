@@ -5,11 +5,6 @@ export const mentorMedia: ProjectMedia[] = [
 	{
 		src: '/projects/mentor/concept.jpg',
 		kind: 'image',
-		caption: 'Early concept work for the new original game.',
-	},
-	{
-		src: '/projects/mentor/prototype.gif',
-		kind: 'gif',
-		caption: 'An early prototype coming together.',
+		caption: 'A battle-tested duo.',
 	},
 ];

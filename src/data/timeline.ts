@@ -421,8 +421,8 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'kreator-project',
 						order: 2025.5,
-						name: 'Original IP Prototype',
-						info: 'An original pitch taken to a playable prototype — networking foundations and core gameplay.',
+						name: 'Heart of Darkness',
+						info: 'Hardcore first-person shooter with ultra-high realism, PvP and PvE',
 						media: kreatorMedia,
 						experiences: [{ person: 'mitko', slug: 'mitko-kreator-studios' }],
 					},
