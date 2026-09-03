@@ -35,24 +35,10 @@ export const exigoMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'balance', 'proprietary-engine'],
 	},
 	{
-		src: '',
-		kind: 'text',
-		person: 'adam',
-		caption: 'Architected fair, highly-balanced multiplayer skirmish maps.',
-		tagIds: ['level-design', 'balance', 'proprietary-engine'],
-	},
-	{
 		src: '/projects/exigo/editor.png',
 		kind: 'image',
 		person: 'adam',
 		caption: 'The Scenario Editor in action.',
-		tagIds: ['devtools', 'proprietary-engine'],
-	},
-	{
-		src: '',
-		kind: 'text',
-		person: 'adam',
-		caption: 'Contributed to the game’s proprietary level and script editor.',
 		tagIds: ['devtools', 'proprietary-engine'],
 	},
 ];

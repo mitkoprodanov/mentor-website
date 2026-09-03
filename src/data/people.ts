@@ -56,7 +56,7 @@ export const people: Person[] = [
 		education: 'BSc Business Informatics, Corvinus',
 		linkedin: 'https://linkedin.com/in/adam-nemeshazi',
 		cv: '/cv/CV_Adam_Nemeshazi_2026_GD.pdf',
-		tagIds: ['systems-design', 'level-design', 'encounter', 'ux-design', 'ui', 'blueprint-scripting', 'progression', 'devtools', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'puzzle-design', 'proprietary-engine', 'ip-critical-design', 'ai', 'navigation'],
+		tagIds: ['systems-design', 'level-design', 'encounter', 'ux-design', 'ui', 'blueprint-scripting', 'progression', 'devtools', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'puzzle-design', 'proprietary-engine', 'ip-critical-design', 'ai', 'navigation', 'co-dev-teams', 'ability', 'metagame'],
 		hobbies: [
 			'Began creating custom maps at the age of 12 for popular titles of the era (Doom II, Duke Nukem 3D, Age of Empires II, Warcraft III)',
 			'Designing, prototyping, and playtesting two original board games',

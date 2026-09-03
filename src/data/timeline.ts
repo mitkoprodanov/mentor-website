@@ -308,7 +308,7 @@ export const timeline: TimelineEntry[] = [
 							slug: 'mitko-supernova',
 							tagIds: ['ai', 'navigation', 'ability', 'progression'],
 						},
-						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'level-design', 'progression'] },
+						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame'] },
 					],
 				},
 				{
@@ -318,7 +318,7 @@ export const timeline: TimelineEntry[] = [
 					media: lolUniverseMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-lol-universe' },
-						{ person: 'adam', slug: 'adam-lol-universe' },
+						{ person: 'adam', slug: 'adam-lol-universe', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ip-critical-design', 'co-dev-teams', 'progression', 'metagame', 'ability', 'encounter', 'devtools', 'proprietary-engine'] },
 					],
 				},
 				{
