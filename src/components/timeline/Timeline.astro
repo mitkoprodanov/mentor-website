@@ -377,14 +377,6 @@ const afterItems = buildRenderList(after);
 		border-top-right-radius: 0;
 	}
 
-	/* A short track stuck to the top of its fork-row (to meet a connector
-	   above) should now sink to the bottom — the connector is below it in
-	   reversed order. Restoring the default `justify-content: flex-end`
-	   does that. */
-	.timeline[data-reversed='true'] :global(.track.align-top) {
-		justify-content: flex-end;
-	}
-
 	/* Reverse the internal run of each apart-block track so the companies
 	   inside one person's column read bottom-up in step with the outer
 	   timeline. This makes chronologically-latest boxes sit at the top —
@@ -392,9 +384,27 @@ const afterItems = buildRenderList(after);
 	   Mentor envelope, Personal Project (Hypha/Biobot) above Primal
 	   Continued (Mandragora) on Ádám's side — so the box that meets each
 	   seam is the one the seam is actually about: Mandragora into Primal
-	   2012–2021 below it, Kreator into Together Again above it. */
+	   2012–2021 below it, Kreator into Together Again above it.
+	   `justify-content` (see the base rules in ApartBlock) then naturally
+	   inverts under column-reverse — `flex-start` becomes "pack at bottom"
+	   and `flex-end` becomes "pack at top" — which happens to be exactly
+	   what each track needs in reversed: `.track.align-top` (a track that
+	   continues from its neighbour) packs at the bottom to meet the seam
+	   which is now below it, and default short tracks pack at the top toward
+	   whatever's now above them. No extra override needed there. */
 	.timeline[data-reversed='true'] :global(.track) {
 		flex-direction: column-reverse;
+	}
+
+	/* Mitko's Mentor envelope is the exception: its base `flex-start`
+	   (packing content at the envelope's top so it meets the "MENTOR GAME
+	   STUDIO" heading) would flip to "pack at bottom" under column-reverse,
+	   leaving a dead band above Kreator inside the envelope where the
+	   connector to Together Again now enters. `flex-end` packs the content
+	   flush against the (now-open) top edge instead, so the connector meets
+	   the topmost card without any interior gap. */
+	.timeline[data-reversed='true'] :global(.track.under-mentor) {
+		justify-content: flex-end;
 	}
 
 	/* `.track.under-mentor` originally has a top nudge (`margin-top: 3rem`,
