@@ -103,7 +103,7 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		)
 	}
 	<div class="company-projects">
-		{company.projects.map((project) => <ProjectRow project={project} emphasized={emphasized} dateRange={company.dateRange} />)}
+		{company.projects.map((project, i) => <ProjectRow project={project} emphasized={emphasized} dateRange={company.dateRange} index={i} />)}
 	</div>
 	{
 		endSide && (

@@ -494,7 +494,6 @@ export const timeline: TimelineEntry[] = [
 					name: 'Original Game Project',
 					hideTitle: true,
 					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',
-					showVision: true,
 					media: mentorMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-mentor' },

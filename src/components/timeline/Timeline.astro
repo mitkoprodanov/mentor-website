@@ -146,22 +146,24 @@ const afterItems = buildRenderList(after);
 		<h2 class="section-title brand-heading">
 			<button
 				type="button"
-				class="title-toggle btn-sheen"
+				class="title-toggle"
 				aria-label="Reverse timeline direction"
 				aria-pressed="true"
 				data-timeline-direction-toggle
 			>
 				<span class="title-toggle__text">Timeline</span>
-				<span class="title-toggle__slot" aria-hidden="true">
-					<span class="title-toggle__reel">
-						{/* Down arrow — time flows top→bottom, oldest first (forward direction). */}
-						<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-							<path d="M12 4v14M12 18l-5-5M12 18l5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-						</svg>
-						{/* Up arrow — time flows bottom→top, latest first (reversed direction). */}
-						<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-							<path d="M12 20V6M12 6l-5 5M12 6l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-						</svg>
+				<span class="title-toggle__icon-wrap btn-sheen" aria-hidden="true">
+					<span class="title-toggle__slot">
+						<span class="title-toggle__reel">
+							{/* Down arrow — time flows top→bottom, oldest first (forward direction). */}
+							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
+								<path d="M12 4v14M12 18l-5-5M12 18l5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+							{/* Up arrow — time flows bottom→top, latest first (reversed direction). */}
+							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
+								<path d="M12 20V6M12 6l-5 5M12 6l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</span>
 					</span>
 				</span>
 			</button>
@@ -203,6 +205,21 @@ const afterItems = buildRenderList(after);
 		width: 100%;
 		max-width: 1360px;
 		margin-bottom: 3rem;
+		/* Stick to just below the fixed navbar while the timeline section is
+		   scrolling past, so the direction-toggle stays reachable no matter
+		   how deep the reader has scrolled into the timeline itself. `z-index`
+		   above the timeline cards but below the navbar's own layer. */
+		position: sticky;
+		top: 3.5rem;
+		z-index: 5;
+		pointer-events: none;
+	}
+
+	.timeline-header .section-title {
+		/* Restore hit-testing for the pill itself; the wrapper opts out so
+		   the invisible padding around the pill doesn't swallow clicks on
+		   the timeline cards passing beneath the sticky header. */
+		pointer-events: auto;
 	}
 
 	.timeline-header .section-title {
@@ -210,48 +227,104 @@ const afterItems = buildRenderList(after);
 		text-align: center;
 	}
 
-	/* The entire section title is the direction toggle — a single wide pill
-	   in the site's clickable warm-accent language: soft tinted bg, slim
-	   colored border, drifting sheen (see `.btn-sheen` in Layout.astro),
-	   glowing halo on hover. Same visual vocabulary as the timeline's own
-	   `.track-row--boxed` cards, sized up to match the section heading. */
+	/* Same card language as the resting person cards in ScrollyRegion
+	   (`.side-panel` + `.decor-frame`) — an opaque dark panel with a warm
+	   hairline border and a matching soft glow, and (via the outer ::before
+	   ring below) a second hairline just past its edge that echoes the
+	   double-line frame around each person card. Fully covers whatever
+	   timeline content is scrolling behind the sticky bar; no
+	   backdrop-filter needed. */
 	.title-toggle {
-		--row-fill: color-mix(in oklab, var(--accent) 6%, var(--bg));
-		--row-fill-hover: color-mix(in oklab, var(--accent) 12%, var(--bg-alt));
-		--row-line: color-mix(in oklab, var(--accent) 32%, var(--border));
-		--row-line-hover: color-mix(in oklab, var(--accent) 70%, var(--border));
 		--sheen-color: var(--accent-3);
-		--sheen-strength: 0.10;
+		--sheen-strength: 0.14;
+		position: relative;
 		display: inline-flex;
 		align-items: center;
-		gap: 0.8em;
-		padding: 0.55em 1.4em;
+		gap: 0.65em;
+		padding: 0.4em 1.6em;
 		font: inherit;
 		font-size: clamp(1.75rem, 4vw, 2.5rem);
+		/* Inherit `.brand-heading` casing/tracking/weight through the button. */
+		text-transform: uppercase;
+		letter-spacing: var(--letter-brand);
 		color: inherit;
-		background: var(--row-fill);
-		border: 1px solid var(--row-line);
+		background: var(--bg);
+		border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
 		border-radius: 999px;
 		cursor: pointer;
 		isolation: isolate;
+		box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+		text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
 		transition:
-			background 0.2s ease,
-			border-color 0.2s ease,
-			box-shadow 0.2s ease;
+			border-color 0.25s ease,
+			box-shadow 0.25s ease,
+			text-shadow 0.25s ease;
+	}
+
+	/* Outer double-hairline ring — matches ScrollyRegion's `.decor-frame`
+	   (the second warm line drawn a ring outside each person card). */
+	.title-toggle::before {
+		content: '';
+		position: absolute;
+		inset: -6px -10px;
+		border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+		border-radius: 999px;
+		pointer-events: none;
+		transition: border-color 0.25s ease;
 	}
 
 	.title-toggle:hover,
 	.title-toggle:focus-visible {
-		background: var(--row-fill-hover);
-		border-color: var(--row-line-hover);
 		outline: none;
-		box-shadow:
-			0 10px 28px -14px rgba(0, 0, 0, 0.7),
-			0 0 22px -2px rgba(255, 122, 0, 0.45),
-			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+		border-color: color-mix(in srgb, var(--accent) 80%, var(--border));
+		box-shadow: 0 0 34px -2px color-mix(in srgb, var(--accent) 48%, transparent);
+		text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 40%, transparent);
+	}
+
+	.title-toggle:hover::before,
+	.title-toggle:focus-visible::before {
+		border-color: color-mix(in srgb, var(--accent) 72%, transparent);
+	}
+
+	/* The warm-accent glow lives ONLY behind the direction icon — a soft
+	   radial that peaks at the icon center and fades completely to
+	   transparent by the wrap's own edge (padding around the icon gives the
+	   glow room to breathe past the icon itself). Same single-color falloff
+	   pattern used earlier for the pill, just localised. */
+	.title-toggle__icon-wrap {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.35em;
+		border-radius: 50%;
+		background: radial-gradient(
+			circle at 50% 50%,
+			color-mix(in srgb, var(--accent) 60%, transparent) 0%,
+			color-mix(in srgb, var(--accent) 26%, transparent) 45%,
+			transparent 100%
+		);
+		transition: background 0.25s ease;
+	}
+
+	.title-toggle:hover .title-toggle__icon-wrap,
+	.title-toggle:focus-visible .title-toggle__icon-wrap {
+		background: radial-gradient(
+			circle at 50% 50%,
+			color-mix(in srgb, var(--accent) 75%, transparent) 0%,
+			color-mix(in srgb, var(--accent) 34%, transparent) 45%,
+			transparent 100%
+		);
 	}
 
 	.title-toggle__text {
+		line-height: 1;
+	}
+
+	/* A larger initial capital echoing an illuminated first letter — the
+	   opening T rides taller than the rest of the caps. Matched on the
+	   Contact section title so both section headings share the treatment. */
+	.title-toggle__text::first-letter {
+		font-size: 1.35em;
 		line-height: 1;
 	}
 
@@ -276,9 +349,11 @@ const afterItems = buildRenderList(after);
 		transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1);
 	}
 
-	/* Latest-first (reversed) — reveal the second (up-arrow) icon in the reel. */
+	/* Latest-first (reversed) — reveal the second (up-arrow) icon in the reel.
+	   The reel stacks TWO icons, each half its own height, so `-50%` shifts
+	   it up by exactly one icon (which is what fits inside the slot). */
 	:global(html[data-reversed='true']) .title-toggle__reel {
-		transform: translateY(-100%);
+		transform: translateY(-50%);
 	}
 
 	.title-toggle__icon {
@@ -304,7 +379,7 @@ const afterItems = buildRenderList(after);
 			transform: translateY(0);
 		}
 		50%, 90% {
-			transform: translateY(-100%);
+			transform: translateY(-50%);
 		}
 		100% {
 			transform: translateY(0);
@@ -468,6 +543,13 @@ const afterItems = buildRenderList(after);
 	   which is now below it, and default short tracks pack at the top toward
 	   whatever's now above them. No extra override needed there. */
 	.timeline[data-reversed='true'] :global(.track) {
+		flex-direction: column-reverse;
+	}
+
+	/* Same idea one level deeper — the project rows inside an ApartBlock's
+	   `.track-projects` column (e.g. Ádám's Personal Project holding
+	   Hypha then Biobot) also read latest-first in reversed timeline. */
+	.timeline[data-reversed='true'] :global(.track-projects) {
 		flex-direction: column-reverse;
 	}
 

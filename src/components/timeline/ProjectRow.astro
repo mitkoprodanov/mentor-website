@@ -13,9 +13,11 @@ interface Props {
 	emphasized?: boolean;
 	/** The enclosing company's date range — shown in the detail modal unless the project overrides it with its own `dateRange`. */
 	dateRange?: string;
+	/** 0-based position within the enclosing `.company-projects` grid — used by the reversed-timeline CSS to flip project order via the `order` property. */
+	index?: number;
 }
 
-const { project, emphasized = false, dateRange } = Astro.props;
+const { project, emphasized = false, dateRange, index = 0 } = Astro.props;
 
 async function loadCards(refs: ProjectDef['experiences']) {
 	return Promise.all(
@@ -71,7 +73,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		'project-row--square-bottom-right': Boolean(project.squareBottomRight),
 		'project-row--bridge-left': Boolean(project.bridgeLeft),
 	}}
-	style={project.rowSpan ? `grid-row: span ${project.rowSpan};` : undefined}
+	style={`--project-order: ${index};${project.rowSpan ? ` grid-row: span ${project.rowSpan};` : ''}`}
 >
 	{
 		project.bridgeLeft && (
@@ -193,6 +195,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		order: var(--project-order, 0);
 		/* A boxed row reads as a clickable action surface, not a plain panel:
 		   the same soft warm-accent tint + colored slim border language as the
 		   Skills / Download CV pills, one notch calmer since the box is large.
@@ -205,6 +208,14 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		/* The drifting sheen is a warm-gold glint on these warm surfaces. */
 		--sheen-color: var(--accent-3);
 		--sheen-strength: 0.07;
+	}
+
+	/* Timeline reversed: flip each project's grid `order` so the company's
+	   own project list reads latest→earliest in step with the outer timeline
+	   direction. Grid-auto-flow: dense in `.company-projects` still fills
+	   solo columns side by side after re-ordering. */
+	:global(html[data-reversed='true']) .project-row {
+		order: calc(0 - var(--project-order, 0));
 	}
 
 	.project-row--boxed {
