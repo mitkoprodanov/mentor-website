@@ -22,6 +22,12 @@ export interface ProjectMedia {
 	 * video id. Embedded via the YouTube IFrame Player API (see
 	 * projectModal.client.ts) so `start`/`end` can loop a segment.
 	 *
+	 * For 'linkedin-post': a LinkedIn post URL (e.g.
+	 * 'https://www.linkedin.com/feed/update/urn:li:activity:7331711027287404545/'),
+	 * a bare activity URN ('urn:li:activity:…'), or just the numeric activity id.
+	 * Embedded via LinkedIn's public post-embed iframe — no SDK/script needed —
+	 * and the post must be publicly visible to render.
+	 *
 	 * For 'text': unused — the note's own text lives in `caption` (used as the
 	 * body) instead of pointing at an asset. Pass an empty string.
 	 */
@@ -31,10 +37,12 @@ export interface ProjectMedia {
 	 * self-hosted mp4/webm file (badged "VIDEO"). 'facebook-reel' /
 	 * 'facebook-video' — an embedded, playable Facebook reel/video (badged
 	 * "REEL"/"VIDEO"). 'youtube' — an embedded YouTube video (badged
-	 * "YOUTUBE"). 'text' — a plain text note inline in the gallery, no
-	 * asset. All videos show in a full-width 16:9 frame.
+	 * "YOUTUBE"). 'linkedin-post' — an embedded LinkedIn post (badged
+	 * "LINKEDIN"), shown in a full-width portrait-ish frame that scrolls
+	 * internally if the post is taller. 'text' — a plain text note inline in
+	 * the gallery, no asset. All videos show in a full-width 16:9 frame.
 	 */
-	kind: 'image' | 'gif' | 'video' | 'facebook-reel' | 'facebook-video' | 'youtube' | 'text';
+	kind: 'image' | 'gif' | 'video' | 'facebook-reel' | 'facebook-video' | 'youtube' | 'linkedin-post' | 'text';
 	/**
 	 * Which person this item belongs to. Omit for shared media (the default
 	 * — belongs to everyone on the project). When set, the item reads as
