@@ -7,18 +7,51 @@ import type { ProjectMedia } from './types';
  */
 export const mandragoraMedia: ProjectMedia[] = [
 	{
-		src: '/projects/mandragora/boss.jpg',
-		kind: 'image',
-		caption: 'A boss encounter in the Action-RPG.',
+		src: 'https://www.youtube.com/watch?v=TuVsA-hP_qg',
+		kind: 'youtube',
+		start: 140,
+		end: 234,
+		caption: 'Mandragora - Necromancer Boss Fight',
+		person: 'adam',
+		tagIds: ['systems-design', 'ux-design', 'unreal-engine', 'encounter', 'ability'],
 	},
 	{
-		src: '/projects/mandragora/talents.gif',
-		kind: 'gif',
-		caption: 'Navigating the talent trees.',
+	src: '',
+		kind: 'text',
+		person: 'adam',
+		caption: 'Designed and tuned dynamic boss and enemy behaviors, delivering a progressive challenge that continually tested player mastery throughout the campaign.',
+		tagIds: ['systems-design', 'ux-design', 'unreal-engine', 'encounter', 'ability'],
 	},
 	{
-		src: '/projects/mandragora/ui.jpg',
+		src: 'https://www.youtube.com/watch?v=SbRSK-2cyc0',
+		kind: 'youtube',
+		start: 16,
+		end: 141,
+		caption: 'Mandragora - Crafting & Caravan NPC UIs',
+		person: 'adam',
+		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting'],
+	},
+	{
+	src: '',
+		kind: 'text',
+		person: 'adam',
+		caption: 'Translated core gamepad controls into intuitive Keyboard & Mouse schemes, preserving input responsiveness and game feel across PC platforms.',
+		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting'],
+	},
+	{
+		src: '/projects/mandragora/skilltree.jpg',
 		kind: 'image',
-		caption: 'The reworked UI/UX in action.',
+		person: 'adam',
+		caption: 'Mandragora - The skill tree of the Wyldwarden',
+		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting', 'progression', 'ability'],
+	},
+	{
+	src: '',
+		kind: 'text',
+		person: 'adam',
+		caption: 'Designed talent trees and player abilities, focusing on how to make complex character growth intuitive.',
+		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting', 'progression', 'ability'],
 	},
 ];
+
+

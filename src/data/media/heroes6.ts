@@ -5,8 +5,8 @@ export const heroes6Media: ProjectMedia[] = [
 	{
 		src: 'https://www.youtube.com/watch?v=EnHEfd9MFr0',
 		kind: 'youtube',
-		start: 62,
-		end: 120,
+		start: 64,
+		end: 471,
 		caption: 'Azkaal boss fight in which the player controls the boss.',
 		tagIds: ['ai', 'encounter', 'systems-design', 'ip-critical-design', 'ability'],
 	},
