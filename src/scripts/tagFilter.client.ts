@@ -87,13 +87,43 @@ function updateCardTags(filter: Filter): void {
 }
 
 function setFilter(filter: Filter): void {
+	const wasActive = currentFilter !== null;
+	const willBeActive = filter !== null;
 	currentFilter = filter;
 
 	// Apply results before the modal opens so the panel is already narrowed to
 	// the matching set when it lifts in.
 	applyResults(filter);
 
+	// Snapshot scroll BEFORE anything about the filter changes. Once
+	// filter-active is set, CSS synchronously hides #timeline and lifts
+	// .timeline-area to position:fixed, collapsing page height — the browser
+	// then clamps window.scrollY and queues a scroll event that would poison
+	// any later reading. filterModal.client.ts owns the actual lock/unlock and
+	// listens for these events so its work is synchronous with the class
+	// toggle (no MutationObserver microtask gap for other scripts to slip
+	// scroll updates into).
+	if (!wasActive && willBeActive) {
+		// If the click came from inside a hovered/opened person card, the sticky
+		// bar has just grown by ~700px to show the skills panel, and the browser
+		// has scroll-anchored window.scrollY DOWN to keep the visible anchor
+		// stable. That anchored Y is a phantom — it exists only while the panel
+		// is up, and restoring to it on close leaves the reader ~700px below
+		// where they started. panelToggle exposes the pre-reveal Y for exactly
+		// this case; fall back to window.scrollY for tag clicks that happen
+		// without a reveal up (e.g. inside the filter results modal).
+		const preReveal = (window as unknown as { __preRevealScrollY?: () => number | null }).__preRevealScrollY?.();
+		const capturedY = typeof preReveal === 'number' ? preReveal : window.scrollY;
+		document.dispatchEvent(new CustomEvent('filter:willopen', { detail: { scrollY: capturedY } }));
+	}
+
 	document.body.classList.toggle('filter-active', filter !== null);
+
+	if (!wasActive && willBeActive) {
+		document.dispatchEvent(new CustomEvent('filter:opened'));
+	} else if (wasActive && !willBeActive) {
+		document.dispatchEvent(new CustomEvent('filter:closed'));
+	}
 	setTagPressedState(filter);
 	updateChip(filter);
 	updateCardTags(filter);

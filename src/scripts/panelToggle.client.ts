@@ -22,8 +22,14 @@ function panels(): HTMLElement[] {
 }
 
 function setOpen(panel: HTMLElement, open: boolean): void {
+	// Touch equivalent of the hover reveal: is-open expands .side-panel-stack
+	// and grows the sticky bar. Snapshot pre-open scrollY the same way (see
+	// showReveal for why) BEFORE the class flip, so tagFilter can capture the
+	// reader's real Y when they click a skill tag inside the opened card.
+	if (open) snapshotIfIdle();
 	panel.classList.toggle('is-open', open);
 	panel.querySelector<HTMLElement>('.panel-toggle')?.setAttribute('aria-expanded', String(open));
+	if (!open && !preRevealActive()) clearSnapshot();
 }
 
 function closeAll(except?: HTMLElement): void {
@@ -62,11 +68,51 @@ function anyCardHovered(): boolean {
 	return panels().some((card) => card.matches(':hover'));
 }
 
+// Pre-reveal scrollY snapshot — exposed to tagFilter so that when the reader
+// clicks a skill tag WHILE hovering (or touch-opened) they end up back at the
+// Y they saw *before* the hover, not at the browser's scroll-anchored Y that
+// exists only because the sticky bar grew ~700px to fit the skills panel.
+// See the note in showReveal() for the full mechanism.
+let preRevealScrollY: number | null = null;
+function preRevealActive(): boolean {
+	return Boolean(bar?.classList.contains('reveal')) || panels().some((p) => p.classList.contains('is-open'));
+}
+function snapshotIfIdle(): void {
+	if (!preRevealActive()) preRevealScrollY = window.scrollY;
+}
+function clearSnapshot(): void {
+	preRevealScrollY = null;
+}
+// Expose to tagFilter (bundled together by Astro but no shared module here).
+(window as unknown as { __preRevealScrollY?: () => number | null }).__preRevealScrollY = () =>
+	preRevealActive() ? preRevealScrollY : null;
+
+function showReveal(): void {
+	if (!bar) return;
+	// SNAPSHOT ORDER MATTERS: read scrollY BEFORE adding .reveal. Once the
+	// class is on, .side-panel-stack switches from display:none to display:
+	// block, the sticky person-bar grows by ~700px, and the browser's scroll
+	// anchoring silently pushes window.scrollY down by that same amount to
+	// keep the visible anchor stable. The pre-reveal value is the reader's
+	// real position; the post-reveal value is a phantom that only exists
+	// while the panel is up.
+	snapshotIfIdle();
+	bar.classList.add('reveal');
+}
+
+function hideReveal(): void {
+	if (!bar) return;
+	bar.classList.remove('reveal');
+	// After the class comes off and the bar collapses back, scroll anchoring
+	// snaps scrollY back on its own — no need to restore it here.
+	if (!preRevealActive()) clearSnapshot();
+}
+
 if (bar) {
 	panels().forEach((card) => {
 		card.addEventListener('pointerenter', () => {
 			if (!hoverMQ.matches || suppressed) return;
-			bar.classList.add('reveal');
+			showReveal();
 		});
 		card.addEventListener('pointerleave', () => {
 			// Locked open via the Skills button: stay revealed no matter where the
@@ -78,7 +124,7 @@ if (bar) {
 			// other card either (moving into the centre over the timeline hides;
 			// moving between the two cards keeps both open).
 			if (!anyCardHovered()) {
-				bar.classList.remove('reveal');
+				hideReveal();
 				suppressed = false;
 			}
 		});

@@ -99,17 +99,26 @@ if (contact && !prefersReduced && !coarsePointer) {
 
 	const onScroll = () => {
 		const y = window.scrollY;
-		const dir = y - lastY;
-		lastY = y;
 
 		// Keep the guard alive while a hash-link jump is still travelling, and
 		// let it drive the scroll all the way to its target untouched.
 		if (navJump) {
 			armNavJump();
+			lastY = y;
 			return;
 		}
 
-		if (snapping || dir === 0 || blocked()) return;
+		// While another overlay owns the page (the filter modal locks body to
+		// position:fixed, dropping window.scrollY to 0), stand down AND don't
+		// touch lastY — otherwise the restore-to-prev-position scroll on modal
+		// close reads as a huge downward jump and can fire snapTo(atTop),
+		// launching the reader all the way to the Contact section.
+		if (blocked()) return;
+
+		const dir = y - lastY;
+		lastY = y;
+
+		if (snapping || dir === 0) return;
 
 		// Document-space offset of the Contact section's top edge, recomputed each
 		// time so it stays correct as the layout settles (fonts, images, resize).
