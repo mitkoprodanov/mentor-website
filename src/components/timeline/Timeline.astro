@@ -144,29 +144,13 @@ const afterItems = buildRenderList(after);
 <Section id="timeline" compact>
 	<div class="timeline-header">
 		<h2 class="section-title brand-heading">
-			<button
-				type="button"
-				class="title-toggle"
-				aria-label="Reverse timeline direction"
-				aria-pressed="true"
-				data-timeline-direction-toggle
-			>
+			{/* Direction toggle is currently disabled — the pill renders as a
+			   static "Timeline" heading. To re-enable, restore the <button> +
+			   icon-reel markup from git history and un-comment the click
+			   listener at the bottom of this file. */}
+			<span class="title-toggle title-toggle--static">
 				<span class="title-toggle__text">Timeline</span>
-				<span class="title-toggle__icon-wrap btn-sheen" aria-hidden="true">
-					<span class="title-toggle__slot">
-						<span class="title-toggle__reel">
-							{/* Down arrow — time flows top→bottom, oldest first (forward direction). */}
-							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-								<path d="M12 4v14M12 18l-5-5M12 18l5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-							</svg>
-							{/* Up arrow — time flows bottom→top, latest first (reversed direction). */}
-							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-								<path d="M12 20V6M12 6l-5 5M12 6l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-							</svg>
-						</span>
-					</span>
-				</span>
-			</button>
+			</span>
 		</h2>
 	</div>
 	<div class="timeline" data-timeline data-reversed="true">
@@ -205,21 +189,6 @@ const afterItems = buildRenderList(after);
 		width: 100%;
 		max-width: 1360px;
 		margin-bottom: 3rem;
-		/* Stick to just below the fixed navbar while the timeline section is
-		   scrolling past, so the direction-toggle stays reachable no matter
-		   how deep the reader has scrolled into the timeline itself. `z-index`
-		   above the timeline cards but below the navbar's own layer. */
-		position: sticky;
-		top: 3.5rem;
-		z-index: 5;
-		pointer-events: none;
-	}
-
-	.timeline-header .section-title {
-		/* Restore hit-testing for the pill itself; the wrapper opts out so
-		   the invisible padding around the pill doesn't swallow clicks on
-		   the timeline cards passing beneath the sticky header. */
-		pointer-events: auto;
 	}
 
 	.timeline-header .section-title {
@@ -273,8 +242,13 @@ const afterItems = buildRenderList(after);
 		transition: border-color 0.25s ease;
 	}
 
-	.title-toggle:hover,
-	.title-toggle:focus-visible {
+	/* Static (toggle-disabled) variant — no cursor, no hover glow, not focusable. */
+	.title-toggle--static {
+		cursor: default;
+	}
+
+	.title-toggle:not(.title-toggle--static):hover,
+	.title-toggle:not(.title-toggle--static):focus-visible {
 		outline: none;
 		border-color: color-mix(in srgb, var(--accent) 80%, var(--border));
 		box-shadow: 0 0 34px -2px color-mix(in srgb, var(--accent) 48%, transparent);
@@ -653,7 +627,11 @@ const afterItems = buildRenderList(after);
 	// mirrored onto the timeline element itself (so the timeline's scoped
 	// CSS keeps its clean `.timeline[data-reversed]` selectors). The SSR
 	// default in Layout.astro / Timeline.astro is "true" (latest first).
-	const toggles = document.querySelectorAll<HTMLButtonElement>('[data-timeline-direction-toggle]');
+	// Direction toggle is disabled — see the render-side note in the markup
+	// above. Leaving the wiring commented out (not deleted) so re-enabling
+	// is a two-file revert. The <html data-reversed="true"> default in
+	// Layout.astro still governs the layout, unchanged.
+	const toggles: NodeListOf<HTMLButtonElement> = document.querySelectorAll('[data-timeline-direction-toggle-DISABLED]');
 	toggles.forEach((btn) => {
 		const timeline = btn.closest('section')?.querySelector<HTMLElement>('[data-timeline]');
 		if (!timeline) return;
