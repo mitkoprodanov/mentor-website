@@ -349,7 +349,7 @@ export const timeline: TimelineEntry[] = [
 					media: aroundMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-around' },
-						{ person: 'adam', slug: 'adam-around', tagIds: ['blueprint-scripting'] },
+						{ person: 'adam', slug: 'adam-around', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting']},
 					],
 				},
 				{
