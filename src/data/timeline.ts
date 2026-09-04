@@ -400,7 +400,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'imagic-labs-project',
 						order: 2025,
 						name: 'Image Gallery Product',
-						info: 'A mobile image-gallery startup product — SOLID and Clean Code in daily practice.',
+						info: 'Innovative mobile image-gallery startup product',
 						media: imagicLabsMedia,
 						experiences: [
 							{

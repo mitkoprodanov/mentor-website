@@ -36,6 +36,29 @@ function scaleVideo(frame: Element): void {
 	if (width > 0) iframe.style.transform = `scale(${width / VIDEO_BASE_W})`;
 }
 
+/**
+ * `image-row` composites (see ProjectDetail.astro) lay several images side by
+ * side and want all of them at the same rendered height, with the row spanning
+ * the full frame width. That's `flex-grow` proportional to each image's own
+ * intrinsic aspect (width/height): width_i = W · a_i / Σa, so height_i =
+ * width_i / a_i = W / Σa — the same for every image. We can only set that once
+ * an image has loaded (naturalWidth/Height become known); until then, the CSS
+ * default of `flex: 1 1 0` distributes width evenly.
+ */
+function initImageRows(): void {
+	document.querySelectorAll<HTMLElement>('[data-image-row]').forEach((row) => {
+		row.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+			const apply = () => {
+				const w = img.naturalWidth;
+				const h = img.naturalHeight;
+				if (w > 0 && h > 0) img.style.flexGrow = String(w / h);
+			};
+			if (img.complete) apply();
+			else img.addEventListener('load', apply, { once: true });
+		});
+	});
+}
+
 function initVideos(): void {
 	const frames = document.querySelectorAll<HTMLElement>('.shot-frame--video');
 	if (frames.length === 0) return;
@@ -169,6 +192,7 @@ function init(): void {
 	if (dialogs.length === 0) return;
 
 	initVideos();
+	initImageRows();
 
 	document.addEventListener('click', (event) => {
 		const el = event.target as HTMLElement;

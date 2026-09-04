@@ -228,6 +228,17 @@ function personStyle(m: ProjectMedia): string | undefined {
 							{m.caption}
 						</figcaption>
 					</figure>
+				) : m.kind === 'image-row' ? (
+					<figure class={shotClasses(m, 'shot--image-row')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+						<div class="shot-frame shot-frame--image-row" data-image-row>
+							{(m.images ?? []).map((imgSrc: string) => (
+								<img src={imgSrc} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
+							))}
+						</div>
+						<figcaption>
+							{m.caption}
+						</figcaption>
+					</figure>
 				) : m.kind === 'text' ? (
 					<figure class={shotClasses(m, 'shot--text')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
 						<div class="shot-text">
@@ -579,6 +590,31 @@ function personStyle(m: ProjectMedia): string | undefined {
 	.shot-linkedin__fallback-hint {
 		font-size: 0.85rem;
 		color: var(--fg-muted);
+	}
+
+	/* A composite of several images laid out horizontally. Each <img> uses
+	   `flex: <aspect> 1 0` — grow proportional to its own aspect (set by
+	   projectModal.client.ts once the image loads) — so widths distribute as
+	   W * a_i / Σa. Because width_i / a_i = W / Σa is the same for every
+	   image, all heights match; and the row spans the full frame width. A
+	   small `--row-gap` sits between adjacent images. Before the loaders
+	   report their intrinsic sizes, every image starts on `flex: 1 1 0`,
+	   which just distributes width evenly. */
+	.shot-frame--image-row {
+		--row-gap: 4px;
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: stretch;
+		gap: var(--row-gap);
+		background: #000;
+	}
+
+	.shot-frame--image-row img {
+		display: block;
+		width: 100%;
+		height: auto;
+		min-width: 0;
+		flex: 1 1 0;
 	}
 
 	.shot-badge {

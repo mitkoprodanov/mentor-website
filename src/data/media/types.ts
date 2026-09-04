@@ -28,6 +28,9 @@ export interface ProjectMedia {
 	 * Embedded via LinkedIn's public post-embed iframe — no SDK/script needed —
 	 * and the post must be publicly visible to render.
 	 *
+	 * For 'image-row': unused — the composite's images live in `images`
+	 * instead. Pass an empty string.
+	 *
 	 * For 'text': unused — the note's own text lives in `caption` (used as the
 	 * body) instead of pointing at an asset. Pass an empty string.
 	 */
@@ -39,10 +42,13 @@ export interface ProjectMedia {
 	 * "REEL"/"VIDEO"). 'youtube' — an embedded YouTube video (badged
 	 * "YOUTUBE"). 'linkedin-post' — an embedded LinkedIn post (badged
 	 * "LINKEDIN"), shown in a full-width portrait-ish frame that scrolls
-	 * internally if the post is taller. 'text' — a plain text note inline in
-	 * the gallery, no asset. All videos show in a full-width 16:9 frame.
+	 * internally if the post is taller. 'image-row' — a composite of several
+	 * static shots (from `images`) laid out horizontally, widths distributed
+	 * so every image ends up at the same height and the row spans the full
+	 * gallery width. 'text' — a plain text note inline in the gallery, no
+	 * asset. All videos show in a full-width 16:9 frame.
 	 */
-	kind: 'image' | 'gif' | 'video' | 'facebook-reel' | 'facebook-video' | 'youtube' | 'linkedin-post' | 'text';
+	kind: 'image' | 'gif' | 'video' | 'facebook-reel' | 'facebook-video' | 'youtube' | 'linkedin-post' | 'image-row' | 'text';
 	/**
 	 * Which person this item belongs to. Omit for shared media (the default
 	 * — belongs to everyone on the project). When set, the item reads as
@@ -73,4 +79,12 @@ export interface ProjectMedia {
 	 */
 	start?: number;
 	end?: number;
+	/**
+	 * 'image-row' only — the images that make up the composite, in the order
+	 * they appear left-to-right. Each entry is a `/public` path or absolute
+	 * URL, same as `src` on a plain 'image' item. Widths are distributed at
+	 * render time so all images end up the same height and together span the
+	 * full gallery width; add or reorder freely without touching layout.
+	 */
+	images?: string[];
 }
