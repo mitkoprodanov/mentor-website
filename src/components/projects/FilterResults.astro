@@ -1,7 +1,7 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson } from '../../data/people';
-import { getTag } from '../../data/tags';
+import { getTag, sortTagIdsByIndex } from '../../data/tags';
 import { getCatalogProjectsInOrder, type CatalogProject } from '../../data/projectCatalog';
 import ProjectDetail from './ProjectDetail.astro';
 
@@ -47,7 +47,9 @@ async function loadProject(project: CatalogProject): Promise<LoadedProject> {
 		project,
 		cards,
 		peopleLabel: cards.map((c) => c.personName).join(' & '),
-		tagLabels: project.experienceTagIds.map((id) => getTag(id).label),
+		// Ordered by each tag's canonical index in data/tags.ts, so the pill row
+		// reads the same order everywhere a project's tags surface.
+		tagLabels: sortTagIdsByIndex(project.experienceTagIds).map((id) => getTag(id).label),
 	};
 }
 

@@ -14,6 +14,7 @@
 
 import type { ProjectMedia } from './media/types';
 import { getPerson, COLUMN, type PersonId } from './people';
+import { sortTagIdsByIndex } from './tags';
 import { timeline, type CompanyDef, type ExperienceRef, type ProjectDef } from './timeline';
 
 /** Which grouping column a project belongs to: worked on together, or one side only. */
@@ -63,8 +64,11 @@ function buildProject(project: ProjectDef, company: CompanyDef): CatalogProject 
 	const media = project.media ?? [];
 	const dateRange = project.dateRange ?? company.dateRange;
 
-	const experienceTagIds = uniq(experiences.flatMap((ref) => ref.tagIds ?? []));
-	const mediaTagIds = uniq(media.flatMap((m) => m.tagIds ?? []));
+	// Tag unions are sorted by each tag's canonical index in data/tags.ts, so
+	// any consumer that renders them as a list (a project's detail pills, a
+	// media item's tag summary) gets a stable order matching the tag registry.
+	const experienceTagIds = sortTagIdsByIndex(uniq(experiences.flatMap((ref) => ref.tagIds ?? [])));
+	const mediaTagIds = sortTagIdsByIndex(uniq(media.flatMap((m) => m.tagIds ?? [])));
 
 	return {
 		key: project.modalId ?? project.id,
@@ -80,7 +84,7 @@ function buildProject(project: ProjectDef, company: CompanyDef): CatalogProject 
 		media,
 		experienceTagIds,
 		mediaTagIds,
-		allTagIds: uniq([...experienceTagIds, ...mediaTagIds]),
+		allTagIds: sortTagIdsByIndex(uniq([...experienceTagIds, ...mediaTagIds])),
 	};
 }
 
@@ -99,9 +103,9 @@ function mergeInto(target: CatalogProject, extra: CatalogProject): void {
 	}
 	target.experiences = experiences;
 	target.media = media;
-	target.experienceTagIds = uniq([...target.experienceTagIds, ...extra.experienceTagIds]);
-	target.mediaTagIds = uniq([...target.mediaTagIds, ...extra.mediaTagIds]);
-	target.allTagIds = uniq([...target.allTagIds, ...extra.allTagIds]);
+	target.experienceTagIds = sortTagIdsByIndex(uniq([...target.experienceTagIds, ...extra.experienceTagIds]));
+	target.mediaTagIds = sortTagIdsByIndex(uniq([...target.mediaTagIds, ...extra.mediaTagIds]));
+	target.allTagIds = sortTagIdsByIndex(uniq([...target.allTagIds, ...extra.allTagIds]));
 	target.side = sideForPeople(new Set(experiences.map((ref) => ref.person)));
 	if (extra.startYear < target.startYear) target.startYear = extra.startYear;
 	// Split halves collapse to the earlier half's sort key so the merged

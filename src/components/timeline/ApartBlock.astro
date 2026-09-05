@@ -1,7 +1,7 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
-import { getTag } from '../../data/tags';
+import { getTag, sortTagIdsByIndex } from '../../data/tags';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import { parseDateRange, isOngoing } from './dateRange';
@@ -67,7 +67,10 @@ const tracks = await Promise.all(
 							modalId: `tl-${project.id}`,
 							modalDateRange: project.dateRange ?? company.dateRange,
 							peopleLabel: cards.map((c) => c.person.name).join(' & '),
-							modalTagLabels: [...new Set(cards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label),
+							// Ordered by each tag's canonical index in data/tags.ts so the
+							// pill row always reads in that order regardless of which
+							// experience contributed the tag.
+							modalTagLabels: sortTagIdsByIndex([...new Set(cards.flatMap((c) => c.tagIds))]).map((id) => getTag(id).label),
 							modalMedia: project.media ?? PLACEHOLDER_MEDIA,
 						};
 					}),

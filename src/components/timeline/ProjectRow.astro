@@ -1,7 +1,7 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, COLUMN } from '../../data/people';
-import { getTag } from '../../data/tags';
+import { getTag, sortTagIdsByIndex } from '../../data/tags';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import type { ProjectDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
@@ -57,7 +57,10 @@ const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
 const modalId = `tl-${project.modalId ?? project.id}`;
 const modalDateRange = project.dateRange ?? dateRange;
 const peopleLabel = modalCards.map((c) => c.person.name).join(' & ');
-const modalTagLabels = [...new Set(modalCards.flatMap((c) => c.tagIds))].map((id) => getTag(id).label);
+// Union of the modal's experience tags, ordered by each tag's canonical index
+// in data/tags.ts (via sortTagIdsByIndex) so the pill row always reads in the
+// same order regardless of which experience contributed the tag.
+const modalTagLabels = sortTagIdsByIndex([...new Set(modalCards.flatMap((c) => c.tagIds))]).map((id) => getTag(id).label);
 const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 ---
 

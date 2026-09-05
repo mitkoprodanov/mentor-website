@@ -13,9 +13,21 @@ export interface WorkTag {
 	label: string;
 	/** e.g. "Languages", "Engines", "AI", "Genre", "Award" — grouping is derived from this at render time. */
 	category: string;
+	/**
+	 * Position in the canonical order — auto-assigned from this file's list
+	 * below. Any surface that renders a list of tags (a project's detail pills,
+	 * the media filter's tag summary, a person card's skills) sorts by this
+	 * index, so tag order always mirrors the way they're written here,
+	 * regardless of the order they happened to be attached to a project,
+	 * experience, or media item.
+	 */
+	index: number;
 }
 
-export const tags: WorkTag[] = [
+// Written without indexes; the index of each tag is its position in this list.
+// A single source of truth so re-ordering just means dragging a line up or
+// down — the numeric index falls out below and everything downstream re-sorts.
+const rawTags: Omit<WorkTag, 'index'>[] = [
 	// Design
 	{ id: 'ip-critical-design', label: 'IP-Critical Design', category: 'Design' },
 	{ id: 'ux-design', label: 'UX Design', category: 'Design' },
@@ -55,6 +67,8 @@ export const tags: WorkTag[] = [
 	{ id: 'clean-code', label: 'Clean Code', category: 'Tech' },
 ];
 
+export const tags: WorkTag[] = rawTags.map((tag, index) => ({ ...tag, index }));
+
 const tagsById = new Map(tags.map((tag) => [tag.id, tag]));
 
 export function getTag(id: string): WorkTag {
@@ -63,12 +77,32 @@ export function getTag(id: string): WorkTag {
 	return tag;
 }
 
-/** Groups tag ids by category, preserving first-occurrence order (so list order controls display order). */
+/**
+ * Sort a list of tag ids by each tag's canonical `index` (its position in the
+ * `rawTags` list above). Use this anywhere a set of tags renders as a visible
+ * list — a project's detail pills, the media filter's tag summary, a person
+ * card's skills — so tag order always mirrors the way they're written in this
+ * file, regardless of the order they were attached to a project/experience/
+ * media item. Unknown ids are dropped rather than throwing (they'd never reach
+ * a render surface anyway; `getTag` guards call sites that expect one).
+ */
+export function sortTagIdsByIndex(tagIds: readonly string[]): string[] {
+	return [...tagIds]
+		.filter((id) => tagsById.has(id))
+		.sort((a, b) => getTag(a).index - getTag(b).index);
+}
+
+/**
+ * Groups tag ids by category, with tags inside each category sorted by their
+ * canonical `index`. Categories appear in the order they're first mentioned in
+ * the input — which, when the input has already been sorted by `index`, is the
+ * category order in `rawTags`.
+ */
 export function groupTagsByCategory(tagIds: string[]): { category: string; tags: WorkTag[] }[] {
 	const groups: { category: string; tags: WorkTag[] }[] = [];
 	const groupByCategory = new Map<string, WorkTag[]>();
 
-	for (const tagId of tagIds) {
+	for (const tagId of sortTagIdsByIndex(tagIds)) {
 		const tag = getTag(tagId);
 		let group = groupByCategory.get(tag.category);
 		if (!group) {
