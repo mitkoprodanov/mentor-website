@@ -56,6 +56,26 @@ function unlock(): void {
 	bar?.classList.remove('locked');
 }
 
+// "Lock Skills" checkbox beside each Skills button. When checked, an outside
+// click does NOT dismiss the revealed skills panel — only pressing the Skills
+// button again does. Unchecked leaves the original click-away-dismisses
+// behaviour intact. Each card carries its own box in the markup, but the two
+// Skills buttons behave as one paired unit, so the checkboxes mirror each
+// other — flipping one flips the other, and the effective state is a single
+// boolean the rest of the script reads via lockCheckActive().
+const lockChecks = Array.from(document.querySelectorAll<HTMLInputElement>('.panel-lock-check'));
+lockChecks.forEach((cb) => {
+	cb.addEventListener('change', () => {
+		lockChecks.forEach((other) => {
+			if (other !== cb) other.checked = cb.checked;
+		});
+	});
+});
+
+function lockCheckActive(): boolean {
+	return lockChecks.some((cb) => cb.checked);
+}
+
 /**
  * The hover reveal keys off the two cards themselves, NOT the full-width bar
  * container. The bar spans the whole width — including the open centre over
@@ -117,7 +137,9 @@ if (bar) {
 		card.addEventListener('pointerleave', () => {
 			// Locked open via the Skills button: stay revealed no matter where the
 			// pointer goes — only an outside click (or Escape / a filter tag)
-			// collapses it now.
+			// collapses it now. The Lock checkbox does NOT influence this on its
+			// own: without a Skills-button click there is nothing to hold open, so
+			// unhovering closes as normal.
 			if (locked) return;
 			// By the time pointerleave fires the pointer has already moved on, so
 			// :hover reflects where it went: collapse only if it isn't over the
@@ -210,8 +232,13 @@ document.addEventListener('click', (event) => {
 
 	// A click anywhere outside both cards collapses them. The two cards are one
 	// unit, so this collapses *both* — clearing a locked-open desktop reveal and
-	// any touch-opened accordion card alike.
+	// any touch-opened accordion card alike. Skipped only when the panel is
+	// currently locked open via the Skills button AND the Lock checkbox is on:
+	// the checkbox rewires the Skills-button lock so only pressing Skills again
+	// can release it. A merely-hovered (not-yet-locked) panel is untouched by
+	// the checkbox and still dismisses on outside click.
 	if (!target.closest('.side-panel')) {
+		if (locked && lockCheckActive()) return;
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
@@ -221,6 +248,7 @@ document.addEventListener('click', (event) => {
 
 document.addEventListener('keydown', (event) => {
 	if (event.key === 'Escape') {
+		if (locked && lockCheckActive()) return;
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
