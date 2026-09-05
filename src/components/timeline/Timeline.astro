@@ -221,12 +221,12 @@ const afterItems = buildRenderList(after);
 		letter-spacing: var(--letter-brand);
 		color: inherit;
 		background: var(--bg);
-		border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+		border: 1px solid color-mix(in srgb, var(--mentor) 55%, var(--border));
 		border-radius: 999px;
 		cursor: default;
 		isolation: isolate;
-		box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent) 30%, transparent);
-		text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
+		box-shadow: 0 0 24px -4px color-mix(in srgb, var(--mentor) 30%, transparent);
+		text-shadow: 0 0 12px color-mix(in srgb, var(--mentor) 18%, transparent);
 		transition:
 			border-color 0.25s ease,
 			box-shadow 0.25s ease,
@@ -239,7 +239,7 @@ const afterItems = buildRenderList(after);
 		content: '';
 		position: absolute;
 		inset: -6px -10px;
-		border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+		border: 1px solid color-mix(in srgb, var(--mentor) 45%, transparent);
 		border-radius: 999px;
 		pointer-events: none;
 		transition: border-color 0.25s ease;
@@ -248,14 +248,14 @@ const afterItems = buildRenderList(after);
 	.title-toggle:hover,
 	.title-toggle:focus-visible {
 		outline: none;
-		border-color: color-mix(in srgb, var(--accent) 80%, var(--border));
-		box-shadow: 0 0 34px -2px color-mix(in srgb, var(--accent) 48%, transparent);
-		text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 40%, transparent);
+		border-color: color-mix(in srgb, var(--mentor) 80%, var(--border));
+		box-shadow: 0 0 34px -2px color-mix(in srgb, var(--mentor) 48%, transparent);
+		text-shadow: 0 0 22px color-mix(in srgb, var(--mentor) 40%, transparent);
 	}
 
 	.title-toggle:hover::before,
 	.title-toggle:focus-visible::before {
-		border-color: color-mix(in srgb, var(--accent) 72%, transparent);
+		border-color: color-mix(in srgb, var(--mentor) 72%, transparent);
 	}
 
 	/* The warm-accent glow lives ONLY behind the direction icon — a soft
@@ -271,8 +271,8 @@ const afterItems = buildRenderList(after);
 		border-radius: 50%;
 		background: radial-gradient(
 			circle at 50% 50%,
-			color-mix(in srgb, var(--accent) 60%, transparent) 0%,
-			color-mix(in srgb, var(--accent) 26%, transparent) 45%,
+			color-mix(in srgb, var(--mentor) 60%, transparent) 0%,
+			color-mix(in srgb, var(--mentor) 26%, transparent) 45%,
 			transparent 100%
 		);
 		transition: background 0.25s ease;
@@ -282,8 +282,8 @@ const afterItems = buildRenderList(after);
 	.title-toggle:focus-visible .title-toggle__icon-wrap {
 		background: radial-gradient(
 			circle at 50% 50%,
-			color-mix(in srgb, var(--accent) 75%, transparent) 0%,
-			color-mix(in srgb, var(--accent) 34%, transparent) 45%,
+			color-mix(in srgb, var(--mentor) 75%, transparent) 0%,
+			color-mix(in srgb, var(--mentor) 34%, transparent) 45%,
 			transparent 100%
 		);
 	}

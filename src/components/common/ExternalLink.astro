@@ -24,7 +24,11 @@ const { href, external = true, class: className } = Astro.props;
 		display: inline-flex;
 		align-items: baseline;
 		gap: 0.3em;
-		color: var(--accent-3);
+		/* Tint follows an ancestor's --link-color if it sets one (e.g. a
+		   person's LinkedIn in ScrollyRegion picks up --person-color; the
+		   Mentor Game Studio contact card sets --link-color: var(--mentor));
+		   plain honey by default everywhere else. */
+		color: var(--link-color, var(--accent-3));
 		font-weight: 600;
 		text-decoration: none;
 		position: relative;
@@ -62,7 +66,7 @@ const { href, external = true, class: className } = Astro.props;
 	}
 
 	.external-link:focus-visible {
-		outline: 2px solid var(--accent-3);
+		outline: 2px solid var(--link-color, var(--accent-3));
 		outline-offset: 3px;
 	}
 </style>

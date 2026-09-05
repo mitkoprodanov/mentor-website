@@ -756,6 +756,10 @@ const adam = getPerson('adam');
 	.side-panel-linkedin {
 		opacity: 0;
 		pointer-events: none;
+		/* Person-tinted — Mitko's link glows ember, Ádám's honey — so the
+		   attribution reads with the same color language the rest of each
+		   panel already carries. */
+		--link-color: var(--person-color);
 	}
 
 	.side-panel-linkedin :global(.external-link) {
