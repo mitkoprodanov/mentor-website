@@ -29,23 +29,23 @@ export interface WorkTag {
 // down — the numeric index falls out below and everything downstream re-sorts.
 const rawTags: Omit<WorkTag, 'index'>[] = [
 	// Design
+	{ id: 'systems-design', label: 'Systems Design', category: 'Design' },
+	{ id: 'level-design', label: 'Level Design', category: 'Design' },
 	{ id: 'ip-critical-design', label: 'IP-Critical Design', category: 'Design' },
 	{ id: 'ux-design', label: 'UX Design', category: 'Design' },
-	{ id: 'balance', label: 'Balance', category: 'Design' },
-	{ id: 'level-design', label: 'Level Design', category: 'Design' },
-	{ id: 'systems-design', label: 'Systems Design', category: 'Design' },
 	{ id: 'narrative-design', label: 'Narrative Design', category: 'Design' },
 	{ id: 'puzzle-design', label: 'Puzzle Design', category: 'Design' },
 	{ id: 'board-game-design', label: 'Board Game Design', category: 'Design' },
+	{ id: 'balance', label: 'Balance', category: 'Design' },
 
 	// Game Systems
-	{ id: 'metagame', label: 'Metagame', category: 'Game Systems' },
-	{ id: 'progression', label: 'Progression', category: 'Game Systems' },
 	{ id: 'gameplay', label: 'Gameplay', category: 'Game Systems' },
 	{ id: 'ability', label: 'Ability', category: 'Game Systems' },
 	{ id: 'encounter', label: 'Encounter', category: 'Game Systems' },
 	{ id: 'navigation', label: 'Navigation', category: 'Game Systems' },
 	{ id: 'ai', label: 'AI', category: 'Game Systems' },
+	{ id: 'progression', label: 'Progression', category: 'Game Systems' },
+	{ id: 'metagame', label: 'Metagame', category: 'Game Systems' },
 	{ id: 'ui', label: 'UI', category: 'Game Systems' },
 	{ id: 'devtools', label: 'DevTools', category: 'Game Systems' },
 
