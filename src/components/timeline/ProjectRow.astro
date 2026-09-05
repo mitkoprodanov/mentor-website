@@ -178,7 +178,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 			>
 				{modalCards.map((c) => (
 					<div class="modal-exp" data-person={c.person?.id ?? c.personId} style={`--person-color: var(--${c.person?.id ?? c.personId}-color)`}>
-						{modalCards.length > 1 && <p class="modal-exp__person">{c.person.name}</p>}
+						<p class="modal-exp__person">{c.person.name}</p>
 						<c.Content />
 					</div>
 				))}

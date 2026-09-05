@@ -125,15 +125,6 @@ function personStyle(m: ProjectMedia): string | undefined {
 <header class:list={['project-modal__head', { 'project-modal__head--shared': Boolean(people) }]}>
 	<Title id={titleId} class="project-modal__title">{title}</Title>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
-	{
-		(dateRange || people) && (
-			<p class="project-modal__meta">
-				{dateRange && <span class="project-modal__year">{dateRange}</span>}
-				{dateRange && people && <span class="project-modal__meta-sep" aria-hidden="true">·</span>}
-				{people && <span>{people}</span>}
-			</p>
-		)
-	}
 </header>
 
 {

@@ -95,7 +95,7 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 						>
 							{lp.cards.map((c) => (
 								<div class="modal-exp" data-person={c.personId} style={`--person-color: var(--${c.personId}-color)`}>
-									{lp.cards.length > 1 && <p class="modal-exp__person">{c.personName}</p>}
+									<p class="modal-exp__person">{c.personName}</p>
 									<c.Content />
 								</div>
 							))}
