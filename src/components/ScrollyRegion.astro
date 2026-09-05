@@ -83,16 +83,10 @@ const adam = getPerson('adam');
 								<CvDownloadLink person={entry.person} />
 							</div>
 							<div class="side-panel-action">
-								<div class="panel-toggle-wrap">
-									<button class="panel-toggle btn-sheen" type="button" aria-expanded="false">
-										<span class="panel-toggle-label">Skills</span>
-										<span class="panel-toggle-chev" aria-hidden="true">▾</span>
-									</button>
-									<label class="panel-lock" title="Keep skills open when clicking outside — only the Skills button closes them">
-										<input type="checkbox" class="panel-lock-check" />
-										<span class="panel-lock-label">Lock</span>
-									</label>
-								</div>
+								<button class="panel-toggle btn-sheen" type="button" aria-expanded="false">
+									<span class="panel-toggle-label">Skills</span>
+									<span class="panel-toggle-chev" aria-hidden="true">▾</span>
+								</button>
 								<div class="side-panel-linkedin">
 									<ExternalLink href={entry.person.linkedin}>LinkedIn</ExternalLink>
 								</div>
@@ -668,83 +662,6 @@ const adam = getPerson('adam');
 
 	.panel-toggle-chev {
 		transition: transform 0.2s ease;
-	}
-
-	/* Wraps the Skills button + its "Lock" checkbox in a single row so they
-	   crossfade as one unit with the LinkedIn cell above (both are placed in
-	   grid cell 1/1 of .side-panel-action). */
-	.panel-toggle-wrap {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.55rem;
-	}
-
-	.person-slot--right .panel-toggle-wrap {
-		flex-direction: row-reverse;
-	}
-
-	/* Small person-tinted checkbox label — sits beside the Skills button and,
-	   when checked, keeps the revealed skills panel open on outside clicks
-	   (see panelToggle.client.ts). Native checkbox restyled to match the
-	   pill-and-hairline vocabulary of the surrounding controls. */
-	.panel-lock {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.7rem;
-		font-weight: 600;
-		color: color-mix(in srgb, var(--person-color) 75%, var(--fg));
-		cursor: pointer;
-		user-select: none;
-		opacity: 0.75;
-		transition: opacity 0.2s ease;
-	}
-
-	.panel-lock:hover {
-		opacity: 1;
-	}
-
-	.panel-lock-check {
-		appearance: none;
-		-webkit-appearance: none;
-		width: 14px;
-		height: 14px;
-		margin: 0;
-		border: 1px solid color-mix(in srgb, var(--person-color) 55%, transparent);
-		border-radius: 4px;
-		background: color-mix(in srgb, var(--person-color) 8%, transparent);
-		cursor: pointer;
-		display: inline-grid;
-		place-content: center;
-		transition:
-			background 0.2s ease,
-			border-color 0.2s ease,
-			box-shadow 0.2s ease;
-	}
-
-	.panel-lock-check::before {
-		content: '';
-		width: 8px;
-		height: 8px;
-		border-radius: 2px;
-		background: var(--bg);
-		transform: scale(0);
-		transition: transform 0.15s ease;
-	}
-
-	.panel-lock-check:checked {
-		background: var(--person-color);
-		border-color: var(--person-color);
-		box-shadow: 0 0 10px 0 color-mix(in srgb, var(--person-color) 55%, transparent);
-	}
-
-	.panel-lock-check:checked::before {
-		transform: scale(1);
-	}
-
-	.panel-lock-check:focus-visible {
-		outline: 2px solid color-mix(in srgb, var(--person-color) 70%, transparent);
-		outline-offset: 2px;
 	}
 
 	.side-panel.is-open .panel-toggle-chev,
