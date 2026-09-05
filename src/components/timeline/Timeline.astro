@@ -144,29 +144,9 @@ const afterItems = buildRenderList(after);
 <Section id="timeline" compact>
 	<div class="timeline-header">
 		<h2 class="section-title brand-heading">
-			<button
-				type="button"
-				class="title-toggle"
-				aria-label="Reverse timeline direction"
-				aria-pressed="true"
-				data-timeline-direction-toggle
-			>
+			<span class="title-toggle">
 				<span class="title-toggle__text">Timeline</span>
-				<span class="title-toggle__icon-wrap btn-sheen" aria-hidden="true">
-					<span class="title-toggle__slot">
-						<span class="title-toggle__reel">
-							{/* Down arrow — time flows top→bottom, oldest first (forward direction). */}
-							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-								<path d="M12 4v14M12 18l-5-5M12 18l5-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-							</svg>
-							{/* Up arrow — time flows bottom→top, latest first (reversed direction). */}
-							<svg class="title-toggle__icon" viewBox="0 0 24 24" width="1em" height="1em">
-								<path d="M12 20V6M12 6l-5 5M12 6l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-							</svg>
-						</span>
-					</span>
-				</span>
-			</button>
+			</span>
 		</h2>
 	</div>
 	<div class="timeline" data-timeline data-reversed="true">
@@ -205,14 +185,6 @@ const afterItems = buildRenderList(after);
 		width: 100%;
 		max-width: 1360px;
 		margin-bottom: 3rem;
-		/* Stick to just below the fixed navbar while the timeline section is
-		   scrolling past, so the direction-toggle stays reachable no matter
-		   how deep the reader has scrolled into the timeline itself. `z-index`
-		   above the timeline cards but below the navbar's own layer. */
-		position: sticky;
-		top: 3.5rem;
-		z-index: 5;
-		pointer-events: none;
 	}
 
 	.timeline-header .section-title {
@@ -251,7 +223,7 @@ const afterItems = buildRenderList(after);
 		background: var(--bg);
 		border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
 		border-radius: 999px;
-		cursor: pointer;
+		cursor: default;
 		isolation: isolate;
 		box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent) 30%, transparent);
 		text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
@@ -647,30 +619,3 @@ const afterItems = buildRenderList(after);
 	}
 </style>
 
-<script>
-	// The direction lives on <html> (so the skill-filter view, which sits
-	// outside the timeline section, can react to the same flag) and is
-	// mirrored onto the timeline element itself (so the timeline's scoped
-	// CSS keeps its clean `.timeline[data-reversed]` selectors). The SSR
-	// default in Layout.astro / Timeline.astro is "true" (latest first).
-	const toggles = document.querySelectorAll<HTMLButtonElement>('[data-timeline-direction-toggle]');
-	toggles.forEach((btn) => {
-		const timeline = btn.closest('section')?.querySelector<HTMLElement>('[data-timeline]');
-		if (!timeline) return;
-		btn.addEventListener('click', () => {
-			const nowReversed = document.documentElement.getAttribute('data-reversed') !== 'true';
-			// Glint sweeps across; halfway through, swap the order so the
-			// reordering happens under the brightest part of the sweep.
-			timeline.classList.add('is-flipping');
-			window.setTimeout(() => {
-				const value = String(nowReversed);
-				document.documentElement.setAttribute('data-reversed', value);
-				timeline.setAttribute('data-reversed', value);
-				btn.setAttribute('aria-pressed', value);
-			}, 220);
-			window.setTimeout(() => {
-				timeline.classList.remove('is-flipping');
-			}, 650);
-		});
-	});
-</script>
