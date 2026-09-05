@@ -533,21 +533,30 @@ const tracks = await Promise.all(
 		/* A clickable boxed row (one person's own detailed project) reads as an
 		   action surface, exactly like the shared `together` rows in
 		   ProjectRow.astro: soft warm-accent tint + colored slim border, plus
-		   the drifting sheen below. */
-		--row-fill: color-mix(in oklab, var(--accent) 6%, var(--bg));
-		--row-fill-hover: color-mix(in oklab, var(--accent) 11%, var(--bg-alt));
-		--row-line: color-mix(in oklab, var(--accent) 32%, var(--border));
+		   the drifting sheen below. An apart track belongs to one person by
+		   construction (the whole track is Mitko-only or Ádám-only — see
+		   .track-left / .track-right below), so the row's tint locks to that
+		   person's own color regardless of era. The Mentor Game Studio
+		   envelope keeps the studio's warm gold identity (see
+		   .track.under-mentor above); the inner project boxes still belong to
+		   Mitko and read as his color, not the studio's. */
+		--row-accent: var(--accent);
+		--row-fill: color-mix(in oklab, var(--row-accent) 6%, var(--bg));
+		--row-fill-hover: color-mix(in oklab, var(--row-accent) 11%, var(--bg-alt));
+		--row-line: color-mix(in oklab, var(--row-accent) 32%, var(--border));
+		--row-line-hover: color-mix(in oklab, var(--row-accent) 70%, var(--border));
+		--row-glow: color-mix(in oklab, var(--row-accent) 45%, transparent);
+		--row-ring: color-mix(in oklab, var(--row-accent) 55%, transparent);
 		--sheen-color: var(--accent-3);
 		--sheen-strength: 0.07;
 	}
 
-	/* Mentor-era rows keep their studio identity — the tint, border and glint
-	   all shift to the warm Mentor gold instead of the plain accent. */
-	.track-company.emphasized .track-row {
-		--row-fill: color-mix(in oklab, var(--mentor) 8%, var(--bg));
-		--row-fill-hover: color-mix(in oklab, var(--mentor) 13%, var(--bg-alt));
-		--row-line: color-mix(in oklab, var(--mentor) 35%, var(--border));
-		--sheen-color: var(--mentor-strong);
+	.track-left .track-row {
+		--row-accent: var(--mitko-color);
+	}
+
+	.track-right .track-row {
+		--row-accent: var(--adam-color);
 	}
 
 	.track-row--boxed {
@@ -555,15 +564,6 @@ const tracks = await Promise.all(
 		border-radius: 14px;
 		background: var(--row-fill);
 		padding: 1rem;
-	}
-
-	/* Drops just the bottom padding a stretched row would otherwise stack on
-	   top of .track-company's own bottom padding below it — matching the
-	   single layer of padding an unboxed company (no project name, like
-	   Mitko's Imagic Labs) ends up with, so a stretched box's card sits the
-	   same distance from its own border as any other company's does. */
-	.track-row--fill-stretch.track-row--boxed {
-		padding-bottom: 0;
 	}
 
 	.cards {
@@ -604,22 +604,11 @@ const tracks = await Promise.all(
 	   crisp ring on top of the lift shadow — so every clickable timeline card
 	   lights up identically no matter which track it sits in. */
 	.track-row--boxed:hover {
-		border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+		border-color: var(--row-line-hover);
 		box-shadow:
 			0 10px 28px -14px rgba(0, 0, 0, 0.7),
-			0 0 22px -2px rgba(255, 122, 0, 0.45),
-			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
-		background: var(--row-fill-hover);
-	}
-
-	/* Mentor-era rows glow in the studio's own warm color instead of the plain
-	   accent, keeping their identity while getting the full glowing treatment. */
-	.track-company.emphasized .track-row--boxed:hover {
-		border-color: color-mix(in oklab, var(--mentor) 70%, var(--border));
-		box-shadow:
-			0 10px 28px -14px rgba(0, 0, 0, 0.7),
-			0 0 22px -2px rgba(255, 183, 3, 0.45),
-			0 0 0 1px color-mix(in oklab, var(--mentor) 55%, transparent);
+			0 0 22px -2px var(--row-glow),
+			0 0 0 1px var(--row-ring);
 		background: var(--row-fill-hover);
 	}
 

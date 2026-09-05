@@ -47,6 +47,10 @@ const leftCard = cards.find((c) => COLUMN[c.person.id] === 'left');
 const rightCard = cards.find((c) => COLUMN[c.person.id] === 'right');
 const singleCard = leftCard && rightCard ? null : (leftCard ?? rightCard);
 const singleSide = singleCard ? COLUMN[singleCard.person.id] : null;
+// Who the box's warm-accent tint belongs to: a solo project takes its one
+// person's color; a shared project blends Mitko (left) → Ádám (right) across
+// the row so the gradient reads as "both of us on this together".
+const soloPersonId = singleCard?.person.id ?? null;
 
 // Detail modal — only named projects render a clickable node, so only they get
 // a modal. Namespaced (`tl-`) so timeline ids never collide with the Projects
@@ -72,6 +76,9 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		'btn-sheen': Boolean(project.name),
 		'project-row--solo-left': singleSide === 'left',
 		'project-row--solo-right': singleSide === 'right',
+		'project-row--mitko': soloPersonId === 'mitko',
+		'project-row--adam': soloPersonId === 'adam',
+		'project-row--shared': Boolean(leftCard && rightCard),
 		'project-row--tall': Boolean(project.rowSpan),
 		'project-row--square-bottom-right': Boolean(project.squareBottomRight),
 		'project-row--bridge-left': Boolean(project.bridgeLeft),
@@ -208,6 +215,10 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		--row-fill-hover: color-mix(in oklab, var(--accent) 11%, var(--bg-alt));
 		--row-line: color-mix(in oklab, var(--accent) 32%, var(--border));
 		--row-line-hover: color-mix(in oklab, var(--accent) 70%, var(--border));
+		/* Halo used by the boxed row's hover glow. Per-variant overrides below
+		   swap the tint to Mitko / Ádám / a blend of both. */
+		--row-glow: color-mix(in oklab, var(--accent) 45%, transparent);
+		--row-ring: color-mix(in oklab, var(--accent) 55%, transparent);
 		/* The drifting sheen is a warm-gold glint on these warm surfaces. */
 		--sheen-color: var(--accent-3);
 		--sheen-strength: 0.07;
@@ -269,8 +280,8 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		background: var(--row-fill-hover);
 		box-shadow:
 			0 10px 28px -14px rgba(0, 0, 0, 0.7),
-			0 0 22px -2px rgba(255, 122, 0, 0.45),
-			0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+			0 0 22px -2px var(--row-glow),
+			0 0 0 1px var(--row-ring);
 	}
 
 	/* A project split into two layout rows that share one modal (see
@@ -590,6 +601,86 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 			border-left: 1px solid var(--row-line);
 			border-right: 1px solid var(--row-line);
 		}
+	}
+
+	/* Per-person tinting. A solo project takes just that person's warm accent
+	   for its fill / border / hover glow; a shared project blends Mitko's
+	   ember (left) into Ádám's honey (right) across the row so the box reads
+	   as "both of us on this". The gradient holds each side's own color out to
+	   ~15% of the row before easing across the middle, so the edges still
+	   land clearly on the person's own tone. */
+	.project-row--mitko {
+		--row-fill: color-mix(in oklab, var(--mitko-color) 6%, var(--bg));
+		--row-fill-hover: color-mix(in oklab, var(--mitko-color) 11%, var(--bg-alt));
+		--row-line: color-mix(in oklab, var(--mitko-color) 32%, var(--border));
+		--row-line-hover: color-mix(in oklab, var(--mitko-color) 70%, var(--border));
+		--row-glow: color-mix(in oklab, var(--mitko-color) 45%, transparent);
+		--row-ring: color-mix(in oklab, var(--mitko-color) 55%, transparent);
+	}
+
+	.project-row--adam {
+		--row-fill: color-mix(in oklab, var(--adam-color) 6%, var(--bg));
+		--row-fill-hover: color-mix(in oklab, var(--adam-color) 11%, var(--bg-alt));
+		--row-line: color-mix(in oklab, var(--adam-color) 32%, var(--border));
+		--row-line-hover: color-mix(in oklab, var(--adam-color) 70%, var(--border));
+		--row-glow: color-mix(in oklab, var(--adam-color) 45%, transparent);
+		--row-ring: color-mix(in oklab, var(--adam-color) 55%, transparent);
+	}
+
+	.project-row--shared {
+		--row-fill-left: color-mix(in oklab, var(--mitko-color) 6%, var(--bg));
+		--row-fill-right: color-mix(in oklab, var(--adam-color) 6%, var(--bg));
+		--row-fill-left-hover: color-mix(in oklab, var(--mitko-color) 11%, var(--bg-alt));
+		--row-fill-right-hover: color-mix(in oklab, var(--adam-color) 11%, var(--bg-alt));
+		/* A single blended tone for anything that reads --row-fill as a solid
+		   color (the bridge fills on split rows like "Around"), so those seams
+		   still meet a plausible average color even if they can't gradient. */
+		--row-fill: color-mix(in oklab, var(--row-fill-left), var(--row-fill-right));
+		--row-fill-hover: color-mix(in oklab, var(--row-fill-left-hover), var(--row-fill-right-hover));
+		--row-line: color-mix(
+			in oklab,
+			color-mix(in oklab, var(--mitko-color), var(--adam-color)) 32%,
+			var(--border)
+		);
+		--row-line-hover: color-mix(
+			in oklab,
+			color-mix(in oklab, var(--mitko-color), var(--adam-color)) 70%,
+			var(--border)
+		);
+		--row-glow: color-mix(
+			in oklab,
+			color-mix(in oklab, var(--mitko-color), var(--adam-color)) 45%,
+			transparent
+		);
+		--row-ring: color-mix(
+			in oklab,
+			color-mix(in oklab, var(--mitko-color), var(--adam-color)) 55%,
+			transparent
+		);
+	}
+
+	/* The gradient wins over the flat --row-fill background on shared boxes;
+	   the base rule's `background: var(--row-fill)` still transitions the
+	   fallback color underneath, so mid-hover the paint stays coherent. */
+	.project-row--shared.project-row--boxed {
+		background: linear-gradient(
+			to right,
+			var(--row-fill-left) 0%,
+			var(--row-fill-left) 15%,
+			var(--row-fill-right) 85%,
+			var(--row-fill-right) 100%
+		);
+	}
+
+	.project-row--shared.project-row--boxed:hover,
+	:global(.company-projects:has([data-modal-group]:hover)) .project-row--shared[data-modal-group] {
+		background: linear-gradient(
+			to right,
+			var(--row-fill-left-hover) 0%,
+			var(--row-fill-left-hover) 15%,
+			var(--row-fill-right-hover) 85%,
+			var(--row-fill-right-hover) 100%
+		);
 	}
 
 	/* Stagger the drifting sheen so adjacent boxes never glint in unison —
