@@ -1000,6 +1000,14 @@ const adam = getPerson('adam');
 			pointer-events: none;
 		}
 
+		/* Skills-lock combo (Skills locked open + Lock checkbox on): the reader
+		   asked to try different filter tags without collapsing the skills, so
+		   let clicks reach the panel again. panelToggle mirrors that state onto
+		   <body> as .skills-lock-active. */
+		:global(body.filter-active.skills-lock-active) .person-bar {
+			pointer-events: auto;
+		}
+
 		/* Rest the cards at their docked edge positions regardless of the
 		   scroll-driven --split (personPhotos.client.ts), so they reliably flank
 		   the results instead of sitting wherever the page happened to be
@@ -1014,10 +1022,10 @@ const adam = getPerson('adam');
 			display: none;
 		}
 
-		:global(body.filter-active) .side-panel-action,
-		:global(body.filter-active) .side-panel-cv,
-		:global(body.filter-active) .side-panel-stack,
-		:global(body.filter-active) .card-filter {
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel-action,
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel-cv,
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack,
+		:global(body.filter-active:not(.skills-lock-active)) .card-filter {
 			display: none !important;
 		}
 
