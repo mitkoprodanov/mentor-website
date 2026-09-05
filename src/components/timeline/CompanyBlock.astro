@@ -66,17 +66,18 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	hidden={false}
 >
 {
-	/* The MENTOR GAME STUDIO / dates label rides inside the warm envelope
-	   when the timeline is reversed (see the CSS below) — the era's opening
-	   is Together Again at the top, so the label sits right above the
-	   inner .company card, wrapped by the same yellow envelope background
-	   just like Mitko's Flying Wild Hog envelope carries it in the forward
-	   direction. Hidden by default; revealed when the reversed override
-	   sets `display: flex`. Rendering it unconditionally in the SSR keeps
-	   the toggle purely CSS-driven — no reflow, no flash on load. */
+	/* The MENTOR GAME STUDIO era label rides inside the warm envelope when
+	   the timeline is reversed (see the CSS below) — the era's opening is
+	   Together Again at the top, so the studio name + its END year ("Present")
+	   sit right above the inner .company card, and the era's START year
+	   (2022) sits below it, each anchored to its own visual edge just like
+	   every company card's own join/leave years. Hidden by default; revealed
+	   when the reversed overrides below set `display: flex`. Rendering both
+	   unconditionally in the SSR keeps the toggle purely CSS-driven — no
+	   reflow, no flash on load. */
 	emphasized && (
-		<div class="mentor-envelope-heading" aria-hidden="true">
-			<span class="mentor-envelope-dates">{MENTOR_ERA.dateRange}</span>
+		<div class="mentor-envelope-heading mentor-envelope-heading--end" aria-hidden="true">
+			<span class="mentor-envelope-dates">{MENTOR_ERA.end}</span>
 			<span class="mentor-envelope-name">{MENTOR_ERA.label}</span>
 		</div>
 	)
@@ -95,20 +96,29 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	}}
 >
 	{
-		startSide && (
-			<div class:list={['company-header', `company-header--${startSide}`]}>
-				<span class="company-year">{start}</span>
-				<h3 class:list={{ emphasized }}>{company.name}</h3>
-			</div>
-		)
+		/* Top of the card (visually top in the current reversed timeline):
+		   the LEAVE marker for this shared stint. The company NAME rides here
+		   too — it's the card's title, so it belongs at the top, always
+		   visible even on an ongoing stint that has no end year (Together
+		   Again, Personal Project). The end year sits above the name,
+		   side-anchored to whoever actually left here (a leave shared by both
+		   sits centered; one-sided leaves align to that person's column). */
 	}
+	<div class:list={['company-header', `company-header--${endSide ?? 'center'}`]}>
+		{endSide && <span class="company-year">{end}</span>}
+		<h3 class:list={{ emphasized }}>{company.name}</h3>
+	</div>
 	<div class="company-projects">
 		{company.projects.map((project, i) => <ProjectRow project={project} emphasized={emphasized} dateRange={company.dateRange} index={i} />)}
 	</div>
 	{
-		endSide && (
-			<div class:list={['company-footer', `company-footer--${endSide}`]}>
-				<span class="company-year">{end}</span>
+		/* Bottom of the card (visually bottom): the JOIN marker for this
+		   shared stint — start year alone, side-anchored to whoever joined
+		   here (both = centered). Suppressed when nobody joined at this box
+		   (both continued from a same-employer box beside it via a seam). */
+		startSide && (
+			<div class:list={['company-footer', `company-footer--${startSide}`]}>
+				<span class="company-year">{start}</span>
 			</div>
 		)
 	}
@@ -163,6 +173,14 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		display: none;
 		flex-direction: column;
 		gap: 0.1rem;
+	}
+
+	/* --end sits at the envelope's visual top: name + LEAVE year, padded
+	   below to breathe from the .company card underneath. The matching
+	   START year for the era lives at the visual bottom of Mitko's
+	   under-mentor envelope in ApartBlock — that's the era's actual bottom
+	   in the current reversed timeline, below Flying Wild Hog. */
+	.mentor-envelope-heading--end {
 		padding: 0 0.5rem 0.75rem;
 	}
 

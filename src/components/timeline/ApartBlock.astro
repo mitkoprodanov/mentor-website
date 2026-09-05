@@ -125,8 +125,23 @@ const tracks = await Promise.all(
 			>
 				{underMentor && showMentorHeader && track.person === 'mitko' && (
 					<div class="mentor-heading">
-						<span class="mentor-dates">{MENTOR_ERA.dateRange}</span>
+						<span class="mentor-dates">{MENTOR_ERA.start} – {MENTOR_ERA.end}</span>
 						<span class="mentor-name">{MENTOR_ERA.label}</span>
+					</div>
+				)}
+				{/* The Mentor era's START year (2022) at the era's visual
+				    bottom in the current reversed timeline — inside the yellow
+				    envelope, right below whichever mentor company sits last
+				    (currently Flying Wild Hog), mirroring how the era's END
+				    year ("Present") + MENTOR GAME STUDIO label sit inside
+				    Together Again's envelope at the visual top of the era.
+				    Placed at DOM top of `.track.under-mentor` so it renders
+				    visually last under the reversed-mode `flex-direction:
+				    column-reverse` on `.track` (see Timeline.astro). Hidden
+				    by default; revealed by the reversed override there. */}
+				{underMentor && showMentorHeader && track.person === 'mitko' && (
+					<div class="mentor-era-start-year" aria-hidden="true">
+						<span class="mentor-dates">{MENTOR_ERA.start}</span>
 					</div>
 				)}
 				{track.companies.map(({ company, projects }, companyIndex) => {
@@ -138,10 +153,20 @@ const tracks = await Promise.all(
 					// so that marker is suppressed. An ongoing ("Present") stint has no
 					// leave event yet either.
 					const { start, end } = parseDateRange(company.dateRange);
-					const isFirst = companyIndex === 0;
-					const isLast = companyIndex === track.companies.length - 1;
-					const showStart = !(isFirst && track.continuesAbove);
-					const showEnd = !(isLast && track.continuesBelow) && !isOngoing(end);
+					// Each company card is self-describing: it always shows its
+					// own LEAVE year (end, at the visual top of the card alongside
+					// the company name) and JOIN year (start, at the visual
+					// bottom), rendered straight from its own dateRange without
+					// being suppressed by adjacency to a same-employer neighbour
+					// across a fork/merge seam. That way Kreator's `2025 – 2026`
+					// shows 2026 at its own edge even though Mitko continues into
+					// Together Again below it, matching how the Mentor era's
+					// envelope anchors its own start and end years to its own
+					// edges (see MENTOR_ERA in data/timeline.ts). An ongoing
+					// ("Present") stint still suppresses its end label — there's
+					// no leave event yet.
+					const showStart = true;
+					const showEnd = !isOngoing(end);
 					return (
 					<div
 						class="track-company"
@@ -165,12 +190,16 @@ const tracks = await Promise.all(
 							'continues-below': !underMentor && companyIndex === track.companies.length - 1 && track.continuesBelow,
 						}}
 					>
-						{showStart && (
-							<div class={`track-header track-header--${track.side}`}>
-								<span class="track-year">{start}</span>
-								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-							</div>
-						)}
+						{/* Top of the card (visually top in the current reversed
+						    timeline): the company NAME + the LEAVE year (end).
+						    The name is the card's title and always shows; the
+						    year is omitted when this box is ongoing ("Present") or
+						    flows via a same-employer seam into the box beside it
+						    — see showEnd above. */}
+						<div class={`track-header track-header--${track.side}`}>
+							{showEnd && <span class="track-year">{end}</span>}
+							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+						</div>
 						<div class="track-projects">
 							{projects.map(({ project, cards, modalId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
@@ -246,9 +275,12 @@ const tracks = await Promise.all(
 								</div>
 							))}
 						</div>
-						{showEnd && (
+						{/* Bottom of the card (visually bottom in the current
+						    reversed timeline): the JOIN year (start), on this
+						    person's own side. */}
+						{showStart && (
 							<div class={`track-footer track-footer--${track.side}`}>
-								<span class="track-year">{end}</span>
+								<span class="track-year">{start}</span>
 							</div>
 						)}
 					</div>
@@ -343,6 +375,16 @@ const tracks = await Promise.all(
 		flex-direction: column;
 		gap: 0.1rem;
 		padding: 0 0 0.25rem;
+	}
+
+	/* The Mentor era's START year label at the visual bottom of Mitko's
+	   under-mentor envelope in the current reversed timeline (see the markup
+	   above for why it's at DOM top). Hidden by default; the reversed
+	   override in Timeline.astro turns it on. Padding goes above the year
+	   (visually) so it sits close to the yellow envelope's bottom edge. */
+	.mentor-era-start-year {
+		display: none;
+		padding: 0.5rem 0 0;
 	}
 
 	.mentor-name {

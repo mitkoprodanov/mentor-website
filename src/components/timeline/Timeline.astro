@@ -566,6 +566,14 @@ const afterItems = buildRenderList(after);
 		display: flex;
 	}
 
+	/* Reveal the Mentor era's START year label at the visual bottom of
+	   Mitko's under-mentor envelope (see ApartBlock's .mentor-era-start-year
+	   — it sits at DOM top of `.track.under-mentor` and renders visually
+	   last under the reversed `flex-direction: column-reverse` on `.track`). */
+	.timeline[data-reversed='true'] :global(.mentor-era-start-year) {
+		display: block;
+	}
+
 	.timeline-shimmer {
 		position: absolute;
 		inset: 0;

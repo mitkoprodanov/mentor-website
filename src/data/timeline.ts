@@ -60,11 +60,20 @@ import { mentorMedia } from './media/mentor';
  * enclosing everything through Ádám rejoining in 2026.
  */
 
-/** The Mentor Game Studio "envelope" label wrapped around its underMentor entries. */
+/**
+ * The Mentor Game Studio "envelope" label wrapped around its underMentor
+ * entries. The era's start and end years are first-class fields (not just a
+ * combined `dateRange` string) so the timeline can anchor each one to its own
+ * visual edge of the envelope — the LEAVE end (currently "Present") at the
+ * visual top of the card in reversed direction, the JOIN year (2022) at the
+ * visual bottom, matching how each company card places its own join/leave
+ * years per person.
+ */
 export const MENTOR_ERA = {
 	label: 'Mentor Game Studio',
-	dateRange: '2022 – Present',
-};
+	start: '2022',
+	end: 'Present',
+} as const;
 
 export interface ExperienceRef {
 	person: PersonId;
