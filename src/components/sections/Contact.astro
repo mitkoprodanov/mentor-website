@@ -20,13 +20,6 @@ import CompanyContactCard from './CompanyContactCard.astro';
 
 <style>
 	.contact-zone {
-		/* Breathing room between the last Timeline projects and where Contact
-		   begins. Also delays the directional snap in contactSnap.client.ts
-		   (which triggers off `.contact-zone`'s top edge) — so the reader can
-		   read the tail projects centered in the viewport without Contact
-		   already yanking the page down. Tune this single value to move the
-		   whole boundary further from / closer to the timeline. */
-		margin-top: 60vh;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
