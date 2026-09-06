@@ -1219,11 +1219,19 @@ const adam = getPerson('adam');
 			display: none;
 		}
 
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel-action,
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel-cv,
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack,
-		:global(body.filter-active:not(.skills-lock-active)) .card-filter,
-		:global(body.filter-active:not(.skills-lock-active)) .collapse-row {
+		/* Strip the CV pill, Skills button, and Lock checkbox from the edge
+		   frame in the filter view — regardless of the skills-lock state, they
+		   are controls that don't belong in this label-only framing. Both the
+		   CV row and the Skills+Lock row live inside .collapse-row wrappers,
+		   so hiding those takes them out together. */
+		:global(body.filter-active) .collapse-row {
+			display: none !important;
+		}
+
+		/* The skills panel itself: keep it interactive when the reader has the
+		   skills-lock combo on (Skills locked open + Lock checkbox) so they can
+		   swap filter tags without collapsing skills; otherwise strip it too. */
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack {
 			display: none !important;
 		}
 
