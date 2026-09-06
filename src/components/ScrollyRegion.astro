@@ -79,22 +79,32 @@ const adam = getPerson('adam');
 						</div>
 						<div class="side-panel btn-sheen">
 							<PersonHeader person={entry.person} />
-							<div class="side-panel-cv">
-								<CvDownloadLink person={entry.person} />
-							</div>
-							<div class="side-panel-action">
-								<div class="panel-toggle-wrap">
-									<button class="panel-toggle btn-sheen" type="button" aria-expanded="false">
-										<span class="panel-toggle-label">Skills</span>
-										<span class="panel-toggle-chev" aria-hidden="true">▾</span>
-									</button>
-									<label class="panel-lock" title="Keep skills open when clicking outside — only the Skills button closes them">
-										<input type="checkbox" class="panel-lock-check" />
-										<span class="panel-lock-label">Lock</span>
-									</label>
+							{/* Each collapsible row is wrapped in a .collapse-row grid so its
+							    height can be animated by transitioning `grid-template-rows`
+							    from 1fr↔0fr — the parent .side-panel then reflows smoothly
+							    each frame as the wrapper's row track shrinks. `height: auto`
+							    keyword interpolation (via `interpolate-size`) proved unreliable
+							    here for parent-follow, so this grid trick is the workaround. */}
+							<div class="collapse-row">
+								<div class="side-panel-cv">
+									<CvDownloadLink person={entry.person} />
 								</div>
-								<div class="side-panel-linkedin">
-									<ExternalLink href={entry.person.linkedin}>LinkedIn</ExternalLink>
+							</div>
+							<div class="collapse-row">
+								<div class="side-panel-action">
+									<div class="panel-toggle-wrap">
+										<button class="panel-toggle btn-sheen" type="button" aria-expanded="false">
+											<span class="panel-toggle-label">Skills</span>
+											<span class="panel-toggle-chev" aria-hidden="true">▾</span>
+										</button>
+										<label class="panel-lock" title="Keep skills open when clicking outside — only the Skills button closes them">
+											<input type="checkbox" class="panel-lock-check" />
+											<span class="panel-lock-label">Lock</span>
+										</label>
+									</div>
+									<div class="side-panel-linkedin">
+										<ExternalLink href={entry.person.linkedin}>LinkedIn</ExternalLink>
+									</div>
 								</div>
 							</div>
 							<div class="side-panel-stack">
@@ -512,7 +522,15 @@ const adam = getPerson('adam');
 	.side-panel {
 		display: flex;
 		flex-direction: column;
-		gap: 0.4rem;
+		/* Was `gap: 0.4rem` — moved to per-child margin-top on the second-
+		   onwards children (see the `> * + *` rule below) so that the CV
+		   pill and Skills row can each animate their own leading margin
+		   from 0.4rem → 0 alongside their height/opacity fade. Flex `gap`
+		   can't be animated per child, so when a row's `display` flipped to
+		   `none` at the end of its transition the row's slice of the shared
+		   gap collapsed in one 0.4rem step — the exact "border isn't easing"
+		   snap this refactor removes. */
+		gap: 0;
 		padding-bottom: 0.7rem;
 		background: var(--bg);
 		border: 1px solid var(--border);
@@ -543,6 +561,41 @@ const adam = getPerson('adam');
 		transition:
 			border-color 0.25s ease,
 			box-shadow 0.25s ease;
+	}
+
+	/* Per-child leading gap — the row-by-row equivalent of the parent's old
+	   `gap: 0.4rem`. Non-first children get 0.4rem above them; the
+	   collapsible wrappers below override this to 0 in their hidden state
+	   and include `margin-top` in their transition list, so the leading
+	   gap eases away with the row rather than snapping at the end of the
+	   height/display transition. */
+	.side-panel > * + * {
+		margin-top: 0.4rem;
+	}
+
+	/* Collapsible row wrapper — the two rows inside the card that can grow
+	   in or out of the layout (the CV pill, the Skills+Lock row). Animates
+	   its own height by transitioning `grid-template-rows` between `1fr`
+	   (open) and `0fr` (closed) — the reliable CSS-only smooth-collapse
+	   pattern. The parent .side-panel is a plain flex column, so the
+	   card's overall height is the sum of its children's heights: as the
+	   wrapper's row track eases from 1fr → 0fr, the card border eases with
+	   it in the same frame-by-frame reflow. `min-height: 0` on the inner
+	   is what lets a grid item shrink below its content size; `overflow:
+	   hidden` clips the content past the wrapper's shrinking edge. The
+	   inner .side-panel-cv / .side-panel-action still handle their own
+	   opacity fade in and out, and their own hidden-state pointer-events. */
+	.collapse-row {
+		display: grid;
+		grid-template-rows: 1fr;
+		transition:
+			grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+			margin-top 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.collapse-row > * {
+		min-height: 0;
+		overflow: hidden;
 	}
 
 	/* The two cards drift out of step with each other. */
@@ -608,17 +661,23 @@ const adam = getPerson('adam');
 		opacity: 0 !important;
 	}
 
-	/* On the cards belonging to a person whose experience is in the open
-	   project modal, disable the Skills toggle — the closed card *is* the
-	   attribution, so it stays in its resting closed state and can't be
-	   expanded while the modal is up. Mitko sits in the left slot, Ádám in
-	   the right (see COLUMN in data/people.ts); the body attribute lists
-	   whichever person ids the modal declared. */
-	:global(body[data-modal-people~='mitko']) .person-slot--left .panel-toggle,
-	:global(body[data-modal-people~='adam']) .person-slot--right .panel-toggle {
+	/* While a project modal is up, strip the sticky cards back to their
+	   pre-arrival intro look — just name + role — collapsing the CV pill
+	   and the Skills+Lock row (via their .collapse-row wrappers) so the
+	   card matches the very first thing the visitor sees at the top of the
+	   site (before the About→Timeline hand-off unlocks the interactive
+	   controls). The card border eases with the row because the wrapper
+	   animates `grid-template-rows` from 1fr → 0fr — a real per-frame
+	   height change — while the inner fades opacity in step. */
+	:global(body[data-modal-people]) .collapse-row {
+		grid-template-rows: 0fr;
+		margin-top: 0;
+	}
+
+	:global(body[data-modal-people]) .side-panel-action,
+	:global(body[data-modal-people]) .side-panel-cv {
+		opacity: 0;
 		pointer-events: none;
-		opacity: 0.4;
-		cursor: not-allowed;
 	}
 
 	.side-panel :global(.person-header) {
@@ -629,53 +688,36 @@ const adam = getPerson('adam');
 	   appears once the bar flips into contact mode (further down), where the two
 	   cards become the contact cards above the Contact section. So it stays fully
 	   hidden on hover, keyboard focus, and the touch toggle. */
+	/* The CV pill is deliberately absent from the skills-revealed card — it only
+	   appears once the bar flips into contact mode (further down), where the two
+	   cards become the contact cards above the Contact section. The height of
+	   its slot is owned by the parent .collapse-row wrapper (see above); this
+	   rule just fades the pill's own contents. */
 	.side-panel-cv {
-		display: none;
-		height: 0;
-		opacity: 0;
-		overflow: hidden;
+		display: flex;
 		justify-content: flex-start;
 		padding: 0 1rem;
-		/* Eases its height/opacity open when the bar flips into contact mode on the
-		   way into the Contact section — instead of snapping the card taller.
-		   Discrete `display` keeps it out of flow (no residual gap) until it opens;
-		   the @starting-style beside the contact-mode rule supplies the from-state. */
-		transition:
-			height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-			opacity 0.4s ease,
-			display 0.4s allow-discrete;
+		opacity: 0;
+		transition: opacity 0.4s ease;
+	}
+
+	/* Slot closed by default — the CV pill only unfolds in contact mode. */
+	.collapse-row:has(> .side-panel-cv) {
+		grid-template-rows: 0fr;
+		margin-top: 0;
 	}
 
 	/* Toggle and LinkedIn share one cell and crossfade between each other when
 	   contact mode flips — no layout jump. */
+	/* Toggle and LinkedIn share one cell and crossfade between each other when
+	   contact mode flips — no layout jump. The slot's height belongs to the
+	   parent .collapse-row wrapper (see above); this rule just fades the
+	   button/LinkedIn contents. */
 	.side-panel-action {
 		display: grid;
 		padding: 0 1rem;
-		/* Grow the Skills button in when the pair docks (body.cards-arrived) instead
-		   of popping it — the row collapses to zero height before arrival and eases
-		   its height/opacity open, so the card's size change reads as one smooth
-		   settle at the end of the About→Timeline hand-off. The discrete `display`
-		   keeps it out of flow (no residual gap in the intro card) until it opens;
-		   @starting-style gives the entry its from-state.
-		   `clip` (not `hidden`) with a clip-margin still clips the row's height for
-		   that grow-in wipe, but lets the Skills button's hover glow bleed past the
-		   top and bottom edges instead of being sliced flat — the button fills the
-		   row exactly, so plain `hidden` cut its glow off. */
-		overflow: clip;
-		overflow-clip-margin: 22px;
-		height: auto;
 		opacity: 1;
-		transition:
-			height 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-			opacity 0.45s ease,
-			display 0.45s allow-discrete;
-	}
-
-	@starting-style {
-		:global(body.cards-arrived) .side-panel-action {
-			height: 0;
-			opacity: 0;
-		}
+		transition: opacity 0.45s ease;
 	}
 
 	/* Until the cards finish sliding out to the sides they're a purely visual,
@@ -688,10 +730,18 @@ const adam = getPerson('adam');
 		pointer-events: none;
 	}
 
+	/* Skills+Lock hidden during the intro — the wrapper is closed and its
+	   leading gap collapsed so no seam remains between Name+Role and the
+	   (currently-hidden) skills stack below. The inner also fades to 0
+	   opacity and blocks pointer events so the button can't be tabbed to. */
+	:global(body:not(.cards-arrived)) .collapse-row:has(> .side-panel-action) {
+		grid-template-rows: 0fr;
+		margin-top: 0;
+	}
+
 	:global(body:not(.cards-arrived)) .side-panel-action {
-		display: none;
-		height: 0;
 		opacity: 0;
+		pointer-events: none;
 	}
 
 	.side-panel-action > * {
@@ -955,18 +1005,16 @@ const adam = getPerson('adam');
 	}
 
 	/* CV pill stays put in contact mode, where the cards read as contact cards
-	   even though they aren't hover-revealed. */
-	:global(body.contact-mode) .side-panel-cv {
-		display: flex;
-		height: auto;
-		opacity: 1;
+	   even though they aren't hover-revealed. Its slot's height opens via
+	   the wrapper's grid-template-rows transition; the pill itself just
+	   fades in. */
+	:global(body.contact-mode) .collapse-row:has(> .side-panel-cv) {
+		grid-template-rows: 1fr;
+		margin-top: 0.4rem;
 	}
 
-	@starting-style {
-		:global(body.contact-mode) .side-panel-cv {
-			height: 0;
-			opacity: 0;
-		}
+	:global(body.contact-mode) .side-panel-cv {
+		opacity: 1;
 	}
 
 	/* Under reduced motion the rest of the bar snaps rather than eases (photos,
@@ -974,7 +1022,8 @@ const adam = getPerson('adam');
 	   instantly with no height/opacity travel. */
 	@media (prefers-reduced-motion: reduce) {
 		.side-panel-action,
-		.side-panel-cv {
+		.side-panel-cv,
+		.collapse-row {
 			transition: none;
 		}
 	}
@@ -1110,7 +1159,8 @@ const adam = getPerson('adam');
 		:global(body.filter-active:not(.skills-lock-active)) .side-panel-action,
 		:global(body.filter-active:not(.skills-lock-active)) .side-panel-cv,
 		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack,
-		:global(body.filter-active:not(.skills-lock-active)) .card-filter {
+		:global(body.filter-active:not(.skills-lock-active)) .card-filter,
+		:global(body.filter-active:not(.skills-lock-active)) .collapse-row {
 			display: none !important;
 		}
 
