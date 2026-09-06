@@ -34,11 +34,12 @@ const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').mat
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 
 if (contact && !prefersReduced && !coarsePointer) {
-	// How far Contact must intrude past a resting state before the snap fires —
-	// small enough to feel eager ("as soon as it's visible at the bottom"), large
-	// enough not to fire on a stray nudge. Capped as a fraction of the viewport
-	// on short screens. The same value is used at both ends, keeping the two
-	// directions symmetric.
+	// How far Contact must intrude past a resting state before the snap fires.
+	// Set high — ~70% of the viewport — so the tail of the timeline (with its
+	// trailing gap under the last entry) can scroll well past the middle of the
+	// screen and stay readable, rather than being yanked away the moment Contact
+	// peeks in at the bottom. The same value is used at both ends, keeping the
+	// two directions symmetric.
 	const threshold = () => Math.min(96, window.innerHeight * 0.12);
 
 	let lastY = window.scrollY;

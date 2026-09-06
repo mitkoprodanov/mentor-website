@@ -4,13 +4,15 @@ import ExternalLink from '../common/ExternalLink.astro';
 ---
 
 <div class="company-card">
-	<h3 class="brand-heading">{STUDIO_CONTACT.name}</h3>
+	<h3 class="company-card__wordmark">
+		<img src="/logo/wordmark.png" alt={STUDIO_CONTACT.name} width="490" height="150" loading="lazy" decoding="async" />
+	</h3>
 	<p class="contact-lead">Let's talk about your project.</p>
 	<div class="contact-links">
-		<ExternalLink href={`mailto:${STUDIO_CONTACT.email}`} external={false}>
+		<ExternalLink href={`mailto:${STUDIO_CONTACT.email}`} external={false} class="contact-pill btn-sheen">
 			{STUDIO_CONTACT.email}
 		</ExternalLink>
-		<ExternalLink href={STUDIO_CONTACT.linkedin}>LinkedIn</ExternalLink>
+		<ExternalLink href={STUDIO_CONTACT.linkedin} class="contact-pill btn-sheen">LinkedIn</ExternalLink>
 	</div>
 </div>
 
@@ -50,16 +52,33 @@ import ExternalLink from '../common/ExternalLink.astro';
 		pointer-events: none;
 	}
 
-	.company-card h3 {
+	/* Studio identity comes from the brand wordmark PNG (extracted from the
+	   horizontal lockup on the branding board) rather than typeset text, so
+	   "MENTOR / GAME STUDIO" matches the logo exactly — same typeface, spacing,
+	   and orange for GAME STUDIO. Sized to fluidly track the card width. */
+	.company-card__wordmark {
 		margin: 0;
-		font-size: 2rem;
-		letter-spacing: 0.02em;
+		display: block;
+		width: min(360px, 70%);
 	}
 
+	.company-card__wordmark img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	/* Match the non-clickable filler in Vision's sentence ("A", "with", "to
+	   build on,", …): muted grey, small-caps, open tracking — so the lead line
+	   reads as body copy in the same voice as the hero pitch, not as another
+	   coloured heading competing with the wordmark. */
 	.contact-lead {
 		margin: 0 0 0.5rem;
-		font-size: 1.05rem;
+		font-size: clamp(0.95rem, 0.82rem + 0.55vw, 1.05rem);
+		line-height: 1.9;
 		color: var(--fg-muted);
+		font-variant-caps: small-caps;
+		letter-spacing: var(--letter-open);
 	}
 
 	.contact-links {
@@ -67,15 +86,67 @@ import ExternalLink from '../common/ExternalLink.astro';
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: center;
-		gap: 1.5rem 2rem;
-		/* Both links belong to the studio, so they glow in the Mentor Game
-		   Studio color rather than the default honey — matching the surrounding
-		   card's own mentor-tinted border and halo. */
-		--link-color: var(--mentor);
+		gap: 1rem 1.25rem;
 	}
 
-	.company-card :global(.external-link) {
-		font-size: 1.15rem;
+	/* Email + LinkedIn styled as CV-style action pills (see CvDownloadLink.astro):
+	   mentor-tinted soft fill, mid-strength border, full-strength label; hover
+	   fills solid with a mentor-coloured halo. The metallic glint is provided by
+	   the shared `.btn-sheen` class in Layout.astro. */
+	.company-card :global(.contact-pill) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		padding: 0.85rem 1.4rem;
+		border-radius: 999px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		text-decoration: none;
+		color: var(--mentor);
+		background: color-mix(in srgb, var(--mentor) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--mentor) 45%, transparent);
+		--sheen-color: var(--mentor);
+		--sheen-strength: 0.16;
+		transition:
+			color 0.2s ease,
+			background 0.2s ease,
+			border-color 0.2s ease,
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+
+	/* Second pill's glint drifts out of sync with the first. */
+	.company-card :global(.contact-pill + .contact-pill) {
+		--sheen-delay: -3s;
+	}
+
+	.company-card :global(.contact-pill:hover),
+	.company-card :global(.contact-pill:focus-visible) {
+		color: var(--bg);
+		background: var(--mentor);
+		border-color: var(--mentor);
+		transform: translateY(-1px);
+		box-shadow:
+			0 0 20px 2px color-mix(in srgb, var(--mentor) 55%, transparent),
+			0 0 0 1px var(--mentor);
+	}
+
+	.company-card :global(.contact-pill:focus-visible) {
+		outline: 2px solid var(--mentor);
+		outline-offset: 2px;
+	}
+
+	/* The ExternalLink's built-in underline sweep and the "↗" icon nudge don't
+	   read on a filled pill — drop the underline so the label stays clean, and
+	   keep the icon inline as a static hint. */
+	.company-card :global(.contact-pill .external-link-label::after) {
+		display: none;
+	}
+
+	.company-card :global(.contact-pill:hover .external-link-icon),
+	.company-card :global(.contact-pill:focus-visible .external-link-icon) {
+		transform: translate(2px, -2px);
 	}
 
 	/* The generous desktop padding squeezes the content column to a sliver on
@@ -87,8 +158,8 @@ import ExternalLink from '../common/ExternalLink.astro';
 			border-radius: 20px;
 		}
 
-		.company-card h3 {
-			font-size: 1.6rem;
+		.company-card__wordmark {
+			width: min(280px, 80%);
 		}
 	}
 </style>

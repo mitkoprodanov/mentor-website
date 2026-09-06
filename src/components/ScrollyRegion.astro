@@ -103,7 +103,7 @@ const adam = getPerson('adam');
 										</label>
 									</div>
 									<div class="side-panel-linkedin">
-										<ExternalLink href={entry.person.linkedin}>LinkedIn</ExternalLink>
+										<ExternalLink href={entry.person.linkedin} class="linkedin-pill btn-sheen">LinkedIn</ExternalLink>
 									</div>
 								</div>
 							</div>
@@ -887,8 +887,64 @@ const adam = getPerson('adam');
 		--link-color: var(--person-color);
 	}
 
-	.side-panel-linkedin :global(.external-link) {
+	/* LinkedIn styled as a CV-style action pill (see CvDownloadLink.astro),
+	   tinted with the person's own colour and glinting via the shared
+	   `.btn-sheen` class — so email/LinkedIn on the studio card and each
+	   person's LinkedIn all read as the same button family. */
+	.side-panel-linkedin :global(.linkedin-pill) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.45rem;
+		padding: 0.55rem 1rem;
+		border-radius: 999px;
+		font-size: 0.8rem;
 		font-weight: 600;
+		text-decoration: none;
+		color: var(--person-color);
+		background: color-mix(in srgb, var(--person-color) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
+		--sheen-color: var(--person-color);
+		--sheen-strength: 0.16;
+		--sheen-delay: -2s;
+		transition:
+			color 0.2s ease,
+			background 0.2s ease,
+			border-color 0.2s ease,
+			transform 0.2s ease,
+			box-shadow 0.2s ease;
+	}
+
+	/* Second person's pill drifts out of step with the first. */
+	.person-slot--right .side-panel-linkedin :global(.linkedin-pill) {
+		--sheen-delay: -5s;
+	}
+
+	.side-panel-linkedin :global(.linkedin-pill:hover),
+	.side-panel-linkedin :global(.linkedin-pill:focus-visible) {
+		color: var(--bg);
+		background: var(--person-color);
+		border-color: var(--person-color);
+		transform: translateY(-1px);
+		box-shadow:
+			0 0 20px 2px color-mix(in srgb, var(--person-color) 55%, transparent),
+			0 0 0 1px var(--person-color);
+	}
+
+	.side-panel-linkedin :global(.linkedin-pill:focus-visible) {
+		outline: 2px solid var(--person-color);
+		outline-offset: 2px;
+	}
+
+	/* Drop the ExternalLink's underline sweep on the filled pill; keep the "↗"
+	   icon nudging on hover as a hint. */
+	.side-panel-linkedin :global(.linkedin-pill .external-link-label::after) {
+		display: none;
+	}
+
+	.side-panel-linkedin :global(.linkedin-pill:hover .external-link-icon),
+	.side-panel-linkedin :global(.linkedin-pill:focus-visible .external-link-icon) {
+		transform: translate(2px, -2px);
 	}
 
 	/* Collapsed by default; skills reveal via the JS `.reveal` class (hover,
@@ -1034,6 +1090,13 @@ const adam = getPerson('adam');
 		align-items: center;
 		max-width: 1600px;
 		margin: 0 auto;
+		/* Real scrollable empty space under the last company/project entry — more
+		   than half the viewport, so at the "Projects" rest position (Contact just
+		   peeking in at the bottom, see contactSnap.client.ts) the bottom of the
+		   last entry sits *above* the middle of the screen. The reader then scrolls
+		   through actual empty space before the directional snap into Contact
+		   fires; nothing is faded in over the timeline tail. */
+		padding-bottom: 60vh;
 	}
 
 	/* ---- Filter modal ---------------------------------------------------

@@ -87,29 +87,7 @@ import CompanyContactCard from './CompanyContactCard.astro';
 		line-height: 1;
 	}
 
-	/* A gentle fade/rise as the section scrolls into view, keyed off contact
-	   mode — enough to feel like it's floating up into place, without breaking
-	   the sense that it's just the page's own last section. */
-	.contact-title,
-	.contact-zone :global(.company-card) {
-		opacity: 0;
-		transform: translateY(24px);
-		transition:
-			opacity 0.6s ease,
-			transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-	}
-
-	:global(body.contact-mode) .contact-title,
-	:global(body.contact-mode) .contact-zone :global(.company-card) {
-		opacity: 1;
-		transform: translateY(0);
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.contact-title,
-		.contact-zone :global(.company-card) {
-			transition: opacity 0.3s ease;
-			transform: none;
-		}
-	}
+	/* No fade / rise on the Contact content — it's the page's own static ending,
+	   revealed by scrolling into it (the directional snap in contactSnap.client.ts
+	   locks the section to viewport top). */
 </style>
