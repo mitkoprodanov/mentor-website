@@ -1,6 +1,6 @@
 ---
 import { getEntry, render } from 'astro:content';
-import { getPerson } from '../../data/people';
+import { getPerson, type Person } from '../../data/people';
 import { getTag, sortTagIdsByIndex } from '../../data/tags';
 import { getCatalogProjectsInOrder, type CatalogProject } from '../../data/projectCatalog';
 import ProjectDetail from './ProjectDetail.astro';
@@ -28,7 +28,7 @@ import ProjectDetail from './ProjectDetail.astro';
 
 interface LoadedProject {
 	project: CatalogProject;
-	cards: { personName: string; personId: string; Content: Awaited<ReturnType<typeof render>>['Content'] }[];
+	cards: { person: Person; Content: Awaited<ReturnType<typeof render>>['Content'] }[];
 	peopleLabel: string;
 	tagLabels: string[];
 }
@@ -40,13 +40,13 @@ async function loadProject(project: CatalogProject): Promise<LoadedProject> {
 			if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 			const { Content } = await render(entry);
 			const person = getPerson(ref.person);
-			return { personName: person.name, personId: person.id, Content };
+			return { person, Content };
 		}),
 	);
 	return {
 		project,
 		cards,
-		peopleLabel: cards.map((c) => c.personName).join(' & '),
+		peopleLabel: cards.map((c) => c.person.name).join(' & '),
 		// Ordered by each tag's canonical index in data/tags.ts, so the pill row
 		// reads the same order everywhere a project's tags surface.
 		tagLabels: sortTagIdsByIndex(project.experienceTagIds).map((id) => getTag(id).label),
@@ -78,7 +78,7 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 				// Single-person cards translate toward their person's side and pick
 				// up their accent color; shared cards stay centered on the neutral
 				// warm accent. Same visual language as .shot--person in ProjectDetail.
-				const personId = side === 'both' ? null : lp.cards[0]?.personId;
+				const personId = side === 'both' ? null : lp.cards[0]?.person.id;
 				return (
 					<article
 						class:list={['fr-card', `fr-card--${side}`, side !== 'both' && 'fr-card--person']}
@@ -96,8 +96,7 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 							as="h4"
 						>
 							{lp.cards.map((c) => (
-								<div class="modal-exp" data-person={c.personId} style={`--person-color: var(--${c.personId}-color)`}>
-									<p class="modal-exp__person">{c.personName}</p>
+								<div class="modal-exp" data-person={c.person.id}>
 									<c.Content />
 								</div>
 							))}
@@ -175,32 +174,47 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 		border-right: 3px solid var(--person-color, var(--accent));
 	}
 
-	/* One person's experience prose inside a card — same lightweight treatment
-	   as the modal's slotted experiences (a person-tinted left rule). */
-	/* Person-color rule sits on the person's own side — see the matching
-	   block in components/timeline/ProjectRow.astro. */
+	/* Same tinted person-colour box as a text-media item (see .shot--text in
+	   ProjectDetail.astro) and its twin in ProjectRow.astro, so experiences
+	   surfaced by the filter read the same wherever they appear. A gradient
+	   accent line under the prose fades from the person's own edge toward
+	   the middle. */
 	.modal-exp {
-		padding-left: 0.85rem;
-		border-left: 2px solid var(--person-color, var(--accent));
+		position: relative;
+		padding: 1rem 1.15rem;
+		border-radius: 10px;
+		border: 1px solid color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
+		text-align: left;
+	}
+
+	.modal-exp[data-person='mitko'] {
+		--person-color: var(--mitko-color);
+		border-left: 3px solid var(--person-color);
 	}
 
 	.modal-exp[data-person='adam'] {
-		padding-left: 0;
-		padding-right: 0.85rem;
-		border-left: none;
-		border-right: 2px solid var(--person-color, var(--accent));
+		--person-color: var(--adam-color);
+		border-right: 3px solid var(--person-color);
 		text-align: right;
 	}
 
-	.modal-exp + .modal-exp {
-		margin-top: 1.1rem;
+	.modal-exp::after {
+		content: '';
+		display: block;
+		height: 2px;
+		width: 50%;
+		margin-top: 0.75rem;
+		background: linear-gradient(to right, var(--person-color, var(--accent)), transparent);
 	}
 
-	.modal-exp__person {
-		margin: 0 0 0.35rem;
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--person-color, var(--accent));
+	.modal-exp[data-person='adam']::after {
+		margin-left: auto;
+		background: linear-gradient(to left, var(--person-color, var(--accent)), transparent);
+	}
+
+	.modal-exp + .modal-exp {
+		margin-top: 1rem;
 	}
 
 	/* A gallery whose every media item was filtered out leaves nothing to show —

@@ -5,8 +5,8 @@ export const supernovaMedia: ProjectMedia[] = [
 	{
 		src: 'https://www.youtube.com/watch?v=agAYZj01BJc',
 		kind: 'youtube',
-		start: 61,
-		end: 125,
+		start: 54,
+		end: 88,
 		caption: 'Wave army movement across the field.',
 		tagIds: ['systems-design', 'navigation', 'ai', 'ui', 'progression'],
 	},

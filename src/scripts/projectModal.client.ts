@@ -20,6 +20,40 @@ function syncScrollLock(): void {
 }
 
 /**
+ * A `<dialog>` opened via `showModal()` renders in the browser's top layer, so
+ * nothing in normal flow — including our sticky person bar — can ever render
+ * above its ::backdrop with plain z-index. The workaround: promote the person
+ * bar into the top layer too, by showing it as a popover. Later-opened top-layer
+ * entrants stack above earlier ones, so the bar ends up above the modal's
+ * backdrop while its two cards remain their normal closed selves, on the sides.
+ *
+ * We also publish a `data-modal-people` attribute on the body naming whose
+ * experience appears in the open modal — the Skills toggle on those cards is
+ * disabled (see ScrollyRegion.astro), so the closed card reads as attribution.
+ */
+function syncPersonBarPopover(): void {
+	const bar = document.getElementById('person-bar') as (HTMLElement & { showPopover?: () => void; hidePopover?: () => void }) | null;
+	if (!bar) return;
+	const openDialog = document.querySelector<HTMLDialogElement>('dialog[data-project-modal][open]');
+	if (openDialog) {
+		const people = openDialog.getAttribute('data-project-people') ?? '';
+		document.body.setAttribute('data-modal-people', people);
+		try {
+			bar.showPopover?.();
+		} catch {
+			/* already open, or popover API unavailable — fall through */
+		}
+	} else {
+		document.body.removeAttribute('data-modal-people');
+		try {
+			bar.hidePopover?.();
+		} catch {
+			/* already closed */
+		}
+	}
+}
+
+/**
  * A Facebook video/reel embeds as a fixed-size cross-origin iframe (640×360, see
  * ProjectModal.astro) whose content can't be reflowed from here. To make it
  * fill the card's full width at any size without letterboxing, scale the whole
@@ -210,6 +244,7 @@ function init(): void {
 
 	const observer = new MutationObserver((mutations) => {
 		syncScrollLock();
+		syncPersonBarPopover();
 		for (const mutation of mutations) {
 			const dialog = mutation.target as HTMLElement;
 			if (dialog.hasAttribute('open')) void activateYouTube(dialog);

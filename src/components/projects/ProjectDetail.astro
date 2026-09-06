@@ -447,6 +447,9 @@ function personStyle(m: ProjectMedia): string | undefined {
 		background: color-mix(in oklab, var(--accent) 4%, var(--bg));
 	}
 
+	/* Person-attributed text media picks up its person's colour on the tint
+	   and border; right-side blocks (Ádám's) right-align their prose so it
+	   reads toward his own sticky person card. */
 	.shot--person.shot--text .shot-text {
 		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
 		border-color: color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
@@ -458,6 +461,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 
 	.shot--person-right.shot--text .shot-text {
 		border-right: 3px solid var(--person-color, var(--accent));
+		text-align: right;
 	}
 
 	.shot-text__person {

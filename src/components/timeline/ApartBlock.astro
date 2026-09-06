@@ -263,12 +263,12 @@ const tracks = await Promise.all(
 												subtitle={project.info}
 												dateRange={modalDateRange}
 												people={cards.length > 1 ? peopleLabel : undefined}
+												personIds={cards.map((c) => c.person.id)}
 												tags={modalTagLabels}
 												media={modalMedia}
 											>
 												{cards.map((c) => (
-													<div class="modal-exp" data-person={c.person?.id ?? c.personId} style={`--person-color: var(--${c.person?.id ?? c.personId}-color)`}>
-														<p class="modal-exp__person">{c.person.name}</p>
+													<div class="modal-exp" data-person={c.person.id}>
 														<c.Content />
 													</div>
 												))}

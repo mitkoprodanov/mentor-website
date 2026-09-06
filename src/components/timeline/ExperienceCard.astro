@@ -1,5 +1,5 @@
 ---
-import { getPerson, type PersonId } from '../../data/people';
+import type { PersonId } from '../../data/people';
 
 interface Props {
 	personId: PersonId;
@@ -22,11 +22,9 @@ interface Props {
 }
 
 const { personId, tagIds, color, side, link, previewImage, interactive = true } = Astro.props;
-const personName = getPerson(personId).name;
 ---
 
 <div class:list={['card', `card--${side}`, { 'card--static': !interactive }]} data-person={personId} data-tags={tagIds.join(' ')} style={`--person-color: ${color}`}>
-	<p class="card__person">{personName}</p>
 	<div class="content">
 		<slot />
 	</div>
@@ -99,6 +97,7 @@ const personName = getPerson(personId).name;
 	.card--right {
 		grid-column: 2;
 		border-right: 2px solid var(--person-color, var(--accent));
+		text-align: right;
 	}
 
 	.card :global(p) {
@@ -106,22 +105,6 @@ const personName = getPerson(personId).name;
 		line-height: 1.5;
 		color: var(--fg);
 		margin: 0;
-	}
-
-	/* Person label sits at the top of every card so the attribution is
-	   explicit — matching the person-name row inside the detail modal. On a
-	   right-side card the label right-aligns so it hugs the person's own
-	   edge, same as the accent border rule. */
-	.card__person {
-		margin: 0 0 0.5rem;
-		font-size: 0.75rem;
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		color: var(--person-color, var(--accent));
-	}
-
-	.card--right .card__person {
-		text-align: right;
 	}
 
 	.showcase {

@@ -12,6 +12,13 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'prototyping', 'playtesting'],
 	},
 	{
+	src: '',
+		kind: 'text',
+		person: 'mitko',
+		caption: 'Established and maintained much of the game’s technical foundation, including character movement, actions, interactions, inventory, background systems, and other mood effects.',
+		tagIds: ['gameplay', 'playtesting', 'narrative-design', ''],
+	},
+	{
 		src: 'https://www.facebook.com/watch/?v=291274308860973',
 		kind: 'facebook-reel',
 		caption: 'Around gameplay',

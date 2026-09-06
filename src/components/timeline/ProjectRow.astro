@@ -183,12 +183,12 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 				subtitle={project.info}
 				dateRange={modalDateRange}
 				people={modalCards.length > 1 ? peopleLabel : undefined}
+				personIds={modalCards.map((c) => c.person.id)}
 				tags={modalTagLabels}
 				media={modalMedia}
 			>
 				{modalCards.map((c) => (
-					<div class="modal-exp" data-person={c.person?.id ?? c.personId} style={`--person-color: var(--${c.person?.id ?? c.personId}-color)`}>
-						<p class="modal-exp__person">{c.person.name}</p>
+					<div class="modal-exp" data-person={c.person.id}>
 						<c.Content />
 					</div>
 				))}
@@ -363,35 +363,52 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		}
 	}
 
-	/* One person's experience prose inside the modal — a lighter-weight stand-in
-	   for the timeline's ExperienceCard, deliberately without the `.card`/
-	   `data-tags` hooks so the tag-filter never treats these as timeline cards. */
-	/* The person-color rule sits on the person's own side of the modal —
-	   Mitko (left column of the site) on the left edge, Ádám (right column)
-	   on the right edge — so the accent points at *them*, not at the empty
-	   middle. Falls back to a left rule for unattributed entries. */
+	/* One person's experience prose inside the modal — the same tinted,
+	   person-color-bordered box as a text-media item (see .shot--text in
+	   ProjectDetail.astro), so the two visually match wherever they surface
+	   together. Attribution stays with the two sticky person cards
+	   projected above the modal (see ScrollyRegion.astro); the box just
+	   colour-codes whose experience it is. Right-side prose (Ádám's) aligns
+	   right so it reads toward his own card on that edge. */
 	.modal-exp {
-		padding-left: 0.85rem;
-		border-left: 2px solid var(--person-color, var(--accent));
+		position: relative;
+		padding: 1rem 1.15rem;
+		border-radius: 10px;
+		border: 1px solid color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
+		text-align: left;
+	}
+
+	.modal-exp[data-person='mitko'] {
+		--person-color: var(--mitko-color);
+		border-left: 3px solid var(--person-color);
 	}
 
 	.modal-exp[data-person='adam'] {
-		padding-left: 0;
-		padding-right: 0.85rem;
-		border-left: none;
-		border-right: 2px solid var(--person-color, var(--accent));
+		--person-color: var(--adam-color);
+		border-right: 3px solid var(--person-color);
 		text-align: right;
 	}
 
-	.modal-exp + .modal-exp {
-		margin-top: 1.1rem;
+	/* Extra person-colour line under the prose — starts solid at the
+	   person's own edge and fades to transparent by the halfway mark, so
+	   the accent points back toward their own side card. */
+	.modal-exp::after {
+		content: '';
+		display: block;
+		height: 2px;
+		width: 50%;
+		margin-top: 0.75rem;
+		background: linear-gradient(to right, var(--person-color, var(--accent)), transparent);
 	}
 
-	.modal-exp__person {
-		margin: 0 0 0.35rem;
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--person-color, var(--accent));
+	.modal-exp[data-person='adam']::after {
+		margin-left: auto;
+		background: linear-gradient(to left, var(--person-color, var(--accent)), transparent);
+	}
+
+	.modal-exp + .modal-exp {
+		margin-top: 1rem;
 	}
 
 	.node-text {

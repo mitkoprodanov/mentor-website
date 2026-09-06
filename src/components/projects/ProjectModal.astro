@@ -21,6 +21,10 @@ interface Props {
 	dateRange?: string;
 	/** Who worked on it, e.g. "Mitko & Ádám". */
 	people?: string;
+	/** Person ids whose experience appears in this modal — used by
+	 *  projectModal.client.ts to disable their sticky Skills toggle while
+	 *  the modal is open (so the closed card reads as their attribution). */
+	personIds?: string[];
 	/** Tag labels rendered as pills. */
 	tags?: string[];
 	media?: ProjectMedia[];
@@ -28,11 +32,16 @@ interface Props {
 	urlLabel?: string;
 }
 
-const { modalId, title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
+const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 ---
 
-<dialog class="project-modal" data-project-modal={modalId} aria-labelledby={titleId}>
+<dialog
+	class="project-modal"
+	data-project-modal={modalId}
+	data-project-people={personIds.join(' ')}
+	aria-labelledby={titleId}
+>
 	<div class="project-modal__panel">
 		<button type="button" class="project-modal__close" data-project-close aria-label="Close dialog">×</button>
 

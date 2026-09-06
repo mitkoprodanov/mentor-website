@@ -44,7 +44,7 @@ const adam = getPerson('adam');
 	     matter. -->
 	<div class="person-backdrop" aria-hidden="true"></div>
 
-	<div class="person-bar">
+	<div class="person-bar" id="person-bar" popover="manual">
 		<div class="person-bar-inner">
 			{
 				[
@@ -149,10 +149,63 @@ const adam = getPerson('adam');
 
 	/* Transparent, so the timeline shows through the gap between the two
 	   edge-anchored cards; each card carries its own opaque background. */
+	/* Also carries `popover="manual"` (see the markup) so that when a project
+	   modal opens, projectModal.client.ts calls .showPopover() on the bar to
+	   promote it into the top layer above the dialog's ::backdrop — that's
+	   the only way an element in normal flow can render *above* a dialog
+	   opened via showModal(). The UA popover styles (position:fixed inset:0,
+	   display:none-when-closed, background/border/padding of a menu) are
+	   individually overridden below so the closed bar keeps its normal
+	   sticky rendering, and the open bar mirrors that same rectangle in
+	   fixed-position form. */
 	.person-bar {
 		position: sticky;
-		top: 3rem;
 		z-index: 4;
+		/* Undo UA popover paints and sizing. */
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: inherit;
+		overflow: visible;
+		width: auto;
+		height: auto;
+		max-width: none;
+		max-height: none;
+		margin: 0;
+		/* Sticky offset — placed AFTER any inset resets so the UA `inset: 0`
+		   from `[popover]` (which shorthand-sets `top: 0`) is not what wins. */
+		top: 3rem;
+		right: auto;
+		bottom: auto;
+		left: auto;
+	}
+
+	/* Force the closed popover to remain visible in normal flow (the UA
+	   default is `display: none`). */
+	.person-bar:not(:popover-open) {
+		display: block;
+	}
+
+	/* When shown as a popover (project modal open), pin the bar to the same
+	   position it held while sticky — so promoting it into the top layer
+	   introduces no visual jump. */
+	.person-bar:popover-open {
+		position: fixed;
+		top: 3rem;
+		left: 0;
+		right: 0;
+	}
+
+	/* Solo-project modal — only the person whose experience is in the modal
+	   comes forward on top; the other person's slot fades to invisible so
+	   the attention is on the single card. `visibility: hidden` keeps the
+	   layout of `.person-bar-inner` stable (still a two-cell flex row) so
+	   the surviving card sits in its usual edge slot instead of jumping to
+	   the centre. Exact-match attribute selectors, so a two-person modal
+	   (`data-modal-people="mitko adam"`) matches neither. */
+	:global(body[data-modal-people='mitko']) .person-slot--right,
+	:global(body[data-modal-people='adam']) .person-slot--left {
+		visibility: hidden;
 	}
 
 	/* During the About→Timeline intro lift (thoughtCloud.client.ts translates the
@@ -546,6 +599,28 @@ const adam = getPerson('adam');
 		opacity: 1;
 	}
 
+	/* While a project detail modal is open, the modal's own backdrop already
+	   dims the page — suppress the person-cards' own hover/focus backdrop so
+	   the two don't stack and darken twice. The person cards themselves are
+	   promoted into the top layer via popover (see .person-bar above) so
+	   they still read crisp on top. */
+	:global(body[data-modal-people]) .person-backdrop {
+		opacity: 0 !important;
+	}
+
+	/* On the cards belonging to a person whose experience is in the open
+	   project modal, disable the Skills toggle — the closed card *is* the
+	   attribution, so it stays in its resting closed state and can't be
+	   expanded while the modal is up. Mitko sits in the left slot, Ádám in
+	   the right (see COLUMN in data/people.ts); the body attribute lists
+	   whichever person ids the modal declared. */
+	:global(body[data-modal-people~='mitko']) .person-slot--left .panel-toggle,
+	:global(body[data-modal-people~='adam']) .person-slot--right .panel-toggle {
+		pointer-events: none;
+		opacity: 0.4;
+		cursor: not-allowed;
+	}
+
 	.side-panel :global(.person-header) {
 		padding: 0.9rem 1rem 0.4rem;
 	}
@@ -799,6 +874,16 @@ const adam = getPerson('adam');
 		.person-bar-inner:focus-within .side-panel-stack {
 			display: block;
 		}
+	}
+
+	/* While a project modal is up, lock both person cards in their resting
+	   closed state — the intro-beginning look. Hover reveal and any prior
+	   is-open expansion are both suppressed so the sticky bar reads exactly
+	   as it did at the top of the site. */
+	:global(body[data-modal-people]) .side-panel.is-open .side-panel-stack,
+	:global(body[data-modal-people]) .person-bar-inner.reveal .side-panel-stack,
+	:global(body[data-modal-people]) .person-bar-inner:focus-within .side-panel-stack {
+		display: none;
 	}
 
 	/* Right-hand card mirrors to the right edge. */
