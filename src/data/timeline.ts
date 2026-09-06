@@ -466,7 +466,13 @@ export const timeline: TimelineEntry[] = [
 				id: 'adam-personal-project',
 				name: 'Personal Project',
 				dateRange: '2024 – Present',
-				alignBottomTo: 'kreator-studios',
+				/* Positioning of this card is fully driven at runtime by
+				   distributeAdamPersonalGaps.client.ts: the card is left at
+				   its own natural size (tightly wrapping Biobot and Hypha)
+				   and shifted down with margin-top so the three gaps around
+				   the two projects — above Biobot, between them, and below
+				   Hypha down to Mandragora — end up equal. No stretch or
+				   alignBottomTo hint needed here. */
 				projects: [
 					{
 						id: 'hypha',

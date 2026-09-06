@@ -525,6 +525,20 @@ const tracks = await Promise.all(
 		gap: 1.25rem;
 	}
 
+	/* When a stretched card holds more than one project (e.g. Ádám's
+	   Personal Project reaching down to Flying Wild Hog with both Hypha and
+	   Biobot inside), the base `.track-row { flex: 1 }` below would let each
+	   row balloon to fill its share of the added height — one small text
+	   card blown up to twice its natural size. Hold each row at its own
+	   natural size instead, and let a runtime script
+	   (distributeAdamPersonalGaps.client.ts) set the exact padding-top and
+	   row-gap that spread the three visible gaps around Biobot and Hypha
+	   evenly across the height from Together Again down to Mandragora. */
+	.track-projects:has(> .track-row--fill-stretch + .track-row--fill-stretch) .track-row--fill-stretch,
+	.track-projects:has(> .track-row--fill-stretch + .track-row--fill-stretch) .track-row--fill-stretch .cards {
+		flex: 0 0 auto;
+	}
+
 	.track-row {
 		display: flex;
 		flex-direction: column;
@@ -751,4 +765,5 @@ const tracks = await Promise.all(
 
 <script>
 	import '../../scripts/syncApartHeights.client';
+	import '../../scripts/distributeAdamPersonalGaps.client';
 </script>
