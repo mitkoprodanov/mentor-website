@@ -649,6 +649,13 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		--row-fill-right: color-mix(in oklab, var(--adam-color) 6%, var(--bg));
 		--row-fill-left-hover: color-mix(in oklab, var(--mitko-color) 11%, var(--bg-alt));
 		--row-fill-right-hover: color-mix(in oklab, var(--adam-color) 11%, var(--bg-alt));
+		/* Per-side border tones, mirrored from the flat --row-line formula so
+		   the gradient border edges land at each person's own tint at their
+		   own side of the box — same 32%/70% mix strengths as the solo rows. */
+		--row-line-left: color-mix(in oklab, var(--mitko-color) 32%, var(--border));
+		--row-line-right: color-mix(in oklab, var(--adam-color) 32%, var(--border));
+		--row-line-left-hover: color-mix(in oklab, var(--mitko-color) 70%, var(--border));
+		--row-line-right-hover: color-mix(in oklab, var(--adam-color) 70%, var(--border));
 		/* A single blended tone for anything that reads --row-fill as a solid
 		   color (the bridge fills on split rows like "Around"), so those seams
 		   still meet a plausible average color even if they can't gradient. */
@@ -678,26 +685,53 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 	/* The gradient wins over the flat --row-fill background on shared boxes;
 	   the base rule's `background: var(--row-fill)` still transitions the
-	   fallback color underneath, so mid-hover the paint stays coherent. */
+	   fallback color underneath, so mid-hover the paint stays coherent.
+	   The border rides the same gradient: a transparent border + two stacked
+	   backgrounds (fill clipped to padding-box, line clipped to border-box)
+	   paints the border with a matching Mitko→Ádám gradient, so the whole
+	   perimeter reads as one continuous blend instead of a flat neutral line
+	   around a gradient fill. */
 	.project-row--shared.project-row--boxed {
-		background: linear-gradient(
-			to right,
-			var(--row-fill-left) 0%,
-			var(--row-fill-left) 15%,
-			var(--row-fill-right) 85%,
-			var(--row-fill-right) 100%
-		);
+		border-color: transparent;
+		background:
+			linear-gradient(
+					to right,
+					var(--row-fill-left) 0%,
+					var(--row-fill-left) 15%,
+					var(--row-fill-right) 85%,
+					var(--row-fill-right) 100%
+				)
+				padding-box,
+			linear-gradient(
+					to right,
+					var(--row-line-left) 0%,
+					var(--row-line-left) 15%,
+					var(--row-line-right) 85%,
+					var(--row-line-right) 100%
+				)
+				border-box;
 	}
 
 	.project-row--shared.project-row--boxed:hover,
 	:global(.company-projects:has([data-modal-group]:hover)) .project-row--shared[data-modal-group] {
-		background: linear-gradient(
-			to right,
-			var(--row-fill-left-hover) 0%,
-			var(--row-fill-left-hover) 15%,
-			var(--row-fill-right-hover) 85%,
-			var(--row-fill-right-hover) 100%
-		);
+		border-color: transparent;
+		background:
+			linear-gradient(
+					to right,
+					var(--row-fill-left-hover) 0%,
+					var(--row-fill-left-hover) 15%,
+					var(--row-fill-right-hover) 85%,
+					var(--row-fill-right-hover) 100%
+				)
+				padding-box,
+			linear-gradient(
+					to right,
+					var(--row-line-left-hover) 0%,
+					var(--row-line-left-hover) 15%,
+					var(--row-line-right-hover) 85%,
+					var(--row-line-right-hover) 100%
+				)
+				border-box;
 	}
 
 	/* Stagger the drifting sheen so adjacent boxes never glint in unison —
