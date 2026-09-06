@@ -662,25 +662,46 @@ const tracks = await Promise.all(
 		}
 	}
 
-	/* One person's experience prose inside the modal — see ProjectRow.astro. */
-	/* Person-color rule sits on the person's own side — Mitko (left) → left
-	   edge, Ádám (right) → right edge — mirroring the timeline's own
-	   columns. See the matching block in ProjectRow.astro. */
+	/* One person's experience prose inside the modal — kept in lockstep with
+	   the matching block in ProjectRow.astro so a solo apart-track project
+	   (Space Punks, Imagic Labs, etc.) reads with the same tinted, boxed
+	   attribution surface as a shared project like Supernova. */
 	.modal-exp {
-		padding-left: 0.85rem;
-		border-left: 2px solid var(--person-color, var(--accent));
+		position: relative;
+		padding: 1rem 1.15rem;
+		border-radius: 10px;
+		border: 1px solid color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
+		text-align: left;
+	}
+
+	.modal-exp[data-person='mitko'] {
+		--person-color: var(--mitko-color);
+		border-left: 3px solid var(--person-color);
 	}
 
 	.modal-exp[data-person='adam'] {
-		padding-left: 0;
-		padding-right: 0.85rem;
-		border-left: none;
-		border-right: 2px solid var(--person-color, var(--accent));
+		--person-color: var(--adam-color);
+		border-right: 3px solid var(--person-color);
 		text-align: right;
 	}
 
+	.modal-exp::after {
+		content: '';
+		display: block;
+		height: 2px;
+		width: 50%;
+		margin-top: 0.75rem;
+		background: linear-gradient(to right, var(--person-color, var(--accent)), transparent);
+	}
+
+	.modal-exp[data-person='adam']::after {
+		margin-left: auto;
+		background: linear-gradient(to left, var(--person-color, var(--accent)), transparent);
+	}
+
 	.modal-exp + .modal-exp {
-		margin-top: 1.1rem;
+		margin-top: 1rem;
 	}
 
 	.modal-exp__person {
