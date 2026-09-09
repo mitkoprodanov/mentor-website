@@ -47,6 +47,7 @@ const rawTags: Omit<WorkTag, 'index'>[] = [
 	{ id: 'progression', label: 'Progression', category: 'Game Systems' },
 	{ id: 'metagame', label: 'Metagame', category: 'Game Systems' },
 	{ id: 'ui', label: 'UI', category: 'Game Systems' },
+	{ id: 'visuals', label: 'Visuals', category: 'Game Systems' },
 	{ id: 'network', label: 'Network', category: 'Game Systems' },
 	{ id: 'devtools', label: 'DevTools', category: 'Game Systems' },
 

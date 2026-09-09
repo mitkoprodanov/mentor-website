@@ -334,7 +334,7 @@ export const timeline: TimelineEntry[] = [
 						{
 							person: 'mitko',
 							slug: 'mitko-supernova',
-							tagIds: ['ai', 'navigation', 'ability', 'progression'],
+							tagIds: ['gameplay', 'ai', 'navigation', 'ability', 'dev-tools', 'proprietary-engine'],
 						},
 						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame'] },
 					],
@@ -349,7 +349,7 @@ export const timeline: TimelineEntry[] = [
 						{
 							person: 'mitko', 
 							slug: 'mitko-lol-universe',
-							tagIds: ['gameplay', 'ability', 'encounter', 'ui', 'co-dev-teams', 'progression', 'devtools', 'proprietary-engine']
+							tagIds: ['gameplay', 'ability', 'encounter', 'ui', 'co-dev-teams', 'progression', 'devtools']
 						},
 						{ 
 							person: 'adam', 
@@ -364,7 +364,11 @@ export const timeline: TimelineEntry[] = [
 					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
 					media: aroundMedia,
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-around' },
+						{ 
+							person: 'mitko', 
+							slug: 'mitko-around',
+							tagIds: ['gameplay', 'ui', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync', 'prototyping'],
+						},
 						{ person: 'adam', slug: 'adam-around', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting']},
 					],
 				},
@@ -378,7 +382,7 @@ export const timeline: TimelineEntry[] = [
 						{ 
 							person: 'mitko', 
 							slug: 'mitko-mmo-rework', 
-							tagIds: ['gameplay', 'microservices', 'agile'], 
+							tagIds: ['gameplay', 'proprietary-engine', 'microservices', 'agile', 'co-dev-teams'], 
 						}
 					],
 				},
@@ -412,7 +416,7 @@ export const timeline: TimelineEntry[] = [
 							{
 								person: 'mitko', 
 								slug: 'mitko-flying-wild-hog', 
-								tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
+								tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos', 'co-dev-teams'],  
 							}
 						],
 					},
@@ -434,7 +438,7 @@ export const timeline: TimelineEntry[] = [
 							{
 								person: 'mitko',
 								slug: 'mitko-imagic-labs',
-								tagIds: ['mobile-development', 'clean-code'],
+								tagIds: ['mobile-development', 'clean-code', 'co-dev-teams'],
 							},
 						],
 					},
@@ -456,7 +460,7 @@ export const timeline: TimelineEntry[] = [
 							{
 								person: 'mitko', 
 								slug: 'mitko-kreator-studios' , 
-								tagIds: ['gameplay', 'ability', 'network', 'ui', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'prototyping'],
+								tagIds: ['gameplay', 'ability', 'network', 'ui', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'prototyping', 'co-dev-teams'],
 							}
 						],
 					},

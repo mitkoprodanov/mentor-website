@@ -9,20 +9,20 @@ export const aroundMedia: ProjectMedia[] = [
 		src: 'https://www.facebook.com/watch/?v=297734748254498',
 		kind: 'facebook-reel',
 		caption: 'Around trailer',
-		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'prototyping', 'playtesting'],
+		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'prototyping', 'playtesting'],
 	},
 	{
 	src: '',
 		kind: 'text',
 		person: 'mitko',
-		caption: 'Established and maintained much of the game’s technical foundation, including character movement, actions, interactions, inventory, background systems, and other mood effects.',
-		tagIds: ['gameplay', 'playtesting', 'narrative-design', ''],
+		caption: 'Established and maintained much of the game’s technical foundation, including character movement, actions, interactions and inventory.',
+		tagIds: ['gameplay', 'ui', 'prototyping', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync'],
 	},
 	{
 		src: 'https://www.facebook.com/watch/?v=291274308860973',
 		kind: 'facebook-reel',
-		caption: 'Around gameplay',
-		tagIds: ['prototyping', 'playtesting', 'narrative-design', 'puzzle-design'],
+		caption: 'Around gameplay showing narrative flow supported by inventory usage',
+		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync'],
 	},
 	{
 	src: '',
@@ -44,5 +44,17 @@ export const aroundMedia: ProjectMedia[] = [
 		caption: 'Designed narrative experiences, game systems, and puzzles that sensitively portray the emotional and psychological realities of living with dementia.',
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design'],
 	},
-
+	{
+	src: '',
+		kind: 'text',
+		person: 'mitko',
+		caption: 'Experiemented with creative visual techniques to bring a hand-drawn world to life.',
+		tagIds: ['visuals', 'level-design', 'unreal-engine'],
+	},
+	{
+		src: 'https://www.facebook.com/reel/651147125502357',
+		kind: 'facebook-reel',
+		caption: 'An immersive hand-drawn world',
+		tagIds: ['visuals', 'level-design', 'unreal-engine'],
+	},
 ];

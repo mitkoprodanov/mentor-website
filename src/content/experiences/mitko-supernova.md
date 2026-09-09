@@ -4,4 +4,4 @@ project: supernova
 category: system-feature
 ---
 
-Built the wave army movement system — large-scale crowd movement combining flocking behavior with pathfinding to coordinate diverse AI armies. Also built the custom status-effect system, tech tree, and multiple heroes with complete ability kits.
+Built a large-scale crowd movement and navigation system coordinating diverse waves of AI-controlled armies. Co-developed the custom status-effect system and implemented multiple heroes with complete ability kits.
