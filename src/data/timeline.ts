@@ -346,8 +346,15 @@ export const timeline: TimelineEntry[] = [
 					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
 					media: lolUniverseMedia,
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-lol-universe' },
-						{ person: 'adam', slug: 'adam-lol-universe', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ip-critical-design', 'co-dev-teams', 'progression', 'metagame', 'ability', 'encounter', 'devtools', 'proprietary-engine'] },
+						{
+							person: 'mitko', 
+							slug: 'mitko-lol-universe',
+							tagIds: ['gameplay', 'ability', 'encounter', 'ui', 'co-dev-teams', 'progression', 'devtools', 'proprietary-engine']
+						},
+						{ 
+							person: 'adam', 
+							slug: 'adam-lol-universe', 
+							tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ip-critical-design', 'co-dev-teams', 'progression', 'metagame', 'ability', 'encounter', 'devtools', 'proprietary-engine'] },
 					],
 				},
 				{
@@ -367,7 +374,13 @@ export const timeline: TimelineEntry[] = [
 					name: 'MMO Microservices Rework',
 					info: 'Reworked a monolithic MMO server into microservices, Agile-driven.',
 					media: mmoReworkMedia,
-					experiences: [{ person: 'mitko', slug: 'mitko-mmo-rework', tagIds: ['agile'] }],
+					experiences: [
+						{ 
+							person: 'mitko', 
+							slug: 'mitko-mmo-rework', 
+							tagIds: ['gameplay', 'microservices', 'agile'], 
+						}
+					],
 				},
 				{
 					id: 'beasts-of-brawlia',
@@ -395,7 +408,13 @@ export const timeline: TimelineEntry[] = [
 						name: 'Space Punks',
 						info: 'Sci-fi co-op action RPG in Unreal Engine 4 — gameplay features and a deep dive into GAS.',
 						media: spacePunksMedia,
-						experiences: [{ person: 'mitko', slug: 'mitko-flying-wild-hog', tagIds: ['unreal-gas'] }],
+						experiences: [
+							{
+								person: 'mitko', 
+								slug: 'mitko-flying-wild-hog', 
+								tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
+							}
+						],
 					},
 				],
 			},
@@ -433,7 +452,13 @@ export const timeline: TimelineEntry[] = [
 						name: 'Heart of Darkness',
 						info: 'Hardcore first-person shooter with ultra-high realism, PvP and PvE',
 						media: kreatorMedia,
-						experiences: [{ person: 'mitko', slug: 'mitko-kreator-studios' }],
+						experiences: [
+							{
+								person: 'mitko', 
+								slug: 'mitko-kreator-studios' , 
+								tagIds: ['gameplay', 'ability', 'network', 'ui', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'prototyping'],
+							}
+						],
 					},
 				],
 			},

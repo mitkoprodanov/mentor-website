@@ -47,6 +47,7 @@ const rawTags: Omit<WorkTag, 'index'>[] = [
 	{ id: 'progression', label: 'Progression', category: 'Game Systems' },
 	{ id: 'metagame', label: 'Metagame', category: 'Game Systems' },
 	{ id: 'ui', label: 'UI', category: 'Game Systems' },
+	{ id: 'network', label: 'Network', category: 'Game Systems' },
 	{ id: 'devtools', label: 'DevTools', category: 'Game Systems' },
 
 	// Platform
@@ -62,7 +63,11 @@ const rawTags: Omit<WorkTag, 'index'>[] = [
 
 	// Tech
 	{ id: 'unreal-gas', label: 'Unreal GAS', category: 'Tech' },
+	{ id: 'unreal-eqs', label: 'Unreal EQS', category: 'Tech' },
+	{ id: 'eos', label: 'EOS', category: 'Tech' },
+	{ id: 'unreal-gamesync', label: 'Unreal GameSync', category: 'Tech' },
 	{ id: 'blueprint-scripting', label: 'Blueprint Scripting', category: 'Tech' },
+	{ id: 'microservices', label: 'Microservices', category: 'Tech' },
 	{ id: 'mobile-development', label: 'Mobile Development', category: 'Tech' },
 	{ id: 'clean-code', label: 'Clean Code', category: 'Tech' },
 ];
