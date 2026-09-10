@@ -188,6 +188,13 @@ const adam = getPerson('adam');
 	.person-bar {
 		position: sticky;
 		z-index: 4;
+		/* The bar is a full-width sticky wrapper but only paints at its two
+		   edges — the two person cards. Let clicks fall through the empty
+		   middle so a project card scrolling behind it (horizontally beside
+		   the person cards) stays clickable; the two slots below re-enable
+		   pointer events on themselves. Same pattern the filter-active
+		   branch uses further down. */
+		pointer-events: none;
 		/* Undo UA popover paints and sizing. */
 		padding: 0;
 		border: 0;
@@ -269,6 +276,10 @@ const adam = getPerson('adam');
 		position: relative;
 		flex: 0 1 355px;
 		min-width: 0;
+		/* Re-enable pointer events on the actual card slot; the parent
+		   .person-bar sets pointer-events: none so the empty middle lets
+		   clicks through to the timeline behind. */
+		pointer-events: auto;
 		transform: translateX(calc((1 - var(--split, 1)) * var(--cx, 0px) * var(--photo-motion, 1)));
 		will-change: transform;
 		/* Eases flex-basis between the resting 340px and the header-only pixel
