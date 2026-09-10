@@ -4,4 +4,4 @@ project: flying-wild-hog
 category: system-feature
 ---
 
-Supported several gameplay features on Space Punks, a sci-fi co-op action RPG built in Unreal Engine 4 — one of the international collaborations run through Mentor Game Studio.
+Joined the development of Space Punks, built an online leaderboard using Epic Online Services, supported procedurally generated missions, gained experience with GAS, and worked on many other gameplay features.
