@@ -28,7 +28,11 @@ import ProjectDetail from './ProjectDetail.astro';
 
 interface LoadedProject {
 	project: CatalogProject;
-	cards: { person: Person; Content: Awaited<ReturnType<typeof render>>['Content'] }[];
+	cards: {
+		person: Person;
+		Content: Awaited<ReturnType<typeof render>>['Content'];
+		tagIds: string[];
+	}[];
 	peopleLabel: string;
 	tagLabels: string[];
 }
@@ -40,7 +44,7 @@ async function loadProject(project: CatalogProject): Promise<LoadedProject> {
 			if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 			const { Content } = await render(entry);
 			const person = getPerson(ref.person);
-			return { person, Content };
+			return { person, Content, tagIds: ref.tagIds ?? [] };
 		}),
 	);
 	return {
@@ -97,7 +101,7 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 							as="h4"
 						>
 							{lp.cards.map((c) => (
-								<div class="modal-exp" data-person={c.person.id}>
+								<div class="modal-exp" data-person={c.person.id} data-exp-tags={c.tagIds.join(' ')}>
 									<c.Content />
 								</div>
 							))}
@@ -226,6 +230,10 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 	}
 
 	.filter-results :global(.shot.fr-hidden) {
+		display: none;
+	}
+
+	.modal-exp.fr-hidden {
 		display: none;
 	}
 

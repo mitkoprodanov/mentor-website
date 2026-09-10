@@ -42,6 +42,14 @@ function applyResults(filter: Filter): void {
 			if (shown) visibleShots += 1;
 		});
 		if (gallery) gallery.classList.toggle('fr-gallery-empty', visibleShots === 0);
+
+		// Hide each person's experience block unless that experience itself
+		// carries the tag — the surrounding project may match through someone
+		// else's experience or a media item, but only the relevant person's
+		// contribution should read here.
+		card.querySelectorAll<HTMLElement>('.modal-exp[data-exp-tags]').forEach((exp) => {
+			exp.classList.toggle('fr-hidden', !hasTag(exp.dataset.expTags, filter));
+		});
 	});
 
 	// All cards live in one flat stack now (see components/projects/FilterResults.astro),
