@@ -3,12 +3,6 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Might & Magic: Heroes VI (see data/timeline.ts). */
 export const heroes6Media: ProjectMedia[] = [
 	{
-		src: '',
-		kind: 'text',
-		caption: "Together, we designed and built the Campaign AI system, giving level designers a dev tool to shape enemy behaviour around narrative pacing and player progression.",
-		tagIds: ['gameplay', 'ai', 'narrative-design', 'systems-design', 'ip-critical-design', 'proprietary-engine', 'devtools', 'level-design', 'balance'],
-	},
-	{
 		src: 'https://www.youtube.com/watch?v=ipXY3c3wDZk',
 		start: 841,
 		end: 1012,
@@ -19,7 +13,7 @@ export const heroes6Media: ProjectMedia[] = [
 	{
 		src: '',
 		kind: 'text',
-		caption: "We designed and refined boss abilities and behaviours to deliver distinctive challenges shaped by each encounter’s narrative context.",
+		caption: "We created and refined boss abilities and behaviours to deliver distinctive challenges shaped by each encounter’s narrative context.",
 		tagIds: ['gameplay', 'ai', 'encounter', 'systems-design', 'ip-critical-design', 'ability', 'narrative-design', 'balance'],
 	},
 	{

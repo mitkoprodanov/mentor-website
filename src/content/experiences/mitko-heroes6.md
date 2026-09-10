@@ -4,4 +4,4 @@ project: heroes6
 category: system-feature
 ---
 
-Built the campaign AI framework with Ádám. Implemented the tutorial system, hero abilities, spells, units, boss encounters, the end-game screen, and numerous other gameplay, AI, and UI features. Developing a genetic-algorithm prototype for finding efficient resource-gathering routes helped me earn a permanent position at the company.
+Built the campaign AI framework with Ádám to create believable, natural-feeling enemy behavior while following the campaign’s narrative flow. Implemented the tutorial system, hero abilities, spells, units, boss encounters, the end-game screen, and numerous other gameplay, AI, and UI features. Developing a genetic-algorithm prototype for finding efficient resource-gathering routes helped me earn a permanent position at the company.
