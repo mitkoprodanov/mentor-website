@@ -1,6 +1,5 @@
 ---
 import type { ProjectMedia } from '../../data/projects';
-import ExternalLink from '../common/ExternalLink.astro';
 
 /**
  * The inner detail of a Project — head, meta, tag pills, a body slot, and the
@@ -31,8 +30,28 @@ interface Props {
 	as?: 'h3' | 'h4';
 }
 
-const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel = 'Visit project', titleId, as = 'h3' } = Astro.props;
+const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3' } = Astro.props;
 const Title = as;
+
+/** Compact, human-friendly label for a project's external link — the host
+ *  (with a leading `www.` stripped) plus the *tail* of the path (its last
+ *  non-empty segment), e.g. "ubisoft.com/might-and-magic-heroes-vi",
+ *  "facebook.com/PrimalAround", "supernova.fandom.com/Supernova". Falls
+ *  back to just the host when the URL has no path — e.g.
+ *  "mandragoragame.com" — so the label always names both where the link
+ *  goes and what it points at. Falls back to the raw URL if the string
+ *  won't parse at all. */
+function defaultUrlLabel(href: string): string {
+	try {
+		const u = new URL(href);
+		const host = u.host.replace(/^www\./, '');
+		const tail = u.pathname.replace(/\/+$/, '').split('/').filter(Boolean).pop();
+		return tail ? `${host}/${tail}` : host;
+	} catch {
+		return href;
+	}
+}
+const resolvedUrlLabel = urlLabel ?? (url ? defaultUrlLabel(url) : undefined);
 
 /**
  * Facebook embed URL — the video plugin's iframe form, so no Facebook SDK or
@@ -126,6 +145,17 @@ function personStyle(m: ProjectMedia): string | undefined {
 	<Title id={titleId} class="project-modal__title">{title}</Title>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
 </header>
+
+{
+	url && (
+		<div class="project-modal__link">
+			<a class="project-link-chip btn-sheen" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${resolvedUrlLabel} in a new tab`}>
+				<span class="project-link-chip__label">{resolvedUrlLabel}</span>
+				<span class="project-link-chip__icon" aria-hidden="true">↗</span>
+			</a>
+		</div>
+	)
+}
 
 {
 	tags.length > 0 && (
@@ -249,16 +279,6 @@ function personStyle(m: ProjectMedia): string | undefined {
 				),
 			)}
 		</section>
-	)
-}
-
-{
-	url && (
-		<div class="project-modal__actions">
-			<ExternalLink href={url} class="project-link">
-				{urlLabel}
-			</ExternalLink>
-		</div>
 	)
 }
 
@@ -660,13 +680,83 @@ function personStyle(m: ProjectMedia): string | undefined {
 		white-space: pre-line;
 	}
 
-	.project-modal__actions {
-		margin-top: 1.5rem;
-		padding-top: 1.25rem;
-		border-top: 1px solid var(--border);
+	/* Project link — a pill-shaped chip sitting between the description and
+	   the tag row. Same shape/size language as a tag pill so the two rows
+	   read as one block of project meta, but tinted with the link accent and
+	   given a subtle border + hover glint so it clearly reads as tappable —
+	   not just another pill. */
+	.project-modal__link {
+		margin-top: 1rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
 	}
 
-	.project-link {
+	/* Shared projects centre the head (see .project-modal__head--shared above);
+	   keep the link chip in the same centred column beneath it. */
+	.project-modal__head--shared + .project-modal__link {
+		justify-content: center;
+	}
+
+	/* Same visual language as the person cards' "Skills" toggle
+	   (see .panel-toggle in ScrollyRegion.astro): alpha-tinted fill and
+	   border over transparent so the page background shows through, plus
+	   the shared .btn-sheen drifting glint to signal "this is a live
+	   click target" without pulling focus. Colour is --accent-3, matching
+	   the description line above. */
+	.project-link-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.4rem 0.95rem;
+		border-radius: 999px;
 		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		line-height: 1.2;
+		color: var(--accent-3);
+		background: color-mix(in srgb, var(--accent) 14%, transparent);
+		border: 1px solid color-mix(in srgb, var(--accent-3) 45%, transparent);
+		text-decoration: none;
+		cursor: pointer;
+		/* Tuning knobs the shared .btn-sheen layer reads (see Layout.astro):
+		   honey glint tinted to match the chip. */
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.18;
+		transition:
+			background 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease,
+			box-shadow 0.2s ease,
+			transform 0.15s ease;
+	}
+
+	/* Hover, focus and press all land on the same "lit" state — the same
+	   filled-accent look the Skills toggle uses when it's engaged. Click
+	   and hover deliberately look identical: no separate pressed/darkened
+	   state, just the one on/off distinction. */
+	.project-link-chip:hover,
+	.project-link-chip:focus-visible,
+	.project-link-chip:active {
+		color: var(--bg);
+		background: var(--accent-3);
+		border-color: var(--accent-3);
+		box-shadow: 0 0 18px 1px color-mix(in srgb, var(--accent-3) 55%, transparent);
+	}
+
+	.project-link-chip:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 3px;
+	}
+
+	.project-link-chip__icon {
+		font-size: 0.9em;
+		transition: transform 0.2s ease;
+	}
+
+	.project-link-chip:hover .project-link-chip__icon,
+	.project-link-chip:focus-visible .project-link-chip__icon,
+	.project-link-chip:active .project-link-chip__icon {
+		transform: translate(2px, -2px);
 	}
 </style>

@@ -186,6 +186,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 				personIds={modalCards.map((c) => c.person.id)}
 				tags={modalTagLabels}
 				media={modalMedia}
+				url={project.url}
 			>
 				{modalCards.map((c) => (
 					<div class="modal-exp" data-person={c.person.id}>

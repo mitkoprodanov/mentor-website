@@ -32,7 +32,7 @@ interface Props {
 	urlLabel?: string;
 }
 
-const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel = 'Visit project' } = Astro.props;
+const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 ---
 

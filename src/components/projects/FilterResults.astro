@@ -93,6 +93,7 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 							dateRange={lp.project.dateRange}
 							people={lp.cards.length > 1 ? lp.peopleLabel : undefined}
 							media={lp.project.media}
+							url={lp.project.url}
 							as="h4"
 						>
 							{lp.cards.map((c) => (

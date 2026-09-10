@@ -102,6 +102,14 @@ export interface ProjectDef {
 	/** Omit for a single-project company — the company name is used instead. */
 	name?: string;
 	/**
+	 * Optional external link for this project — shown in its detail as an
+	 * ExternalLink above the tag pills (mirroring the LinkedIn / email links
+	 * on a person contact card). Typical destinations: the game's official
+	 * page (publisher/store/wiki/social). Omit for projects without a public
+	 * home yet.
+	 */
+	url?: string;
+	/**
 	 * Year (or year range) shown in this project's detail modal. Overrides the
 	 * enclosing company's `dateRange` — used when a single project inside a
 	 * longer-running company happened in a specific year (e.g. Biobot's 2026
@@ -280,6 +288,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'exigo',
 						order: 2004,
 						name: 'Armies of Exigo',
+						url: 'https://en.wikipedia.org/wiki/Armies_of_Exigo',
 						info: 'Real-time strategy game with asymmetric factions and two-level scenarios',
 						media: exigoMedia,
 						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['level-design', 'balance', 'proprietary-engine', 'devtools'] }],
@@ -288,6 +297,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'warhammer-mark-of-chaos',
 						order: 2006,
 						name: 'Warhammer: Mark of Chaos & Battle March',
+						url: 'https://store.steampowered.com/app/4280940/Warhammer_Mark_of_Chaos__Gold_Edition_Classic/',
 						info: 'Real-time tactics game set in the Warhammer universe',
 						media: warhammerMarkOfChaosMedia,
 						experiences: [{ person: 'adam', slug: 'adam-warhammer-mark-of-chaos', tagIds: ['systems-design', 'level-design', 'ip-critical-design', 'ai', 'navigation', 'proprietary-engine', 'devtools'] }],
@@ -307,6 +317,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'heroes6',
 					order: 2010,
 					name: 'Might & Magic: Heroes VI',
+					url: 'https://www.ubisoft.com/games/might-and-magic-heroes-vi',
 					info: 'Turn-based fantasy strategy-RPG combining exploration, army management, hero progression, and tactical combat',
 					media: heroes6Media,
 					experiences: [
@@ -328,6 +339,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'supernova',
 					order: 2013,
 					name: 'Supernova',
+					url: 'https://supernova.fandom.com/wiki/Supernova',
 					info: 'Supernova takes an innovative approach to the multiplayer online battle arena (MOBA) genre by adding real-time strategy (RTS) elements and promises an exciting science fiction setting with vast potential',
 					media: supernovaMedia,
 					experiences: [
@@ -343,6 +355,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'lol-universe',
 					order: 2015,
 					name: 'League of Legends Universe',
+					url: 'https://universe.leagueoflegends.com/',
 					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
 					media: lolUniverseMedia,
 					experiences: [
@@ -361,6 +374,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'around',
 					order: 2017,
 					name: 'Around',
+					url: 'https://www.facebook.com/PrimalAround',
 					info: 'A beautiful journey into the realm of forgotten memories, Around is a hand-drawn point-and-click adventure game',
 					media: aroundMedia,
 					experiences: [
@@ -390,6 +404,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'beasts-of-brawlia',
 					order: 2020,
 					name: 'Beasts of Brawlia',
+					url: 'https://x.com/BeastsOfBrawlia',
 					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
 					media: beastsOfBrawliaMedia,
 					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ability', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting'] }],
@@ -410,6 +425,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'space-punks',
 						order: 2022,
 						name: 'Space Punks',
+						url: 'https://playspacepunks.com/',
 						info: 'Sci-fi co-op action RPG in Unreal Engine 4 — gameplay features and a deep dive into GAS.',
 						media: spacePunksMedia,
 						experiences: [
@@ -432,6 +448,7 @@ export const timeline: TimelineEntry[] = [
 						id: 'imagic-labs-project',
 						order: 2025,
 						name: 'Image Gallery Product',
+						url: 'https://www.imagicapp.com/',
 						info: 'Innovative mobile image-gallery startup product',
 						media: imagicLabsMedia,
 						experiences: [
@@ -485,6 +502,7 @@ export const timeline: TimelineEntry[] = [
 						// the split pair into one card in the filter view.
 						modalId: 'mandragora',
 						name: 'Mandragora: Whispers of the Witch Tree',
+						url: 'https://mandragoragame.com/',
 						info: 'Challenging 2.5D side-scroller action-RPG with Soulslike depth',
 						media: mandragoraMedia,
 						experiences: [{ person: 'adam', slug: 'adam-mandragora', tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting', 'encounter', 'progression', 'ability'] }],

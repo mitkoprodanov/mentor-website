@@ -266,6 +266,7 @@ const tracks = await Promise.all(
 												personIds={cards.map((c) => c.person.id)}
 												tags={modalTagLabels}
 												media={modalMedia}
+												url={project.url}
 											>
 												{cards.map((c) => (
 													<div class="modal-exp" data-person={c.person.id}>

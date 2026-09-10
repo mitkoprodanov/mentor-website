@@ -25,6 +25,8 @@ export interface CatalogProject {
 	key: string;
 	title: string;
 	info?: string;
+	/** External project link — see ProjectDef.url. */
+	url?: string;
 	dateRange?: string;
 	/** First year parsed from `dateRange`, for chronological ordering within a group. */
 	startYear: number;
@@ -76,6 +78,7 @@ function buildProject(project: ProjectDef, company: CompanyDef): CatalogProject 
 		// same fallback the timeline node uses (see data/timeline.ts).
 		title: project.name ?? company.name,
 		info: project.info,
+		url: project.url,
 		dateRange,
 		startYear: parseStartYear(dateRange),
 		order: project.order,
@@ -103,6 +106,7 @@ function mergeInto(target: CatalogProject, extra: CatalogProject): void {
 	}
 	target.experiences = experiences;
 	target.media = media;
+	if (!target.url && extra.url) target.url = extra.url;
 	target.experienceTagIds = sortTagIdsByIndex(uniq([...target.experienceTagIds, ...extra.experienceTagIds]));
 	target.mediaTagIds = sortTagIdsByIndex(uniq([...target.mediaTagIds, ...extra.mediaTagIds]));
 	target.allTagIds = sortTagIdsByIndex(uniq([...target.allTagIds, ...extra.allTagIds]));
