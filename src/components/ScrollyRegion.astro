@@ -97,10 +97,6 @@ const adam = getPerson('adam');
 											<span class="panel-toggle-label">Skills</span>
 											<span class="panel-toggle-chev" aria-hidden="true">▾</span>
 										</button>
-										<label class="panel-lock" title="Keep skills open when clicking outside — only the Skills button closes them">
-											<input type="checkbox" class="panel-lock-check" />
-											<span class="panel-lock-label">Lock</span>
-										</label>
 									</div>
 									<div class="side-panel-linkedin">
 										<ExternalLink href={entry.person.linkedin} class="linkedin-pill btn-sheen">LinkedIn</ExternalLink>
@@ -827,70 +823,6 @@ const adam = getPerson('adam');
 		flex-direction: row-reverse;
 	}
 
-	/* Small person-tinted checkbox label — sits beside the Skills button and,
-	   when checked, keeps the revealed skills panel open on outside clicks
-	   (see panelToggle.client.ts). Native checkbox restyled to match the
-	   pill-and-hairline vocabulary of the surrounding controls. */
-	.panel-lock {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.7rem;
-		font-weight: 600;
-		color: color-mix(in srgb, var(--person-color) 75%, var(--fg));
-		cursor: pointer;
-		user-select: none;
-		opacity: 0.75;
-		transition: opacity 0.2s ease;
-	}
-
-	.panel-lock:hover {
-		opacity: 1;
-	}
-
-	.panel-lock-check {
-		appearance: none;
-		-webkit-appearance: none;
-		width: 14px;
-		height: 14px;
-		margin: 0;
-		border: 1px solid color-mix(in srgb, var(--person-color) 55%, transparent);
-		border-radius: 4px;
-		background: color-mix(in srgb, var(--person-color) 8%, transparent);
-		cursor: pointer;
-		display: inline-grid;
-		place-content: center;
-		transition:
-			background 0.2s ease,
-			border-color 0.2s ease,
-			box-shadow 0.2s ease;
-	}
-
-	.panel-lock-check::before {
-		content: '';
-		width: 8px;
-		height: 8px;
-		border-radius: 2px;
-		background: var(--bg);
-		transform: scale(0);
-		transition: transform 0.15s ease;
-	}
-
-	.panel-lock-check:checked {
-		background: var(--person-color);
-		border-color: var(--person-color);
-		box-shadow: 0 0 10px 0 color-mix(in srgb, var(--person-color) 55%, transparent);
-	}
-
-	.panel-lock-check:checked::before {
-		transform: scale(1);
-	}
-
-	.panel-lock-check:focus-visible {
-		outline: 2px solid color-mix(in srgb, var(--person-color) 70%, transparent);
-		outline-offset: 2px;
-	}
-
 	.side-panel.is-open .panel-toggle-chev,
 	.person-bar-inner.locked .panel-toggle-chev {
 		transform: rotate(180deg);
@@ -1222,15 +1154,9 @@ const adam = getPerson('adam');
 			left: 0;
 			right: 0;
 			z-index: 27;
-			/* Purely a frame now — let clicks fall through to the backdrop/modal. */
-			pointer-events: none;
-		}
-
-		/* Skills-lock combo (Skills locked open + Lock checkbox on): the reader
-		   asked to try different filter tags without collapsing the skills, so
-		   let clicks reach the panel again. panelToggle mirrors that state onto
-		   <body> as .skills-lock-active. */
-		:global(body.filter-active.skills-lock-active) .person-bar {
+			/* Skills stay open through the filter view now (the previous "just a
+			   frame — no pointer events" behaviour was gated behind the removed
+			   Lock checkbox), so let clicks reach the panel for swapping tags. */
 			pointer-events: auto;
 		}
 
@@ -1268,18 +1194,9 @@ const adam = getPerson('adam');
 			pointer-events: none;
 		}
 
-		/* The skills panel itself: keep it interactive when the reader has the
-		   skills-lock combo on (Skills locked open + Lock checkbox) so they can
-		   swap filter tags without collapsing skills; otherwise close it too,
-		   using the same 0.14s ease as the horizontal shrink so the vertical
-		   and horizontal collapses arrive together. Both selectors chained
-		   here have specificity that beats `.side-panel.is-open .side-panel-stack`
-		   so no !important is needed for the override. */
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack,
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel.is-open .side-panel-stack {
-			height: 0;
-			overflow: hidden;
-		}
+		/* Skills stack stays open through the filter view now (the previous
+		   collapse was gated behind the removed Lock checkbox — its "keep the
+		   skills open" state is the default). */
 
 		/* No skills-reveal backdrop here — the filter backdrop already dims the page. */
 		:global(body.filter-active) .person-backdrop {

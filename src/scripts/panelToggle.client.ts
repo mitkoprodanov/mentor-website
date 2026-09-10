@@ -51,42 +51,9 @@ let suppressed = false;
 // outside click, selecting a filter tag, or Escape.
 let locked = false;
 
-function syncLockBodyClass(): void {
-	// Mirrors the Lock checkbox onto <body> so ScrollyRegion.astro's
-	// body.filter-active rules can leave the skills panel and the Skills
-	// button visible/clickable when the reader has asked to keep the skills
-	// up (otherwise filter-active hides .side-panel-stack / .side-panel-action
-	// outright on desktop, and the panel collapses the instant a tag is
-	// chosen). The .side-panel-stack itself still needs .reveal / .is-open to
-	// render, so leaving this on without an active reveal is harmless.
-	document.body.classList.toggle('skills-lock-active', lockCheckActive());
-}
-
 function unlock(): void {
 	locked = false;
 	bar?.classList.remove('locked');
-	syncLockBodyClass();
-}
-
-// "Lock Skills" checkbox beside each Skills button. When checked, an outside
-// click does NOT dismiss the revealed skills panel — only pressing the Skills
-// button again does. Unchecked leaves the original click-away-dismisses
-// behaviour intact. Each card carries its own box in the markup, but the two
-// Skills buttons behave as one paired unit, so the checkboxes mirror each
-// other — flipping one flips the other, and the effective state is a single
-// boolean the rest of the script reads via lockCheckActive().
-const lockChecks = Array.from(document.querySelectorAll<HTMLInputElement>('.panel-lock-check'));
-lockChecks.forEach((cb) => {
-	cb.addEventListener('change', () => {
-		lockChecks.forEach((other) => {
-			if (other !== cb) other.checked = cb.checked;
-		});
-		syncLockBodyClass();
-	});
-});
-
-function lockCheckActive(): boolean {
-	return lockChecks.some((cb) => cb.checked);
 }
 
 /**
@@ -133,9 +100,22 @@ function showReveal(): void {
 	bar.classList.add('reveal');
 }
 
+function blurInsideBar(): void {
+	// The CSS keeps .side-panel-stack visible while any element inside the bar
+	// has focus (`.person-bar-inner:focus-within .side-panel-stack`). That is
+	// how keyboard users tab into the skills — but it also means a click on
+	// any card button (Skills, Lock, a tag, CV, LinkedIn) leaves focus behind
+	// and holds the panel open after the pointer has left. Drop the focus
+	// whenever we intend to close so unhovering (or an outside close) actually
+	// collapses the panel, "as if nothing were pressed."
+	const active = document.activeElement as HTMLElement | null;
+	if (active && bar?.contains(active)) active.blur();
+}
+
 function hideReveal(): void {
 	if (!bar) return;
 	bar.classList.remove('reveal');
+	blurInsideBar();
 	// After the class comes off and the bar collapses back, scroll anchoring
 	// snaps scrollY back on its own — no need to restore it here.
 	if (!preRevealActive()) clearSnapshot();
@@ -148,11 +128,9 @@ if (bar) {
 			showReveal();
 		});
 		card.addEventListener('pointerleave', () => {
-			// Locked open via the Skills button: stay revealed no matter where the
-			// pointer goes — only an outside click (or Escape / a filter tag)
-			// collapses it now. The Lock checkbox does NOT influence this on its
-			// own: without a Skills-button click there is nothing to hold open, so
-			// unhovering closes as normal.
+			// Locked open via the Skills button, or auto-locked by picking a
+			// filter tag: stay revealed no matter where the pointer goes — only
+			// an outside click (or the Skills button again) collapses it now.
 			if (locked) return;
 			// By the time pointerleave fires the pointer has already moved on, so
 			// :hover reflects where it went: collapse only if it isn't over the
@@ -224,15 +202,11 @@ document.addEventListener('click', (event) => {
 				// Pressing Skills is an explicit close intent — force-collapse
 				// regardless of whether the pointer is still over the card, and
 				// suppress hover re-open until the pointer leaves and comes back.
-				// This matters especially with Lock on + filter active, where the
-				// panel would otherwise sit pinned even as the reader tries to
-				// dismiss it (the CSS override keeps the stack visible while
-				// .reveal is on).
 				bar?.classList.remove('reveal');
+				blurInsideBar();
 				suppressed = true;
 				closeAll();
 			}
-			syncLockBodyClass();
 			return;
 		}
 		// Touch: no hover reveal, so the button is an accordion — expand one card
@@ -245,50 +219,50 @@ document.addEventListener('click', (event) => {
 		return;
 	}
 
-	// A filter tag (in the skills) or the under-card pill was clicked: the
-	// details normally drop away so the filtered timeline is visible. When the
-	// Lock checkbox is on the reader has explicitly asked to keep the skills
-	// up while picking tags — so pin the reveal (auto-lock so pointerleave
-	// won't collapse it) and let the tag flow through without dismissing.
-	// Closing the filtered view then leaves the skills untouched (filterModal
-	// only clears the filter — it does not touch .reveal / .is-open).
+	// A filter tag (in the skills) or the under-card pill was clicked: keep the
+	// skills panel up so the reader can pick another tag without collapsing
+	// them (auto-lock so pointerleave won't collapse it either). Closing the
+	// filtered view then leaves the skills untouched (filterModal only clears
+	// the filter — it does not touch .reveal / .is-open).
 	if (target.closest('button.tag--linked') || target.closest('.card-filter-tag')) {
-		if (lockCheckActive()) {
-			if (hoverMQ.matches) {
-				locked = true;
-				suppressed = false;
-				bar?.classList.add('reveal', 'locked');
-			}
-			syncLockBodyClass();
-			return;
+		if (hoverMQ.matches) {
+			locked = true;
+			suppressed = false;
+			bar?.classList.add('reveal', 'locked');
 		}
-		closeAll();
-		dismissDetails();
 		return;
 	}
 
 	// A click anywhere outside both cards collapses them. The two cards are one
 	// unit, so this collapses *both* — clearing a locked-open desktop reveal and
-	// any touch-opened accordion card alike. Skipped only when the panel is
-	// currently locked open via the Skills button AND the Lock checkbox is on:
-	// the checkbox rewires the Skills-button lock so only pressing Skills again
-	// can release it. A merely-hovered (not-yet-locked) panel is untouched by
-	// the checkbox and still dismisses on outside click.
+	// any touch-opened accordion card alike.
+	//
+	// Filter-dismissing UI (the modal backdrop, the timeline filter chip) is
+	// treated as "clear the filter only, leave the panel alone" — so the
+	// reader's first click-away drops the filter and leaves the skills up
+	// (tagFilter/filterModal handle the filter clear), and the *next*
+	// click-away (which no longer lands on those controls) closes the skills.
+	// The `.card-filter-tag` under each card is handled by the earlier
+	// filter-tag branch above.
+	if (target.closest('.filter-backdrop') || target.closest('#timeline-filter-chip')) {
+		return;
+	}
 	if (!target.closest('.side-panel')) {
-		if (locked && lockCheckActive()) return;
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
+		blurInsideBar();
 		suppressed = false;
 	}
 });
 
 document.addEventListener('keydown', (event) => {
 	if (event.key === 'Escape') {
-		if (locked && lockCheckActive()) return;
+		if (locked) return;
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
+		blurInsideBar();
 		suppressed = false;
 	}
 });
