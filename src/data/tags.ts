@@ -31,12 +31,12 @@ const rawTags: Omit<WorkTag, 'index'>[] = [
 	// Design
 	{ id: 'systems-design', label: 'Systems Design', category: 'Design' },
 	{ id: 'level-design', label: 'Level Design', category: 'Design' },
-	{ id: 'ip-critical-design', label: 'IP-Critical Design', category: 'Design' },
 	{ id: 'ux-design', label: 'UX Design', category: 'Design' },
+	{ id: 'ip-critical-design', label: 'IP-Critical Design', category: 'Design' },
 	{ id: 'narrative-design', label: 'Narrative Design', category: 'Design' },
+	{ id: 'balance', label: 'Balance', category: 'Design' },
 	{ id: 'puzzle-design', label: 'Puzzle Design', category: 'Design' },
 	{ id: 'board-game-design', label: 'Board Game Design', category: 'Design' },
-	{ id: 'balance', label: 'Balance', category: 'Design' },
 
 	// Game Systems
 	{ id: 'gameplay', label: 'Gameplay', category: 'Game Systems' },
@@ -65,8 +65,8 @@ const rawTags: Omit<WorkTag, 'index'>[] = [
 	// Tech
 	{ id: 'unreal-gas', label: 'Unreal GAS', category: 'Tech' },
 	{ id: 'unreal-eqs', label: 'Unreal EQS', category: 'Tech' },
-	{ id: 'eos', label: 'EOS', category: 'Tech' },
 	{ id: 'unreal-gamesync', label: 'Unreal GameSync', category: 'Tech' },
+	{ id: 'eos', label: 'EOS', category: 'Tech' },
 	{ id: 'blueprint-scripting', label: 'Blueprint Scripting', category: 'Tech' },
 	{ id: 'microservices', label: 'Microservices', category: 'Tech' },
 	{ id: 'mobile-development', label: 'Mobile Development', category: 'Tech' },
