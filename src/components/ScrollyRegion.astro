@@ -678,6 +678,12 @@ const adam = getPerson('adam');
 	:global(body:not(.contact-mode):has(.person-bar-inner:focus-within)) .person-backdrop,
 	:global(body:not(.contact-mode):has(.side-panel.is-open)) .person-backdrop {
 		opacity: 1;
+		/* The panel behaves like a modal: catch pointer events on the backdrop
+		   so hover/click on the timeline behind is blocked. A click here isn't
+		   inside .side-panel, so the outside-click handler in
+		   panelToggle.client.ts collapses the panel — same "click outside to
+		   dismiss" contract as any modal. */
+		pointer-events: auto;
 	}
 
 	/* While a project detail modal is open, the modal's own backdrop already
