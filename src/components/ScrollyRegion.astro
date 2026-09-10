@@ -77,7 +77,7 @@ const adam = getPerson('adam');
 								<polygon class="decor-line decor-line--inner" points="75,15 136,54 136,120 75,153 14,120 14,54" />
 							</svg>
 						</div>
-						<div class="side-panel btn-sheen">
+						<div class="side-panel">
 							<PersonHeader person={entry.person} />
 							{/* Each collapsible row is wrapped in a .collapse-row grid so its
 							    height can be animated by transitioning `grid-template-rows`
@@ -594,11 +594,6 @@ const adam = getPerson('adam');
 		   scroll area to absorb whatever's left — so the card bottom is always
 		   on screen. Lifted on mobile below, where the bar scrolls with the page. */
 		max-height: calc(100vh - 4.5rem);
-		/* Faint person-tinted glint drifting across the card — the same cue as
-		   the pills and timeline boxes — but only once the card is actually a
-		   live click target (see the cards-arrived gate below). */
-		--sheen-color: var(--person-color);
-		--sheen-strength: 0.09;
 		/* Let the collapsible rows inside (the Skills button and the CV pill)
 		   animate their height between 0 and auto rather than snapping — height
 		   keyword interpolation is opt-in and inherits, so enabling it here covers
@@ -642,30 +637,6 @@ const adam = getPerson('adam');
 	.collapse-row > * {
 		min-height: 0;
 		overflow: hidden;
-	}
-
-	/* The two cards drift out of step with each other. */
-	.person-slot--right .side-panel {
-		--sheen-delay: -4.5s;
-	}
-
-	/* During the non-interactive intro the card isn't clickable yet, so it
-	   shouldn't advertise itself — hold the glint until body.cards-arrived
-	   (see .side-panel-action's gate above). */
-	:global(body:not(.cards-arrived)) .side-panel::after {
-		animation: none;
-		opacity: 0;
-	}
-
-	/* When the skills panel is open the card is already fully revealed and
-	   engaged — the drifting glint would just be busywork over the content,
-	   so suppress it in every reveal state: hover (.reveal on the bar),
-	   keyboard focus (:focus-within), and the touch toggle (.is-open). */
-	.person-bar-inner.reveal .side-panel::after,
-	.person-bar-inner:focus-within .side-panel::after,
-	.side-panel.is-open::after {
-		animation: none;
-		opacity: 0;
 	}
 
 	/* Brighter, glowing silhouette when the card is hovered. */
