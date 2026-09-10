@@ -51,7 +51,9 @@ export const people: Person[] = [
 			'agile',
 			'prototyping',
 			'co-dev-teams',
-
+			'microservices',
+			'eos',
+			'network',
 		],
 		hobbies: [
 			'Paragliding — both solo and as a tandem pilot',

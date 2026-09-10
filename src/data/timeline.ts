@@ -321,8 +321,8 @@ export const timeline: TimelineEntry[] = [
 					info: 'Turn-based fantasy strategy-RPG combining exploration, army management, hero progression, and tactical combat',
 					media: heroes6Media,
 					experiences: [
-						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['ai'] },
-						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['systems-design', 'level-design', 'ip-critical-design', 'ui', 'ai', 'encounter', 'ability', 'progression', 'proprietary-engine', 'devtools', 'gameplay', 'narrative-design'] },
+						{ person: 'mitko', slug: 'mitko-heroes6', tagIds: ['ai', 'gameplay', 'proprietary-engine', 'devtools', 'encounter', 'ability', 'ui'] },
+						{ person: 'adam', slug: 'adam-heroes6', tagIds: ['systems-design', 'level-design', 'ip-critical-design', 'ui', 'ai', 'encounter', 'ability', 'progression', 'proprietary-engine', 'devtools', 'gameplay', 'narrative-design', 'balance'] },
 					],
 				},
 			],
@@ -346,9 +346,9 @@ export const timeline: TimelineEntry[] = [
 						{
 							person: 'mitko',
 							slug: 'mitko-supernova',
-							tagIds: ['gameplay', 'ai', 'navigation', 'ability', 'dev-tools', 'proprietary-engine'],
+							tagIds: ['gameplay', 'ai', 'navigation', 'ability', 'devtools', 'proprietary-engine'],
 						},
-						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame', 'gameplay'] },
+						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame', 'gameplay', 'devtools'] },
 					],
 				},
 				{
@@ -367,7 +367,7 @@ export const timeline: TimelineEntry[] = [
 						{ 
 							person: 'adam', 
 							slug: 'adam-lol-universe', 
-							tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ip-critical-design', 'co-dev-teams', 'progression', 'metagame', 'ability', 'encounter', 'devtools', 'proprietary-engine'] },
+							tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ip-critical-design', 'co-dev-teams', 'progression', 'metagame', 'ability', 'encounter', 'devtools', 'proprietary-engine', 'balance'] },
 					],
 				},
 				{
@@ -381,7 +381,7 @@ export const timeline: TimelineEntry[] = [
 						{ 
 							person: 'mitko', 
 							slug: 'mitko-around',
-							tagIds: ['gameplay', 'ui', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync', 'prototyping'],
+							tagIds: ['gameplay', 'ui', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync', 'prototyping', 'visuals', 'level-design'],
 						},
 						{ person: 'adam', slug: 'adam-around', tagIds: ['systems-design', 'level-design', 'ui', 'gameplay', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting']},
 					],
@@ -407,7 +407,7 @@ export const timeline: TimelineEntry[] = [
 					url: 'https://www.facebook.com/bobthebrawler',
 					info: 'Fun-oriented local and online arena brawler, where competition will create and destroy friendships',
 					media: beastsOfBrawliaMedia,
-					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ability', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting'] }],
+					experiences: [{ person: 'adam', slug: 'adam-beasts-of-brawlia', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ability', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting', 'balance'] }],
 				},
 			],
 		},

@@ -12,5 +12,6 @@ export const imagicLabsMedia: ProjectMedia[] = [
 		],
 		person: 'mitko',
 		caption: 'The image gallery app on mobile.',
+		tagIds: ['mobile-development', 'clean-code', 'co-dev-teams'],
 	}
 ];

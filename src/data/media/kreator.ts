@@ -7,6 +7,6 @@ export const kreatorMedia: ProjectMedia[] = [
 		kind: 'linkedin-post',
 		person: 'mitko',
 		caption: 'Behind the scenes at Kreator Studios, using photogrammetry to support hyperrealism',
-		tagIds: ['gameplay', 'ability', 'network', 'ui', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'prototyping'],
+		tagIds: ['gameplay', 'ability', 'network', 'ui', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'prototyping', 'co-dev-teams'],
 	},
 ];

@@ -21,7 +21,7 @@ export const spacePunksMedia: ProjectMedia[] = [
 		kind: 'text',
 		person: 'mitko',
 		caption: "Used Unreal Engine's Environment Query System (EQS) to support procedurally generated cooperative missions.",
-		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
+		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-eqs'],  
 	},
 	{
 		src: '',
