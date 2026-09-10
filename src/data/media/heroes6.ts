@@ -6,7 +6,7 @@ export const heroes6Media: ProjectMedia[] = [
 		src: '',
 		kind: 'text',
 		caption: "Together, we designed and built the Campaign AI system, giving level designers a dev tool to shape enemy behaviour around narrative pacing and player progression.",
-		tagIds: ['gameplay', 'AI', 'dev-tool'],
+		tagIds: ['gameplay', 'ai', 'devtools', 'systems-design', 'proprietary-engine'],
 	},
 	{
 		src: 'https://www.youtube.com/watch?v=gQiKPPclIzc',
