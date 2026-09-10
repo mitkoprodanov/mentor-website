@@ -390,7 +390,7 @@ export const timeline: TimelineEntry[] = [
 					id: 'mmo-rework',
 					order: 2019,
 					name: 'MMO Microservices Rework',
-					info: 'Reworked a monolithic MMO server into microservices, Agile-driven.',
+					info: 'Reworked a monolithic MMO server into microservices, Agile-driven',
 					media: mmoReworkMedia,
 					experiences: [
 						{ 
@@ -426,7 +426,7 @@ export const timeline: TimelineEntry[] = [
 						order: 2022,
 						name: 'Space Punks',
 						url: 'https://playspacepunks.com/',
-						info: 'Sci-fi co-op action RPG in Unreal Engine 4 — gameplay features and a deep dive into GAS.',
+						info: 'Humorous, comic-style sci-fi online co-op action RPG built around fast-paced combat and synergizing character abilities',
 						media: spacePunksMedia,
 						experiences: [
 							{
@@ -447,7 +447,7 @@ export const timeline: TimelineEntry[] = [
 					{
 						id: 'imagic-labs-project',
 						order: 2025,
-						name: 'Image Gallery Product',
+						name: 'Imagic App',
 						url: 'https://www.imagicapp.com/',
 						info: 'Innovative mobile image-gallery startup product',
 						media: imagicLabsMedia,
@@ -491,9 +491,12 @@ export const timeline: TimelineEntry[] = [
 				/* Starts the year after mandragora-early (above, inside the
 				   shared 2012 – 2021 box) rather than repeating 2021, since
 				   that year's already covered by the first appearance — see
-				   the file-level comment above on why Mandragora is split. */
+				   the file-level comment above on why Mandragora is split.
+				   Vertical position of this card (and therefore Mandragora
+				   inside it) is set at runtime by alignApartPairs.client.ts
+				   so Mandragora lines up with Mitko's Space Punks card on
+				   the other track — see that script for the pairing scheme. */
 				dateRange: '2022 – 2025',
-				stretchToMiddleOf: 'imagic-labs',
 				projects: [
 					{
 						id: 'mandragora',
@@ -513,13 +516,12 @@ export const timeline: TimelineEntry[] = [
 				id: 'adam-personal-project',
 				name: 'Personal Project',
 				dateRange: '2024 – Present',
-				/* Positioning of this card is fully driven at runtime by
-				   distributeAdamPersonalGaps.client.ts: the card is left at
-				   its own natural size (tightly wrapping Biobot and Hypha)
-				   and shifted down with margin-top so the three gaps around
-				   the two projects — above Biobot, between them, and below
-				   Hypha down to Mandragora — end up equal. No stretch or
-				   alignBottomTo hint needed here. */
+				/* Positioning of this card, its own row-gap between Biobot
+				   and Hypha, and Primal Continued's margin above are all
+				   set at runtime by alignApartPairs.client.ts so Biobot
+				   and Hypha line up horizontally with Mitko's Heart of
+				   Darkness and Imagic App on the other track. See that
+				   script for the pairing scheme. */
 				projects: [
 					{
 						id: 'hypha',
@@ -556,7 +558,7 @@ export const timeline: TimelineEntry[] = [
 					order: 2027,
 					name: 'Original Game Project',
 					hideTitle: true,
-					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together.',
+					info: 'Reunited at Mentor Game Studio in 2026 to build a new original game together',
 					media: mentorMedia,
 					experiences: [
 						{ person: 'mitko', slug: 'mitko-mentor' },
