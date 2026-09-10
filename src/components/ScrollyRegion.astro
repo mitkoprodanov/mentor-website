@@ -657,6 +657,17 @@ const adam = getPerson('adam');
 		opacity: 0;
 	}
 
+	/* When the skills panel is open the card is already fully revealed and
+	   engaged — the drifting glint would just be busywork over the content,
+	   so suppress it in every reveal state: hover (.reveal on the bar),
+	   keyboard focus (:focus-within), and the touch toggle (.is-open). */
+	.person-bar-inner.reveal .side-panel::after,
+	.person-bar-inner:focus-within .side-panel::after,
+	.side-panel.is-open::after {
+		animation: none;
+		opacity: 0;
+	}
+
 	/* Brighter, glowing silhouette when the card is hovered. */
 	.side-panel:hover {
 		border-color: color-mix(in srgb, var(--person-color) 55%, var(--border));
