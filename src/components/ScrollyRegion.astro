@@ -141,6 +141,7 @@ const adam = getPerson('adam');
 	import '../scripts/contactSnap.client';
 	import '../scripts/navScroll.client';
 	import '../scripts/personPhotos.client';
+	import '../scripts/personCardResize.client';
 </script>
 
 <style>
@@ -254,6 +255,24 @@ const adam = getPerson('adam');
 		min-width: 0;
 		transform: translateX(calc((1 - var(--split, 1)) * var(--cx, 0px) * var(--photo-motion, 1)));
 		will-change: transform;
+		/* Eases flex-basis between the resting 340px and the header-only pixel
+		   width published by personCardResize.client.ts as --panel-w-shrunk.
+		   Two pixel endpoints, so no keyword interpolation is needed — the
+		   panel background, the .slot-decor frame and glow (both sized to the
+		   slot) and the headshot (centred in the slot) all reflow together
+		   frame by frame. A snappy, fast ease — matches the Skills-panel
+		   height transition below so both animations feel like one system. */
+		transition: flex-basis 0.14s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+
+	/* Shrink the slot to fit just name + role whenever the card is stripped
+	   of its action buttons — any project detail modal (single-person or the
+	   two-person "mitko adam" variant), and the filtered-results framing.
+	   Fallback of max-content keeps things sensible until the JS measurement
+	   lands (that first run happens off-screen, before the reader can see it). */
+	:global(body[data-modal-people]) .person-slot,
+	:global(body.filter-active) .person-slot {
+		flex-basis: var(--panel-w-shrunk, max-content);
 	}
 
 	/* ---- Headshot photos above each card --------------------------------
@@ -954,15 +973,20 @@ const adam = getPerson('adam');
 	   scroll behind it — the modal behaviour paired with .person-backdrop and
 	   the wheel handling in panelToggle.client.ts. */
 	.side-panel-stack {
-		display: none;
-		/* A flex child of the capped .side-panel: min-height:0 lets it shrink
-		   below its content so it — and only it — takes up the slack when the
-		   card would exceed its max-height, scrolling internally while the
-		   header/CV/button stay put. Short skill lists still render at their
-		   natural height (flex-grow stays 0). */
+		/* Skills panel toggle uses the same fast ease as the slot's horizontal
+		   shrink above (0.14s cubic-bezier) so opening/closing the skills feels
+		   like one animation with the card resize. `interpolate-size` opts in
+		   to keyword sizing so `height: 0` ↔ `height: auto` interpolates
+		   frame-by-frame — the panel's own border eases in step, no snap.
+		   Collapsed state uses `overflow: hidden` to clip content past the
+		   shrinking edge; the open-state rules below re-enable overflow-y:auto
+		   so the skills list can still scroll internally when the panel is
+		   capped by the viewport-relative max-height. */
+		height: 0;
 		min-height: 0;
-		overflow-y: auto;
-		overscroll-behavior: contain;
+		overflow: hidden;
+		interpolate-size: allow-keywords;
+		transition: height 0.14s cubic-bezier(0.4, 0, 0.2, 1);
 	}
 
 	/* Slimmer take on the site-wide scrollbar (see Layout.astro) for the
@@ -972,13 +996,17 @@ const adam = getPerson('adam');
 	}
 
 	.side-panel.is-open .side-panel-stack {
-		display: block;
+		height: auto;
+		overflow-y: auto;
+		overscroll-behavior: contain;
 	}
 
 	@media (hover: hover) and (pointer: fine) {
 		.person-bar-inner.reveal .side-panel-stack,
 		.person-bar-inner:focus-within .side-panel-stack {
-			display: block;
+			height: auto;
+			overflow-y: auto;
+			overscroll-behavior: contain;
 		}
 	}
 
@@ -989,7 +1017,8 @@ const adam = getPerson('adam');
 	:global(body[data-modal-people]) .side-panel.is-open .side-panel-stack,
 	:global(body[data-modal-people]) .person-bar-inner.reveal .side-panel-stack,
 	:global(body[data-modal-people]) .person-bar-inner:focus-within .side-panel-stack {
-		display: none;
+		height: 0;
+		overflow: hidden;
 	}
 
 	/* Right-hand card mirrors to the right edge. */
@@ -1223,16 +1252,33 @@ const adam = getPerson('adam');
 		   frame in the filter view — regardless of the skills-lock state, they
 		   are controls that don't belong in this label-only framing. Both the
 		   CV row and the Skills+Lock row live inside .collapse-row wrappers,
-		   so hiding those takes them out together. */
+		   so closing those grid rows takes them out together. Uses the same
+		   grid-template-rows: 0fr collapse the data-modal-people state uses,
+		   so the card's vertical height eases down in sync with its
+		   horizontal shrink rather than snapping to display: none. */
 		:global(body.filter-active) .collapse-row {
-			display: none !important;
+			grid-template-rows: 0fr;
+			margin-top: 0;
+		}
+
+		:global(body.filter-active) .side-panel-action,
+		:global(body.filter-active) .side-panel-cv,
+		:global(body.filter-active) .side-panel-linkedin {
+			opacity: 0;
+			pointer-events: none;
 		}
 
 		/* The skills panel itself: keep it interactive when the reader has the
 		   skills-lock combo on (Skills locked open + Lock checkbox) so they can
-		   swap filter tags without collapsing skills; otherwise strip it too. */
-		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack {
-			display: none !important;
+		   swap filter tags without collapsing skills; otherwise close it too,
+		   using the same 0.14s ease as the horizontal shrink so the vertical
+		   and horizontal collapses arrive together. Both selectors chained
+		   here have specificity that beats `.side-panel.is-open .side-panel-stack`
+		   so no !important is needed for the override. */
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel-stack,
+		:global(body.filter-active:not(.skills-lock-active)) .side-panel.is-open .side-panel-stack {
+			height: 0;
+			overflow: hidden;
 		}
 
 		/* No skills-reveal backdrop here — the filter backdrop already dims the page. */
