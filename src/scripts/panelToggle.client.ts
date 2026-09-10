@@ -244,7 +244,7 @@ document.addEventListener('click', (event) => {
 	// click-away (which no longer lands on those controls) closes the skills.
 	// The `.card-filter-tag` under each card is handled by the earlier
 	// filter-tag branch above.
-	if (target.closest('.filter-backdrop') || target.closest('#timeline-filter-chip')) {
+	if (target.closest('.filter-backdrop') || target.closest('#timeline-filter-chip-clear')) {
 		return;
 	}
 	if (!target.closest('.side-panel')) {

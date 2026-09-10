@@ -116,6 +116,26 @@ const adam = getPerson('adam');
 		</div>
 	</div>
 
+	<!-- Active-filter chip: single clickable button that clears the filter.
+	     Lives at the top level of #personal (a sibling of .timeline-area) so
+	     `position: fixed` resolves to the viewport — .timeline-area has
+	     `transform: translateX(-50%)` during filter-active, which would
+	     otherwise pin any fixed descendant to the modal box. Hidden until the
+	     filter turns on; toggled by tagFilter.client.ts / driven by
+	     filterModal.client.ts / panelToggle.client.ts via its id. -->
+	<div class="filter-chip-shield">
+		<button
+			type="button"
+			class="filter-chip btn-sheen"
+			id="timeline-filter-chip-clear"
+			aria-label="Clear filter"
+			hidden
+		>
+			<span class="filter-chip-label">Filtered by: <strong id="timeline-filter-chip-skill"></strong></span>
+			<span class="filter-chip-icon" aria-hidden="true">✕</span>
+		</button>
+	</div>
+
 	<div class="timeline-area" id="timeline-area">
 		<Timeline />
 		<!-- The skill-tag filter's detailed results — hidden until a filter turns
@@ -1083,6 +1103,85 @@ const adam = getPerson('adam');
 		pointer-events: auto;
 	}
 
+	/* Filter chip — the "Filtered by … ✕" pill that clears the active filter.
+	   Fixed just above the .timeline-area modal (which lifts to top: 4.5rem in
+	   the filter view), with a small gap between its bottom edge and the
+	   modal's top. Sitting outside the modal's scroll container means nothing
+	   in the results can pass under the chip while the reader scrolls. */
+	.filter-chip-shield {
+		position: fixed;
+		top: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 28;
+		display: flex;
+		justify-content: center;
+	}
+
+	.filter-chip-shield:has(.filter-chip[hidden]) {
+		display: none;
+	}
+
+	/* Same visual language as the Project detail's link-chip (see
+	   .project-link-chip in ProjectDetail.astro), minus the arrow-drift, so
+	   the two chips read as one system. Opaque so it stays legible when a
+	   playing video happens to sit right behind it. */
+	.filter-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		width: max-content;
+		padding: 0.4rem 0.95rem;
+		border-radius: 999px;
+		font-family: inherit;
+		font-size: 0.85rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		line-height: 1.2;
+		color: var(--accent-3);
+		background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+		border: 1px solid color-mix(in srgb, var(--accent-3) 55%, var(--border));
+		cursor: pointer;
+		/* A stronger-than-default idle glint so the pill visibly reads as a
+		   live click target while it sits alone above the results — no other
+		   hover affordance is present at that spot. */
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.35;
+		transition:
+			background 0.2s ease,
+			border-color 0.2s ease,
+			color 0.2s ease,
+			box-shadow 0.2s ease,
+			transform 0.15s ease;
+	}
+
+	.filter-chip[hidden] {
+		display: none;
+	}
+
+	.filter-chip:hover,
+	.filter-chip:focus-visible,
+	.filter-chip:active {
+		color: var(--bg);
+		background: var(--accent-3);
+		border-color: var(--accent-3);
+		box-shadow: 0 0 18px 1px color-mix(in srgb, var(--accent-3) 55%, transparent);
+	}
+
+	.filter-chip:focus-visible {
+		outline: 2px solid var(--accent-3);
+		outline-offset: 3px;
+	}
+
+	.filter-chip-label strong {
+		color: inherit;
+	}
+
+	.filter-chip-icon {
+		font-size: 0.9em;
+		line-height: 1;
+	}
+
 /* Filtering: hide the original timeline (rendered by the child Timeline — use :global for #timeline) and drop the original page headings/labels when the filter modal is active so the modal shows a flat project list. */
 	:global(body.filter-active #timeline) {
 		display: none;
@@ -1154,9 +1253,14 @@ const adam = getPerson('adam');
 			left: 0;
 			right: 0;
 			z-index: 27;
-			/* Skills stay open through the filter view now (the previous "just a
-			   frame — no pointer events" behaviour was gated behind the removed
-			   Lock checkbox), so let clicks reach the panel for swapping tags. */
+			/* Bar container is a frame — let clicks fall through its empty middle
+			   (which sits over the filter results modal, including the "Filtered
+			   by …" chip). The two person slots below re-enable pointer events on
+			   themselves so the still-open skills panels remain interactive. */
+			pointer-events: none;
+		}
+
+		:global(body.filter-active) .person-slot {
 			pointer-events: auto;
 		}
 
@@ -1182,9 +1286,20 @@ const adam = getPerson('adam');
 		   grid-template-rows: 0fr collapse the data-modal-people state uses,
 		   so the card's vertical height eases down in sync with its
 		   horizontal shrink rather than snapping to display: none. */
-		:global(body.filter-active) .collapse-row {
+		/* Snap the collapse-rows shut instead of transitioning: the filter
+		   view flips a lot of layout at once (the whole bar becomes fixed,
+		   .timeline-area lifts into a modal) and the collapse-row's
+		   grid-template-rows transition ends up stuck at its start value on
+		   this frame. Killing the transition here forces the row to 0
+		   immediately, which is what we want for the minimalistic filter card
+		   anyway. Qualified with `.side-panel > .collapse-row` (rather than
+		   just `.collapse-row`) so the specificity beats the sibling-margin
+		   rule at line 607 — `.side-panel > * + *` — which Astro compiles to
+		   `.side-panel[cid] > [cid] + [cid]` (four class-level tokens). */
+		:global(body.filter-active) .side-panel > .collapse-row {
 			grid-template-rows: 0fr;
 			margin-top: 0;
+			transition: none;
 		}
 
 		:global(body.filter-active) .side-panel-action,
@@ -1194,9 +1309,39 @@ const adam = getPerson('adam');
 			pointer-events: none;
 		}
 
-		/* Skills stack stays open through the filter view now (the previous
-		   collapse was gated behind the removed Lock checkbox — its "keep the
-		   skills open" state is the default). */
+		/* Collapse the skills stack in the filter view — the "Filtered by …"
+		   chip already tells the reader which skill is active, so the whole
+		   panel of tags reads as noise here. Cards shrink to just name + role,
+		   the minimalistic frame around the results the user asked for. Also
+		   zero the sibling-margin (see .side-panel > * + * above) so no
+		   leftover 0.4rem strip sits between the header and the card bottom. */
+		:global(body.filter-active) .side-panel > .side-panel-stack,
+		:global(body.filter-active) .side-panel.is-open > .side-panel-stack {
+			height: 0;
+			overflow: hidden;
+			margin-top: 0;
+		}
+
+		/* The active-skill pill echoed under each card is redundant now that
+		   the "Filtered by …" chip sits above the results — hide it in the
+		   filter view too, keeping the cards down to just the header. */
+		:global(body.filter-active) .card-filter {
+			display: none;
+		}
+
+		/* Tighten the header + card padding so the (now single-row) label-only
+		   card sits at just name + role with a symmetric small gap all around —
+		   no lingering empty strip at the bottom where the CV pill and skills
+		   panel used to sit. The default header uses `0.9rem 1rem 0.4rem` and
+		   the card itself carries a 0.7rem bottom padding for the collapsible
+		   rows; both make the card too tall in this stripped-down state. */
+		:global(body.filter-active) .side-panel {
+			padding-bottom: 0;
+		}
+
+		:global(body.filter-active) .side-panel :global(.person-header) {
+			padding: 0.6rem 1rem;
+		}
 
 		/* No skills-reveal backdrop here — the filter backdrop already dims the page. */
 		:global(body.filter-active) .person-backdrop {

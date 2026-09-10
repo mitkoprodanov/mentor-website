@@ -69,11 +69,6 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 ---
 
 <div id="filter-results" class="filter-results" aria-hidden="true">
-	<div class="filter-chip" id="timeline-filter-chip" hidden>
-		<span class="filter-chip-label">Filtered by: <strong id="timeline-filter-chip-skill"></strong></span>
-		<button type="button" class="filter-chip-clear" id="timeline-filter-chip-clear" aria-label="Clear filter">✕</button>
-	</div>
-
 	<p class="fr-empty" data-fr-empty hidden>No projects match this skill yet.</p>
 
 	<div class="fr-stack">
@@ -246,51 +241,6 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 		color: var(--fg-muted);
 		font-size: 0.95rem;
 		padding: 2rem 0;
-	}
-
-	/* The active-filter chip, pinned to the top of the lifted modal panel. */
-	.filter-chip {
-		position: sticky;
-		top: 0;
-		z-index: 5;
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		width: max-content;
-		margin: 0 auto 1.5rem;
-		padding: 0.5rem 0.5rem 0.5rem 1rem;
-		border-radius: 999px;
-		background: var(--bg-alt);
-		border: 1px solid var(--accent-3);
-		box-shadow: 0 0 16px 2px var(--accent-soft);
-		font-size: 0.85rem;
-	}
-
-	.filter-chip[hidden] {
-		display: none;
-	}
-
-	.filter-chip-label strong {
-		color: var(--accent-3);
-	}
-
-	.filter-chip-clear {
-		display: grid;
-		place-items: center;
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 50%;
-		border: none;
-		background: var(--accent-soft);
-		color: var(--fg);
-		cursor: pointer;
-		font-size: 0.75rem;
-		line-height: 1;
-	}
-
-	.filter-chip-clear:hover {
-		background: var(--accent-3);
-		color: var(--bg);
 	}
 
 	@media (max-width: 900px) {

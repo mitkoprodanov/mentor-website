@@ -5,7 +5,7 @@ export const supernovaMedia: ProjectMedia[] = [
 	{
 	src: '',
 		kind: 'text',
-		caption: 'Together, we designed dynamic crowd simulation and navigation systems for heterogeneous unit archetypes, combining pathfinding with flocking-based local movement and reactive commander avoidance to enable coordinated, fluid crowds at low computational cost.',
+		caption: 'Together, we designed and built dynamic crowd simulation and navigation systems for heterogeneous unit archetypes, combining pathfinding with flocking-based local movement and reactive commander avoidance to enable coordinated, fluid crowds at low computational cost.',
 		tagIds: ['gameplay', 'systems-design', 'navigation', 'ai', 'devtools', 'proprietary-engine'],
 	},
 	{
@@ -19,8 +19,7 @@ export const supernovaMedia: ProjectMedia[] = [
 	{
 	src: '',
 		kind: 'text',
-		person: 'mitko',
-		caption: "Implemented several commanders from initial concept through to polished, shipped content, with complete ability kits and distinctive behaviours and visuals. Brought the designer and artist vision to life through iterative refinement by playtesting and feedback.",
+		caption: "We designed and implemented several commanders from initial concept through to polished, shipped content, with complete ability kits and distinctive behaviours and visuals. Brought the designer and artist vision to life through iterative refinement by playtesting and feedback.",
 		tagIds: ['gameplay', 'ability', 'devtools', 'proprietary-engine'],
 	},
 	{

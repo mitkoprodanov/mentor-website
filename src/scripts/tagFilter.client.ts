@@ -72,7 +72,10 @@ function tagLabelFor(tagId: string): string {
 }
 
 function updateChip(filter: Filter): void {
-	const chip = document.getElementById('timeline-filter-chip');
+	// The whole "Filtered by … ✕" chip is a single button now (see
+	// FilterResults.astro) — clicking anywhere on it clears the filter — so
+	// there is only one element to toggle.
+	const chip = document.getElementById('timeline-filter-chip-clear');
 	const label = document.getElementById('timeline-filter-chip-skill');
 	if (!chip || !label) return;
 	if (filter) {
