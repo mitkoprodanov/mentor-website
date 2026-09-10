@@ -380,8 +380,18 @@ function personStyle(m: ProjectMedia): string | undefined {
 	   into the gallery's outer gutter (see .project-modal__gallery's
 	   --gallery-gutter above), so the offset is visible but the frame
 	   never crosses the panel's own edge. */
+	/* Base shot — a bordered figure that holds the media frame AND its
+	   caption in one padded surface, so the visual and the caption below
+	   read as one connected block. Matches the modal experience prose
+	   baseline (.modal-exp in ProjectRow.astro): solid 45%-mix border,
+	   soft-tinted fill, 3px person-coloured side accent for solo items,
+	   text-media is exactly this treatment without the underline. */
 	.shot {
 		margin: 0;
+		padding: 1rem 1.15rem;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+		background: color-mix(in oklab, var(--accent) 4%, var(--bg));
 	}
 
 	/* Solo shots translate exactly one gallery-gutter into the surrounding
@@ -396,16 +406,47 @@ function personStyle(m: ProjectMedia): string | undefined {
 		transform: translateX(var(--gallery-gutter));
 	}
 
-	.shot--person .shot-frame {
-		border-color: color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+	/* Solo shots — solid person-coloured border at 45% mix, soft 8%-mix
+	   person tint on the fill. The 3px accent bar down the person's own
+	   edge is set on the side variants below. */
+	.shot--person {
+		border: 1px solid color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
+		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
 	}
 
-	.shot--person-left .shot-frame {
+	.shot--person-left {
 		border-left: 3px solid var(--person-color, var(--accent));
 	}
 
-	.shot--person-right .shot-frame {
+	.shot--person-right {
 		border-right: 3px solid var(--person-color, var(--accent));
+		text-align: right;
+	}
+
+	/* Shared shots — the top and bottom borders carry a Mitko→Ádám gradient
+	   (painted as a border-box background beneath transparent top/bottom
+	   borders) and each side gets its own person's 3px solid accent, so
+	   both people are unmistakeably present on the frame. Fill: the same
+	   soft left-to-right person-tint pair as the shared timeline preview. */
+	.shot:not(.shot--person) {
+		border: 1px solid transparent;
+		border-left: 3px solid var(--mitko-color);
+		border-right: 3px solid var(--adam-color);
+		background:
+			linear-gradient(
+					to right,
+					color-mix(in oklab, var(--mitko-color) 6%, var(--bg)) 0%,
+					color-mix(in oklab, var(--mitko-color) 6%, var(--bg)) 15%,
+					color-mix(in oklab, var(--adam-color) 6%, var(--bg)) 85%,
+					color-mix(in oklab, var(--adam-color) 6%, var(--bg)) 100%
+				)
+				padding-box,
+			linear-gradient(
+					to right,
+					color-mix(in oklab, var(--mitko-color) 45%, var(--border)) 0%,
+					color-mix(in oklab, var(--adam-color) 45%, var(--border)) 100%
+				)
+				border-box;
 	}
 
 	.shot-person {
@@ -423,7 +464,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 	   force any aspect (see .shot-frame--native-video below), so a 4:3 or
 	   ultrawide clip fits horizontally and shows in full. */
 	.shot-frame--native-video {
-		background: #000;
+		--frame-bg: #000;
 	}
 
 	.shot-video-native {
@@ -433,35 +474,11 @@ function personStyle(m: ProjectMedia): string | undefined {
 		border: 0;
 	}
 
-	/* A text-only media item — no frame, no aspect ratio, just prose in a
-	   soft-tinted card. Attributed items pick up the person-color rule on
-	   their own side (see .shot--person-* above) and a tinted background. */
+	/* A text-only media item — no frame, no aspect ratio, just prose. The
+	   .shot figure supplies the border, fill and padding (see above); this
+	   is a plain wrapper. */
 	.shot--text {
 		max-width: 100%;
-	}
-
-	.shot-text {
-		padding: 1rem 1.15rem;
-		border-radius: 10px;
-		border: 1px solid var(--border);
-		background: color-mix(in oklab, var(--accent) 4%, var(--bg));
-	}
-
-	/* Person-attributed text media picks up its person's colour on the tint
-	   and border; right-side blocks (Ádám's) right-align their prose so it
-	   reads toward his own sticky person card. */
-	.shot--person.shot--text .shot-text {
-		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
-		border-color: color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
-	}
-
-	.shot--person-left.shot--text .shot-text {
-		border-left: 3px solid var(--person-color, var(--accent));
-	}
-
-	.shot--person-right.shot--text .shot-text {
-		border-right: 3px solid var(--person-color, var(--accent));
-		text-align: right;
 	}
 
 	.shot-text__person {
@@ -481,12 +498,19 @@ function personStyle(m: ProjectMedia): string | undefined {
 		white-space: pre-line;
 	}
 
+	/* Inner media frame — just clips the visual to a soft rounded edge
+	   inside the .shot box; the border/tint of the box itself is on .shot
+	   above, so the caption below the frame sits inside the same padded
+	   surface and reads as connected to the visual. --frame-bg is the
+	   inner fill, defaulting transparent so the .shot tint shows through;
+	   overridden to #000 by the video / image-row frame types below where
+	   the media needs a black backdrop. */
 	.shot-frame {
 		position: relative;
-		border-radius: 10px;
+		border-radius: 8px;
 		overflow: hidden;
-		border: 1px solid var(--border);
-		background: var(--bg);
+		--frame-bg: transparent;
+		background: var(--frame-bg);
 	}
 
 	/* Images (and gifs) size at their intrinsic aspect ratio — width fills
@@ -507,7 +531,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 	.shot-frame--video {
 		position: relative;
 		aspect-ratio: 16 / 9;
-		background: #000;
+		--frame-bg: #000;
 	}
 
 	.shot-video {
@@ -526,7 +550,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 	.shot-frame--youtube {
 		position: relative;
 		aspect-ratio: 16 / 9;
-		background: #000;
+		--frame-bg: #000;
 	}
 
 	.shot-frame--youtube :global(iframe),
@@ -547,7 +571,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		position: relative;
 		width: 100%;
 		height: min(720px, 85vh);
-		background: var(--bg);
+		--frame-bg: var(--bg);
 	}
 
 	.shot-linkedin {
@@ -601,7 +625,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		flex-wrap: nowrap;
 		align-items: stretch;
 		gap: var(--row-gap);
-		background: #000;
+		--frame-bg: #000;
 	}
 
 	.shot-frame--image-row img {
@@ -625,11 +649,15 @@ function personStyle(m: ProjectMedia): string | undefined {
 		color: var(--accent-2);
 	}
 
+	/* Match .shot-text__body so an image/video caption and a text-media
+	   block read in the same voice — same size, leading, colour, and
+	   pre-line whitespace handling. */
 	.shot figcaption {
 		margin-top: 0.5rem;
-		font-size: 0.8rem;
-		line-height: 1.45;
-		color: var(--fg-muted);
+		font-size: 0.9rem;
+		line-height: 1.55;
+		color: var(--fg);
+		white-space: pre-line;
 	}
 
 	.project-modal__actions {
