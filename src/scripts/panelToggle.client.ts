@@ -30,6 +30,7 @@ function setOpen(panel: HTMLElement, open: boolean): void {
 	panel.classList.toggle('is-open', open);
 	panel.querySelector<HTMLElement>('.panel-toggle')?.setAttribute('aria-expanded', String(open));
 	if (!open && !preRevealActive()) clearSnapshot();
+	syncBodyScrollLock();
 }
 
 function closeAll(except?: HTMLElement): void {
@@ -98,6 +99,7 @@ function showReveal(): void {
 	// while the panel is up.
 	snapshotIfIdle();
 	bar.classList.add('reveal');
+	syncBodyScrollLock();
 }
 
 function blurInsideBar(): void {
@@ -119,6 +121,7 @@ function hideReveal(): void {
 	// After the class comes off and the bar collapses back, scroll anchoring
 	// snaps scrollY back on its own — no need to restore it here.
 	if (!preRevealActive()) clearSnapshot();
+	syncBodyScrollLock();
 }
 
 if (bar) {
@@ -154,6 +157,33 @@ function modalActive(): boolean {
 	return Boolean(bar?.classList.contains('reveal')) || panels().some((p) => p.classList.contains('is-open'));
 }
 
+/**
+ * While the skills panel is up, freeze the page behind it — the wheel handler
+ * below already blocks scroll while the pointer is over a card, but the reader
+ * can move the pointer onto the timeline (or use keyboard/touch) and scroll the
+ * page underneath. Lock the body scroll for the whole time the panel is open so
+ * the timeline stays put no matter where the input lands. Compensate for the
+ * scrollbar disappearing so the layout doesn't shift.
+ */
+let lockedScrollbarPad = '';
+function syncBodyScrollLock(): void {
+	const active = modalActive();
+	const html = document.documentElement;
+	if (active) {
+		if (html.dataset.scrollLocked === '1') return;
+		const scrollbarWidth = window.innerWidth - html.clientWidth;
+		lockedScrollbarPad = document.body.style.paddingRight;
+		if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+		html.style.overflow = 'hidden';
+		html.dataset.scrollLocked = '1';
+	} else {
+		if (html.dataset.scrollLocked !== '1') return;
+		html.style.overflow = '';
+		document.body.style.paddingRight = lockedScrollbarPad;
+		delete html.dataset.scrollLocked;
+	}
+}
+
 if (bar) {
 	panels().forEach((card) => {
 		card.addEventListener(
@@ -180,6 +210,7 @@ function dismissDetails(): void {
 	if (active && bar?.contains(active)) active.blur();
 	// Block hover re-reveal until the pointer leaves and comes back.
 	suppressed = true;
+	syncBodyScrollLock();
 }
 
 document.addEventListener('click', (event) => {
@@ -197,6 +228,7 @@ document.addEventListener('click', (event) => {
 			if (locked) {
 				suppressed = false;
 				bar?.classList.add('reveal', 'locked');
+				syncBodyScrollLock();
 			} else {
 				bar?.classList.remove('locked');
 				// Pressing Skills is an explicit close intent — force-collapse
@@ -206,6 +238,7 @@ document.addEventListener('click', (event) => {
 				blurInsideBar();
 				suppressed = true;
 				closeAll();
+				syncBodyScrollLock();
 			}
 			return;
 		}
@@ -229,6 +262,7 @@ document.addEventListener('click', (event) => {
 			locked = true;
 			suppressed = false;
 			bar?.classList.add('reveal', 'locked');
+			syncBodyScrollLock();
 		}
 		return;
 	}
@@ -253,6 +287,7 @@ document.addEventListener('click', (event) => {
 		bar?.classList.remove('reveal');
 		blurInsideBar();
 		suppressed = false;
+		syncBodyScrollLock();
 	}
 });
 
@@ -264,6 +299,7 @@ document.addEventListener('keydown', (event) => {
 		bar?.classList.remove('reveal');
 		blurInsideBar();
 		suppressed = false;
+		syncBodyScrollLock();
 	}
 });
 
