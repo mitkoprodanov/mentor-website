@@ -141,7 +141,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 
 ---
 
-<header class:list={['project-modal__head', { 'project-modal__head--shared': Boolean(people) }]}>
+<header class="project-modal__head">
 	<Title id={titleId} class="project-modal__title">{title}</Title>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
 </header>
@@ -283,20 +283,19 @@ function personStyle(m: ProjectMedia): string | undefined {
 }
 
 <style>
+	/* The head reads as the *Header* of the detail view — title, strap-line,
+	   the external link and the tag pills — so it always centers, regardless
+	   of whether the project is solo or shared. Symmetric side padding leaves
+	   room for the sticky person cards that project above the modal in their
+	   fitted (`--panel-w-shrunk`) width during modal-open state, so those
+	   important cards never overlap the header text. The same padding also
+	   keeps the close button (top-right) clear on the right. */
 	.project-modal__head {
-		padding-right: 2.5rem;
-	}
-
-	/* Shared projects — the ones with both people on the byline — center
-	   their head so the title reads as belonging to the pair, not to
-	   either side. Solo projects keep the default left alignment,
-	   matching the left-aligned rest of the modal. */
-	.project-modal__head--shared {
-		padding-right: 0;
+		padding-inline: 2.5rem;
 		text-align: center;
 	}
 
-	.project-modal__head--shared .project-modal__meta {
+	.project-modal__head .project-modal__meta {
 		justify-content: center;
 	}
 
@@ -338,9 +337,10 @@ function personStyle(m: ProjectMedia): string | undefined {
 		list-style: none;
 		display: flex;
 		flex-wrap: wrap;
+		justify-content: center;
 		gap: 0.4rem;
 		margin: 1rem 0 0;
-		padding: 0;
+		padding: 0 2.5rem;
 	}
 
 	.tag {
@@ -685,17 +685,16 @@ function personStyle(m: ProjectMedia): string | undefined {
 	   read as one block of project meta, but tinted with the link accent and
 	   given a subtle border + hover glint so it clearly reads as tappable —
 	   not just another pill. */
+	/* The link chip belongs to the header block (see .project-modal__head
+	   above) — so it always centers under the title/subtitle and carries the
+	   same side padding to stay clear of the sticky person cards. */
 	.project-modal__link {
 		margin-top: 1rem;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.4rem;
-	}
-
-	/* Shared projects centre the head (see .project-modal__head--shared above);
-	   keep the link chip in the same centred column beneath it. */
-	.project-modal__head--shared + .project-modal__link {
 		justify-content: center;
+		gap: 0.4rem;
+		padding: 0 2.5rem;
 	}
 
 	/* Same visual language as the person cards' "Skills" toggle
