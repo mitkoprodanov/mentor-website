@@ -348,7 +348,7 @@ export const timeline: TimelineEntry[] = [
 							slug: 'mitko-supernova',
 							tagIds: ['gameplay', 'ai', 'navigation', 'ability', 'dev-tools', 'proprietary-engine'],
 						},
-						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame'] },
+						{ person: 'adam', slug: 'adam-supernova', tagIds: ['systems-design', 'progression', 'navigation', 'ai', 'progression', 'ability', 'ui', 'metagame', 'gameplay'] },
 					],
 				},
 				{
@@ -383,7 +383,7 @@ export const timeline: TimelineEntry[] = [
 							slug: 'mitko-around',
 							tagIds: ['gameplay', 'ui', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync', 'prototyping'],
 						},
-						{ person: 'adam', slug: 'adam-around', tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting']},
+						{ person: 'adam', slug: 'adam-around', tagIds: ['systems-design', 'level-design', 'ui', 'gameplay', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting']},
 					],
 				},
 				{

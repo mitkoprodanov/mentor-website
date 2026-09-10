@@ -5,6 +5,7 @@ export const spacePunksMedia: ProjectMedia[] = [
 	{
 		src: 'https://www.youtube.com/watch?v=3a6yQj7KrHc',
 		kind: 'youtube',
+		person: 'mitko',
 		caption: "The official reveal trailer",
 		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
 	},
@@ -34,6 +35,7 @@ export const spacePunksMedia: ProjectMedia[] = [
 		kind: 'youtube',
 		start: 35,
 		end: 103,
+		person: 'mitko',
 		caption: "A humorous, comic-book-style game taking you through colorful, varied worlds",
 		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
 	},

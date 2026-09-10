@@ -19,30 +19,17 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ui', 'prototyping', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync'],
 	},
 	{
-		src: 'https://www.facebook.com/watch/?v=291274308860973',
-		kind: 'facebook-reel',
-		caption: 'Around gameplay showing narrative flow supported by inventory usage',
-		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync'],
-	},
-	{
 	src: '',
 		kind: 'text',
 		person: 'adam',
 		caption: 'Led prototyping and playtesting sessions to validate narrative experiences and puzzle design.',
-		tagIds: ['prototyping', 'playtesting', 'narrative-design', 'puzzle-design'],
+		tagIds: ['gameplay', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'ui', 'unreal-engine'],
 	},
 	{
-		src: 'https://www.facebook.com/watch/?v=323920638727021',
+		src: 'https://www.facebook.com/watch/?v=291274308860973',
 		kind: 'facebook-reel',
-		caption: 'Around - Some of our memories are unclear like a blurry painting',
-		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design'],
-	},
-	{
-	src: '',
-		kind: 'text',
-		person: 'adam',
-		caption: 'Designed narrative experiences, game systems, and puzzles that sensitively portray the emotional and psychological realities of living with dementia.',
-		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design'],
+		caption: 'Around gameplay showing narrative flow supported by inventory usage',
+		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync'],
 	},
 	{
 	src: '',
@@ -52,9 +39,22 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['visuals', 'level-design', 'unreal-engine'],
 	},
 	{
+	src: '',
+		kind: 'text',
+		person: 'adam',
+		caption: 'Designed narrative experiences, game systems, and puzzles that sensitively portray the emotional and psychological realities of living with dementia.',
+		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine'],
+	},
+	{
+		src: 'https://www.facebook.com/watch/?v=323920638727021',
+		kind: 'facebook-reel',
+		caption: 'Around - Some of our memories are unclear like a blurry painting',
+		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine'],
+	},
+	{
 		src: 'https://www.facebook.com/reel/651147125502357',
 		kind: 'facebook-reel',
 		caption: 'An immersive hand-drawn world',
-		tagIds: ['visuals', 'level-design', 'unreal-engine'],
+		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine'],
 	},
 ];

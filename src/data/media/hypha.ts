@@ -5,18 +5,21 @@ export const hyphaMedia: ProjectMedia[] = [
 	{
 		src: '/projects/hypha/board.jpg',
 		kind: 'image',
+		person: 'adam',
 		caption: 'The starting board - neutral territory before any mycelium takes root.',
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'board-game'],
 	},
 	{
 		src: '/projects/hypha/hypha.jpg',
 		kind: 'image',
+		person: 'adam',
 		caption: 'Hyphae tiles are transparent, allowing players to stack them on top of one another.',
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'board-game'],
 	},
 	{
 		src: '/projects/hypha/endgame.jpg',
 		kind: 'image',
+		person: 'adam',
 		caption: 'The final board state after a three-player game.',
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'board-game'],
 	},

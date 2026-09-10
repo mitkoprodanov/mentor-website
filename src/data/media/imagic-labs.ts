@@ -10,6 +10,7 @@ export const imagicLabsMedia: ProjectMedia[] = [
 			'/projects/imagic-labs/imagic_download.jpg',
 			'/projects/imagic-labs/imagic_enjoy.jpg', 
 		],
+		person: 'mitko',
 		caption: 'The image gallery app on mobile.',
 	}
 ];
