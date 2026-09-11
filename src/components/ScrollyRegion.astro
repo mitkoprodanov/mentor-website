@@ -764,6 +764,14 @@ const adam = getPerson('adam');
 		pointer-events: none;
 	}
 
+	/* .person-slot has pointer-events:auto (so the bar's empty centre stays
+	   click-through), which lets :hover and pointerenter fire on the slot even
+	   though the parent .person-bar-inner has pointer-events:none above. Explicitly
+	   kill them on the slot too until the cards have arrived. */
+	:global(body:not(.cards-arrived)) .person-slot {
+		pointer-events: none;
+	}
+
 	/* Skills+Lock hidden during the intro — the wrapper is closed and its
 	   leading gap collapsed so no seam remains between Name+Role and the
 	   (currently-hidden) skills stack below. The inner also fades to 0
