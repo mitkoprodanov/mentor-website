@@ -61,6 +61,12 @@ function unlock(): void {
 	if (!filterOpen) return;
 	filterOpen = false;
 	document.documentElement.style.overflow = '';
+	// Clear the panel-toggle scroll-lock flag too. filterModal sets overflow:hidden
+	// independently of panelToggle, so when it clears overflow the flag is left
+	// stale — syncBodyScrollLock() sees it and bails early instead of re-applying
+	// the lock for a still-open panel. Clearing it here lets the filter:unlocked
+	// listener below re-evaluate cleanly.
+	delete document.documentElement.dataset.scrollLocked;
 	const html = document.documentElement;
 	const body = document.body;
 	// Restore instantly (scroll-behavior:smooth on <html> would otherwise
@@ -81,6 +87,8 @@ function unlock(): void {
 	html.style.scrollBehavior = 'auto';
 	window.scrollTo(0, savedScrollY);
 	html.style.scrollBehavior = prevBehavior;
+	// Let panelToggle re-evaluate its scroll lock now that overflow is cleared.
+	document.dispatchEvent(new CustomEvent('filter:unlocked'));
 	// The close reflow keeps trickling out for many hundreds of ms — the
 	// person-bar collapses, filter-results goes display:none,
 	// syncApartHeights runs its iterative settle passes on the newly-visible

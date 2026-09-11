@@ -213,6 +213,10 @@ function dismissDetails(): void {
 	syncBodyScrollLock();
 }
 
+// When filterModal clears its own overflow:hidden on filter close, re-check
+// whether the scroll lock should still be active (panel may still be open).
+document.addEventListener('filter:unlocked', syncBodyScrollLock);
+
 document.addEventListener('click', (event) => {
 	const target = event.target as HTMLElement;
 
