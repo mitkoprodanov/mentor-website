@@ -52,6 +52,9 @@ function lock(): void {
 	// re-set from the willopen event detail just before this).
 	// Block page scroll while the modal is up.
 	document.documentElement.style.overflow = 'hidden';
+	// Reset the filter panel to the top so reopening never inherits old scroll.
+	const area = document.getElementById('timeline-area');
+	if (area) area.scrollTop = 0;
 }
 
 function unlock(): void {

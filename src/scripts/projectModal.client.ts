@@ -247,8 +247,13 @@ function init(): void {
 		syncPersonBarPopover();
 		for (const mutation of mutations) {
 			const dialog = mutation.target as HTMLElement;
-			if (dialog.hasAttribute('open')) void activateYouTube(dialog);
-			else pauseYouTube(dialog);
+			if (dialog.hasAttribute('open')) {
+				const panel = dialog.querySelector<HTMLElement>('.project-modal__panel');
+				if (panel) panel.scrollTop = 0;
+				void activateYouTube(dialog);
+			} else {
+				pauseYouTube(dialog);
+			}
 		}
 	});
 
