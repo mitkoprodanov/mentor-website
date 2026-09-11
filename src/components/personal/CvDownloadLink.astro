@@ -12,6 +12,7 @@
  * attribute asks the browser to save the file rather than open it in a tab.
  */
 import type { Person } from '../../data/people';
+import { asset } from '../../utils/asset';
 
 interface Props {
 	person: Person;
@@ -25,7 +26,7 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 	person.cv && (
 		<a
 			class="cv-download btn-sheen"
-			href={person.cv}
+			href={asset(person.cv)}
 			download
 			style={`--person-color: var(--${person.id}-color)`}
 			aria-label={label}

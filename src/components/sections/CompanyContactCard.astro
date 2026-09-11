@@ -1,11 +1,12 @@
 ---
 import { STUDIO_CONTACT } from '../../data/contact';
 import ExternalLink from '../common/ExternalLink.astro';
+import { asset } from '../../utils/asset';
 ---
 
 <div class="company-card">
 	<h3 class="company-card__wordmark">
-		<img src="/logo/wordmark.png" alt={STUDIO_CONTACT.name} width="490" height="150" loading="lazy" decoding="async" />
+		<img src={asset('/logo/horizontal.png')} alt={STUDIO_CONTACT.name} width="490" height="150" loading="lazy" decoding="async" />
 	</h3>
 	<p class="contact-lead">Let's talk about your project.</p>
 	<div class="contact-links">

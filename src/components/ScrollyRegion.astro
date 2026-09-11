@@ -18,6 +18,7 @@
  * place, with no duplicated second set.
  */
 import { getPerson } from '../data/people';
+import { asset } from '../utils/asset';
 import PersonHeader from './personal/PersonHeader.astro';
 import PersonCard from './personal/PersonCard.astro';
 import CvDownloadLink from './personal/CvDownloadLink.astro';
@@ -53,7 +54,7 @@ const adam = getPerson('adam');
 				].map((entry) => (
 					<div class:list={['person-slot', `person-slot--${entry.side}`]} style={`--person-color: var(--${entry.person.id}-color)`}>
 						<div class:list={['person-photo', entry.person.id === 'mitko' ? 'person-photo--cutout' : 'person-photo--framed']} aria-hidden="true">
-							<img src={`/people/${entry.person.id}.png`} alt="" width="132" height="150" loading="eager" decoding="async" />
+							<img src={asset(`/people/${entry.person.id}.png`)} alt="" width="132" height="150" loading="eager" decoding="async" />
 						</div>
 						{/* Curvy, person-tinted flourishes that lift the card off the busy
 						    timeline behind it — a stronger, more graphic separation than the

@@ -1,13 +1,17 @@
 ---
 import Section from '../Section.astro';
 import Vision from '../common/Vision.astro';
+import { asset } from '../../utils/asset';
+
+const logoSrc = asset('/logo/primary.png');
+const maskUrl = `url(${logoSrc})`;
 ---
 
 <Section id="about" class="about">
 	<div class="hero-content">
 		<h1>
-			<img src="/logo/primary.png" alt="Mentor Game Studio" class="hero-logo" />
-			<span class="hero-shine" aria-hidden="true"></span>
+			<img src={logoSrc} alt="Mentor Game Studio" class="hero-logo" />
+			<span class="hero-shine" style={`-webkit-mask-image: ${maskUrl}; mask-image: ${maskUrl};`} aria-hidden="true"></span>
 		</h1>
 		{/* The pitch sentence with clickable value-prop parts, in place of the old
 		    tagline + vision lines. */}
@@ -79,8 +83,6 @@ import Vision from '../common/Vision.astro';
 		background: linear-gradient(75deg, transparent 40%, rgba(255, 255, 255, 0.9) 50%, transparent 60%);
 		background-size: 300% 100%;
 		background-position: 150% 0;
-		-webkit-mask-image: url('/logo/primary.png');
-		mask-image: url('/logo/primary.png');
 		-webkit-mask-size: contain;
 		mask-size: contain;
 		-webkit-mask-repeat: no-repeat;
