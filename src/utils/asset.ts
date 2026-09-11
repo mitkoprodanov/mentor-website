@@ -6,6 +6,6 @@
  */
 export function asset(path: string): string {
 	if (!path || path.includes('://') || path.startsWith('//')) return path;
-	const base = import.meta.env.BASE_URL; // e.g. '/mentor-website/'
+	const base = import.meta.env.BASE_URL; // '/' in production
 	return base.endsWith('/') ? base + path.replace(/^\//, '') : base + path;
 }
