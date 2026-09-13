@@ -56,10 +56,12 @@ export const people: Person[] = [
 			'network',
 		],
 		hobbies: [
-			'Paragliding — both solo and as a tandem pilot',
+			'Home projects in Unity',
 			'Formerly speedcubing, held multiple national records for a while',
 			'Studied the game of go, up to 1 dan',
 			'Board games and table football',
+			'Paragliding — both solo and as a tandem pilot',
+			'Ultra trail running'
 		],
 	},
 	{
