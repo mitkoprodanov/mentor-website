@@ -168,12 +168,17 @@ function modalActive(): boolean {
 let lockedScrollbarPad = '';
 function syncBodyScrollLock(): void {
 	const active = modalActive();
+	const isMobile = window.matchMedia('(max-width: 900px)').matches;
 	const html = document.documentElement;
 	if (active) {
 		if (html.dataset.scrollLocked === '1') return;
-		const scrollbarWidth = window.innerWidth - html.clientWidth;
-		lockedScrollbarPad = document.body.style.paddingRight;
-		if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+		// Compensate for scrollbar disappearing only on desktop (mobile has no
+		// visible scrollbar that would shift layout when overflow:hidden fires).
+		if (!isMobile) {
+			const scrollbarWidth = window.innerWidth - html.clientWidth;
+			lockedScrollbarPad = document.body.style.paddingRight;
+			if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+		}
 		html.style.overflow = 'hidden';
 		html.dataset.scrollLocked = '1';
 	} else {
@@ -190,6 +195,8 @@ if (bar) {
 			'wheel',
 			(event) => {
 				if (!modalActive()) return;
+				// On mobile the panel is inline — let the page scroll normally.
+				if (window.matchMedia('(max-width: 900px)').matches) return;
 				const stack = card.querySelector<HTMLElement>('.side-panel-stack');
 				if (stack && stack.scrollHeight > stack.clientHeight) {
 					stack.scrollTop += event.deltaY;
@@ -246,13 +253,12 @@ document.addEventListener('click', (event) => {
 			}
 			return;
 		}
-		// Touch: no hover reveal, so the button is an accordion — expand one card
-		// at a time.
+		// Touch: open/close all cards in sync — tapping one person's Skills
+		// button opens both, tapping again closes both.
 		const panel = toggle.closest<HTMLElement>('.side-panel');
 		if (!panel) return;
 		const willOpen = !panel.classList.contains('is-open');
-		closeAll(panel); // accordion — only one card open at once
-		setOpen(panel, willOpen);
+		panels().forEach(p => setOpen(p, willOpen));
 		return;
 	}
 

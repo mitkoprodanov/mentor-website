@@ -1,0 +1,289 @@
+---
+/**
+ * Full-screen "Rotate to explore" overlay shown on portrait phones.
+ * Auto-hides when the device rotates to landscape; "Continue anyway"
+ * dismisses it for the session.  Only rendered/scripted on the client —
+ * the overlay starts fully hidden in CSS and is shown by the JS below.
+ *
+ * Visual concept: a phone outline containing two glowing orbs in the
+ * site's per-person accent colours (Mitko = ember, Ádám = honey).  As
+ * the phone tips from portrait to landscape the orbs naturally spread
+ * left/right — embodying the side-by-side portfolio concept the copy
+ * describes.
+ */
+---
+
+<div id="rotate-overlay" class="ro ro--hidden" role="dialog" aria-modal="true" aria-labelledby="ro-heading">
+
+	<!-- ── Animated phone visual ───────────────────────────────────────── -->
+	<div class="ro__visual" aria-hidden="true">
+
+		<!-- Outer ambient glow that expands in landscape (when class changes) -->
+		<div class="ro__halo"></div>
+
+		<!--
+		  SVG phone: portrait aspect (100×180 viewBox).
+		  When the CSS animation rotates the element −90°, the phone looks
+		  landscape, Mitko's orb (top → left) and Ádám's orb (bottom → right)
+		  spread to opposite sides — no extra JS needed.
+		-->
+		<svg
+			class="ro__phone"
+			viewBox="0 0 100 180"
+			xmlns="http://www.w3.org/2000/svg"
+			fill="none"
+		>
+			<defs>
+				<!-- Mitko: ember orange -->
+				<radialGradient id="ro-g-mitko" cx="50%" cy="50%" r="50%">
+					<stop offset="0%"   stop-color="#ff7a00" stop-opacity="0.7"/>
+					<stop offset="50%"  stop-color="#ff7a00" stop-opacity="0.18"/>
+					<stop offset="100%" stop-color="#ff7a00" stop-opacity="0"/>
+				</radialGradient>
+				<!-- Ádám: honey gold -->
+				<radialGradient id="ro-g-adam" cx="50%" cy="50%" r="50%">
+					<stop offset="0%"   stop-color="#ffd166" stop-opacity="0.6"/>
+					<stop offset="50%"  stop-color="#ffd166" stop-opacity="0.14"/>
+					<stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+				</radialGradient>
+			</defs>
+
+			<!-- Phone body -->
+			<rect class="ro__frame" x="3" y="3" width="94" height="174" rx="17"/>
+
+			<!-- Camera pill -->
+			<rect x="33" y="11" width="34" height="6" rx="3" fill="rgba(255,255,255,0.09)"/>
+
+			<!-- Home bar -->
+			<rect x="33" y="163" width="34" height="5" rx="2.5" fill="rgba(255,255,255,0.09)"/>
+
+			<!-- Seam between the two people — horizontal in portrait,
+			     vertical in landscape (after −90° rotation) -->
+			<line class="ro__seam" x1="12" y1="90" x2="88" y2="90"/>
+
+			<!-- Mitko's presence — upper half in portrait, left in landscape -->
+			<circle class="ro__orb ro__orb--left"  cx="50" cy="58"  r="34" fill="url(#ro-g-mitko)"/>
+
+			<!-- Ádám's presence — lower half in portrait, right in landscape -->
+			<circle class="ro__orb ro__orb--right" cx="50" cy="124" r="34" fill="url(#ro-g-adam)"/>
+		</svg>
+	</div>
+
+	<!-- ── Copy ────────────────────────────────────────────────────────── -->
+	<div class="ro__copy">
+		<h2 class="ro__heading" id="ro-heading">Rotate to explore</h2>
+		<p class="ro__sub">
+			Our portfolios are designed<br>to be experienced side by side.
+		</p>
+	</div>
+
+	<!-- ── Dismiss ─────────────────────────────────────────────────────── -->
+	<button class="ro__continue" type="button" id="rotate-continue">
+		Continue anyway
+	</button>
+
+</div>
+
+<script>
+	import '../scripts/rotateOverlay.client';
+</script>
+
+<style>
+/* ── Overlay shell ───────────────────────────────────────────────────────── */
+
+.ro {
+	position: fixed;
+	inset: 0;
+	z-index: 200;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1.5rem;
+	padding: 2.5rem 1.75rem 3rem;
+	background:
+		/* Subtle per-person ambient glow — two off-centre radials */
+		radial-gradient(ellipse 70% 50% at 28% 48%,
+			rgba(255, 122, 0, 0.07) 0%, transparent 65%),
+		radial-gradient(ellipse 70% 50% at 72% 52%,
+			rgba(255, 209, 102, 0.06) 0%, transparent 65%),
+		/* Hero-section style soft centre bloom */
+		radial-gradient(ellipse 80% 40% at 50% 40%,
+			rgba(255, 183, 3, 0.04) 0%, transparent 70%),
+		#0b0d12;
+
+	/* Fade managed via classes below */
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 0.4s ease,
+		visibility 0s linear 0.4s;
+}
+
+/* JS adds this once `hidden` class is removed, triggering the fade. */
+.ro.ro--visible {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+	transition:
+		opacity 0.4s ease,
+		visibility 0s linear 0s;
+}
+
+/* Fully removed from the a11y tree while not shown. */
+.ro.ro--hidden {
+	display: none;
+}
+
+/* ── Visual ─────────────────────────────────────────────────────────────── */
+
+.ro__visual {
+	position: relative;
+	/* Square that comfortably holds the phone in both orientations. */
+	width: 200px;
+	height: 200px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Ambient halo behind the phone — pulses gently. */
+.ro__halo {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background:
+		radial-gradient(ellipse 55% 55% at 38% 50%,
+			rgba(255, 122, 0, 0.12) 0%, transparent 70%),
+		radial-gradient(ellipse 55% 55% at 62% 50%,
+			rgba(255, 209, 102, 0.10) 0%, transparent 70%);
+	animation: ro-halo-breathe 4s ease-in-out infinite;
+}
+
+@keyframes ro-halo-breathe {
+	0%, 100% { opacity: 0.7; transform: scale(0.96); }
+	50%       { opacity: 1.0; transform: scale(1.04); }
+}
+
+/* The phone SVG: 100×180 in CSS = portrait phone.
+   Rotates −90° to landscape and back on a 4 s loop. */
+.ro__phone {
+	width: 100px;
+	height: 180px;
+	overflow: visible;
+	transform-origin: center center;
+	animation: ro-phone-tip 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+	/* Dual-colour drop shadow echoing the two people. */
+	filter:
+		drop-shadow(0 0 14px rgba(255, 122, 0, 0.20))
+		drop-shadow(0 0 28px rgba(255, 209, 102, 0.12));
+}
+
+@keyframes ro-phone-tip {
+	/* Hold portrait */
+	0%  { transform: rotate(0deg); }
+	18% { transform: rotate(0deg); }
+	/* Tip to landscape */
+	45% { transform: rotate(-90deg); }
+	/* Hold landscape */
+	62% { transform: rotate(-90deg); }
+	/* Tip back to portrait */
+	88% { transform: rotate(0deg); }
+	100%{ transform: rotate(0deg); }
+}
+
+.ro__frame {
+	stroke: rgba(255, 255, 255, 0.16);
+	stroke-width: 1.5;
+	fill: rgba(255, 255, 255, 0.025);
+}
+
+.ro__seam {
+	stroke: rgba(255, 255, 255, 0.07);
+	stroke-width: 0.75;
+	stroke-dasharray: 4 5;
+}
+
+/* Orbs: breathe in sync with the halo; bloom slightly while landscape
+   (the animation midpoint ~50% aligns with the phone's landscape hold). */
+.ro__orb {
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: ro-orb-bloom 4s ease-in-out infinite;
+}
+
+@keyframes ro-orb-bloom {
+	0%, 30%  { transform: scale(1);    opacity: 0.85; }
+	52%      { transform: scale(1.15); opacity: 1; }
+	70%, 100%{ transform: scale(1);    opacity: 0.85; }
+}
+
+/* ── Copy ────────────────────────────────────────────────────────────────── */
+
+.ro__copy {
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.ro__heading {
+	margin: 0;
+	font-family: var(--font-heading, Inter, sans-serif);
+	font-size: clamp(1.35rem, 5vw, 1.65rem);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.13em;
+	color: #e9ecf1;
+	/* Warm glow — same treatment as the hero logo headline. */
+	text-shadow:
+		0 0 30px rgba(255, 122, 0, 0.30),
+		0 0 60px rgba(255, 183, 3, 0.12);
+}
+
+.ro__sub {
+	margin: 0;
+	color: #9aa3b2;
+	font-size: 0.88rem;
+	line-height: 1.65;
+}
+
+/* ── Dismiss ─────────────────────────────────────────────────────────────── */
+
+.ro__continue {
+	background: none;
+	border: none;
+	border-bottom: 1px solid transparent;
+	padding: 0.3rem 0.15rem;
+	color: #9aa3b2;
+	font-family: inherit;
+	font-size: 0.78rem;
+	letter-spacing: 0.06em;
+	cursor: pointer;
+	transition:
+		color 0.2s ease,
+		border-color 0.2s ease;
+}
+
+.ro__continue:hover,
+.ro__continue:focus-visible {
+	color: #e9ecf1;
+	border-color: rgba(154, 163, 178, 0.55);
+	outline: none;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+	.ro__phone {
+		animation: none;
+		/* Show between portrait and landscape as a hint */
+		transform: rotate(-45deg);
+	}
+	.ro__orb,
+	.ro__halo {
+		animation: none;
+	}
+}
+</style>

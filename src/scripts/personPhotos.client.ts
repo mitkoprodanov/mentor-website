@@ -79,7 +79,9 @@ if (bar && barInner && slots.length) {
 		// The cards only become "real" (Skills button, hover/open, glow) once
 		// they've finished sliding out to the sides — until then they're a
 		// non-interactive moving intro. reveal hits exactly 1 only when docked.
-		document.body.classList.toggle('cards-arrived', reveal >= 1);
+		// 5px tolerance handles sub-pixel sticky rendering and anchor jumps
+		// that land the bar just shy of its CSS `top` threshold.
+		document.body.classList.toggle('cards-arrived', top <= dockTop + 5);
 	}
 
 	let ticking = false;

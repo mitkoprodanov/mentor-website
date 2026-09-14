@@ -71,13 +71,39 @@ if (navbar) {
 	`;
 	document.head.appendChild(style);
 
+	const MOBILE_NAV_QUERY = '(max-width: 900px)';
+
 	const computeTargetY = (id: string): number => {
 		if (id === 'about') return 0;
+		const scrollingEl = document.scrollingElement || document.documentElement;
+		const maxY = document.documentElement.scrollHeight - window.innerHeight;
+		const isMobile = window.matchMedia(MOBILE_NAV_QUERY).matches;
+
+		if (isMobile && id === 'timeline') {
+			// Mobile: person bar is static, scroll to its top (minus navbar) so it
+			// sits at the viewport top with the timeline visible below it.
+			const personBar = document.querySelector<HTMLElement>('.person-bar');
+			if (personBar) {
+				const y = personBar.getBoundingClientRect().top + scrollingEl.scrollTop - navbar.offsetHeight;
+				return Math.max(0, Math.min(maxY, Math.round(y)));
+			}
+		}
+
+		if (isMobile && id === 'contact') {
+			// Mobile: person bar becomes sticky (contact-mode CSS adds position:sticky).
+			// Land the contact title just below the sticky bar (navbar + bar height + gap).
+			const anchor = anchorFor(id);
+			const personBar = document.querySelector<HTMLElement>('.person-bar');
+			if (anchor && personBar) {
+				const viewportOffset = navbar.offsetHeight + personBar.offsetHeight + 8;
+				const y = anchor.getBoundingClientRect().top + scrollingEl.scrollTop - viewportOffset;
+				return Math.max(0, Math.min(maxY, Math.round(y)));
+			}
+		}
+
 		const el = anchorFor(id);
 		if (!el) return 0;
-		const scrollingEl = document.scrollingElement || document.documentElement;
 		const y = el.getBoundingClientRect().top + scrollingEl.scrollTop - ANCHOR_VIEWPORT_Y;
-		const maxY = document.documentElement.scrollHeight - window.innerHeight;
 		return Math.max(0, Math.min(maxY, Math.round(y)));
 	};
 

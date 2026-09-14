@@ -316,6 +316,26 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	}
 
 	@media (max-width: 900px) {
+		/* Tighten company card padding and project grid gap on mobile. */
+		.company {
+			padding: 0.75rem 0.85rem 0.9rem;
+		}
+
+		.company-header {
+			padding: 0.15rem 0 1rem;
+		}
+
+		.company-footer {
+			padding: 1rem 0 0.15rem;
+		}
+
+		.company-projects {
+			gap: 0.75rem 0.5rem;
+		}
+	}
+
+	@media (max-width: 400px) {
+		/* At very narrow widths collapse the project grid to prevent overflow. */
 		.company-projects {
 			grid-template-columns: 1fr;
 		}

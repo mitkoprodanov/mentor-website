@@ -39,7 +39,7 @@
  * into one column and pair alignment stops being meaningful.
  */
 
-const MOBILE_QUERY = '(max-width: 900px)';
+const MOBILE_QUERY = '(max-width: 480px)';
 const MAX_ITERATIONS = 24;
 const CONVERGENCE_EPSILON = 0.5;
 

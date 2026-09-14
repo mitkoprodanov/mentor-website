@@ -827,7 +827,8 @@ const adam = getPerson('adam');
 	   pinned-open unit even after the pointer leaves. */
 	.panel-toggle:hover,
 	.panel-toggle:focus-visible,
-	.person-bar-inner.locked .panel-toggle {
+	.person-bar-inner.locked .panel-toggle,
+	.side-panel.is-open .panel-toggle {
 		color: var(--bg);
 		background: var(--person-color);
 		border-color: var(--person-color);
@@ -1370,85 +1371,112 @@ const adam = getPerson('adam');
 
 	@media (max-width: 900px) {
 		.scrolly {
-			padding: 1.5rem 1rem 3rem;
+			/* Tighter side padding frees horizontal space for the two-column
+			   person bar and timeline tracks below it. */
+			padding: 0.5rem 0.5rem 3rem;
 		}
 
-		/* On a phone there's no room for two edge-anchored cards with the
-		   timeline showing through a centre gap — two 50%-width cards would
-		   leave only a sliver between them, and the sticky bar would sit
-		   opaque over the (now full-width, single-column) timeline scrolling
-		   behind it. So drop the sticky framing here: the bar becomes a normal
-		   block that scrolls away, and the two people stack full-width above
-		   the timeline like an ordinary intro. */
+		/* Sticky on mobile too — the bar floats on top as the reader scrolls
+		   through Timeline and Contact, exactly like desktop. Negative margins
+		   cancel the scrolly padding so the bar spans edge-to-edge. */
 		.person-bar {
-			position: static;
+			position: sticky;
+			top: 3rem;
+			margin-left: -0.5rem;
+			margin-right: -0.5rem;
 		}
 
+		/* Keep both cards side-by-side — Mitko left, Adam right, always.
+		   The right card keeps its right-aligned identity (those rules are not
+		   overridden here). Horizontal padding removed so cards touch the
+		   viewport edges; gap kept for the centre seam. */
 		.person-bar-inner {
-			flex-direction: column;
-			align-items: stretch;
-			gap: 1rem;
-			max-width: 520px;
-			padding: 0.5rem 0;
+			gap: 0.3rem;
+			padding: 0.4rem 0;
 		}
 
+		/* Each slot hugs its content — border wraps tightly around name +
+		   role + Skills button. space-between on the parent keeps left at
+		   the left edge and right at the right edge. max-width guards against
+		   overflow on narrow portrait screens where both cards together could
+		   exceed 100% if uncapped. When Skills opens (both in sync) the slot
+		   grows to half the bar width so the panel has room for the list. */
 		.person-slot {
 			flex: 0 0 auto;
-			width: 100%;
-			/* No sticky split on a phone — the bar is a normal stacked block. */
+			min-width: 0;
+			max-width: calc(50% - 0.15rem);
 			transform: none !important;
 		}
 
-		/* Stacked and full-width, both cards read top-to-bottom left-aligned —
-		   the right card's mirrored (right-aligned) layout only makes sense when
-		   it's anchored to the right edge on desktop. */
-		.person-slot--right :global(.person-header),
-		.person-slot--right .card-filter {
-			text-align: left;
+		.person-slot:has(.side-panel.is-open) {
+			flex: 1 1 0;
+			max-width: 50%;
 		}
 
-		.person-slot--right .side-panel-cv {
-			justify-content: flex-start;
-		}
-
-		.person-slot--right .side-panel-action > * {
-			justify-self: start;
-		}
-
-		/* Expanding skills is now a plain inline accordion (tap to open): let it
-		   grow to its natural height and push the page instead of trapping a
-		   tall list inside a short scroll box, and drop the full-page modal
-		   backdrop that only made sense when the card was a sticky overlay. */
+		/* Skills panel: plain inline accordion — grows naturally and pushes the
+		   page instead of being capped inside a short scroll box. */
 		.side-panel {
 			max-height: none;
 		}
 
+		/* The hidden skills stack contains PersonCard with many tags on one
+		   unwrapped row — its max-content is very wide and propagates up to
+		   inflate the slot's flex-basis when the slot uses flex: 0 0 auto.
+		   Pin width to 0 while closed so the slot can shrink to just its
+		   visible content (header + Skills button). Restore on open. */
 		.side-panel-stack {
+			width: 0;
 			max-height: none;
 			overflow-y: visible;
 		}
 
+		/* Cap the open card to the viewport height so the skills stack has a
+		   scroll boundary. Body scroll is locked by JS (syncBodyScrollLock) for
+		   the whole time the panel is open, so the timeline never moves while
+		   the reader scrolls through skills. 100dvh accounts for the mobile
+		   browser chrome (address bar); 3.5rem clears the sticky nav + bar top. */
+		.side-panel.is-open {
+			max-height: calc(100dvh - 3.5rem);
+		}
+
+		/* When open on mobile, let the stack scroll internally so the card
+		   never exceeds its max-height. overscroll-behavior:contain ensures
+		   the bounce at the top/bottom of the list stays inside the panel. */
+		.side-panel.is-open .side-panel-stack {
+			width: auto;
+			overflow-y: auto;
+			overscroll-behavior: contain;
+		}
+
+		/* Full-page modal backdrop is a desktop-only concept. */
 		.person-backdrop {
 			display: none;
 		}
 
-		/* The per-card blur halo reads as a floating overlay ring — with the
-		   bar now in normal flow it just muddies the edges, so drop it. Same
-		   for the corner flourishes, which also risk poking past the viewport
-		   edge on a narrow full-width card. */
+		/* Corner flourishes and blur ring add visual complexity that doesn't
+		   translate well to narrow mobile slots. */
 		.person-slot::before,
 		.slot-decor {
 			display: none;
 		}
 
-		/* No sticky bar and no centre gap to split across on a phone: the photo
-		   just sits centred, in flow, above each stacked card and scrolls away
-		   with it. Drop the scroll-driven transform/fade entirely. */
+		/* Photos stay absolute (above their card, out of flow) on mobile — the
+		   same as desktop. personPhotos.client.ts fades them via --photo-opacity
+		   as the bar scrolls up toward its sticky position, so by the time the
+		   bar docks the photos are already gone — "left behind" in the About
+		   section. Once docked (cards-arrived), only the floating cards remain. */
 		.person-photo {
-			position: static;
-			margin: 0 auto 0.75rem;
-			transform: none !important;
-			opacity: 1 !important;
+			/* Absolute positioning is the default; no override needed. */
+		}
+	}
+
+	/* Portrait phones: hide the floating headshots entirely — they belong to
+	   the About→Timeline slide-in experience (landscape / desktop). The rotate
+	   overlay guides portrait users to flip their phone; if they Continue anyway
+	   the person cards should be compact, not photo-topped. */
+	@media (max-width: 600px) and (orientation: portrait) {
+		.person-photo {
+			display: none;
 		}
 	}
 </style>

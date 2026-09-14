@@ -28,7 +28,7 @@
 
 type Pair = { source: HTMLElement; target: HTMLElement } & ({ mode: 'middle' | 'bottom' } | { mode: 'near-top'; gap: number });
 
-const MOBILE_QUERY = '(max-width: 900px)';
+const MOBILE_QUERY = '(max-width: 480px)';
 
 function findTarget(id: string): HTMLElement | null {
 	return document.querySelector<HTMLElement>(`[data-company-id="${CSS.escape(id)}"]`);

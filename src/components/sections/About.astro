@@ -133,6 +133,12 @@ const maskUrl = `url(${logoSrc})`;
 		}
 	}
 
+	@media (max-width: 900px) {
+		:global(#about) {
+			padding-bottom: clamp(20rem, 4rem + 30vh, 32rem);
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.hero-logo {
 			animation: none !important;
