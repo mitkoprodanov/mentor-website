@@ -1,15 +1,26 @@
 /**
  * Vision interactivity (see components/common/Vision.astro).
  *
- * Hovering (or focusing) a [data-thought-part] reveals its detail panel;
- * clicking toggles for touch devices. State is scoped PER `.vision` root so
- * multiple Vision instances on the same page (hero + a project preview) work
- * independently — closing a detail in one never touches another.
+ * On hover devices: mouseenter/mouseleave drive visibility; click just ensures
+ * the tooltip is shown without flashing (never toggles closed).
+ *
+ * On touch/no-hover: tap to show; tap the active part again to hide; tap any
+ * other part to switch immediately with no clearing phase.
+ *
+ * The tricky bit: on touch, browsers fire `focus` before `click` when a button
+ * is tapped for the first time. Without a guard, focus opens the detail and
+ * click immediately sees it as active and closes it — a two-tap-to-show bug.
+ * The `skipNextClick` flag per part absorbs that spurious click.
+ *
+ * State is scoped per `.vision` root so multiple instances on the same page
+ * work independently.
  */
 
 document.querySelectorAll<HTMLElement>('.vision').forEach((root) => {
 	const parts = Array.from(root.querySelectorAll<HTMLElement>('[data-thought-part]'));
 	if (!parts.length) return;
+
+	const isHoverDevice = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 	const detailFor = (part: HTMLElement): HTMLElement | null => {
 		const id = part.getAttribute('aria-controls');
@@ -40,18 +51,48 @@ document.querySelectorAll<HTMLElement>('.vision').forEach((root) => {
 	};
 
 	for (const part of parts) {
-		part.addEventListener('mouseenter', () => openDetail(part));
-		part.addEventListener('focus', () => openDetail(part));
+		// Per-part flag: when focus fires just before a click (the browser's touch
+		// tap sequence), the click should not toggle the tooltip that focus just opened.
+		let skipNextClick = false;
+
+		part.addEventListener('focus', () => {
+			if (!part.classList.contains('is-active')) {
+				openDetail(part);
+			}
+			// Set flag regardless — covers the case where focus fires on a click
+			// that would otherwise flash (hover device clicking an active part).
+			skipNextClick = true;
+			setTimeout(() => { skipNextClick = false; }, 0);
+		});
+
+		if (isHoverDevice) {
+			part.addEventListener('mouseenter', () => openDetail(part));
+		}
+
 		part.addEventListener('click', (e) => {
-			// Don't let a click inside a Vision embedded in a project-row also
-			// open the row's detail modal.
 			e.stopPropagation();
-			if (part.classList.contains('is-active')) closeAll();
-			else openDetail(part);
+
+			if (skipNextClick) {
+				skipNextClick = false;
+				return;
+			}
+
+			if (isHoverDevice) {
+				// Hover device: click just ensures shown, never toggles or flashes.
+				if (!part.classList.contains('is-active')) openDetail(part);
+			} else {
+				// Touch: tap shows; tap the active part hides; tap any other part
+				// shows it immediately (openDetail's closeAll handles the switch).
+				if (part.classList.contains('is-active')) closeAll();
+				else openDetail(part);
+			}
 		});
 	}
 
-	root.addEventListener('mouseleave', () => closeAll());
+	if (isHoverDevice) {
+		root.addEventListener('mouseleave', () => closeAll());
+	}
+
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape') closeAll();
 	});

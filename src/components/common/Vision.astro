@@ -305,9 +305,8 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 	.vision--preview .detail-right { left:  calc(100% + 1rem); }
 
 	/* ── Responsive fallback — once there's no longer side room, the detail
-	   drops below the sentence. The preview goes fully in-flow (static) so it
-	   pushes the experience cards beneath it down rather than floating over
-	   them; the hero has nothing below it, so it can stay absolute. ────────── */
+	   floats below the sentence (position: absolute so it overlays content below
+	   without shifting it). ─────────────────────────────────────────────────── */
 
 	@media (max-width: 1250px) {
 		.vision--hero .sentence-detail {
@@ -323,11 +322,15 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 			text-align: center;
 		}
 
+		/* Float below the sentence, spanning its full width. Override the
+		   side-panel bottom-anchor (bottom: 0) from the preview base rule. */
 		.vision--preview .sentence-detail {
-			position: static;
+			top: calc(100% + 0.75rem);
+			bottom: auto;
+			left: 0;
+			right: 0;
+			width: auto;
 			transform: none;
-			width: 100%;
-			margin-top: 0.75rem;
 		}
 	}
 
@@ -336,11 +339,13 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 			margin-top: 1.25rem;
 		}
 
+		/* Span the full vision width, overriding the 50%-centred positioning
+		   set by the ≤1250px block above. */
 		.vision--hero .sentence-detail {
-			position: static;
+			left: 0;
+			right: 0;
+			width: auto;
 			transform: none;
-			width: 100%;
-			margin-top: 0.9rem;
 		}
 	}
 </style>
