@@ -1,0 +1,136 @@
+/**
+ * Visual density tokens — typography scale, spacing, and border radii.
+ * Desktop values at :root; mobile overrides at max-width: 900px.
+ *
+ * TUNING MOBILE DENSITY — change values in the @media block only:
+ *   All type at once → adjust --text-density (scales every --text-* proportionally)
+ *   Card padding     → --pad-card, --pad-card-sm, --pad-card-lg
+ *   Gaps             → --gap-xs through --gap-xl
+ *   Radii            → --r-card, --r-panel, --r-block, --r-feature
+ *   One specific element → override just that token without touching the others
+ *   Desktop is never affected — all changes live in the @media block below.
+ */
+
+:root {
+
+	/* ── Typography ──────────────────────────────────────────────────────── */
+
+	--text-xs:    0.72rem;   /* year labels, badges, micro text                  */
+	--text-sm:    0.80rem;   /* tag labels, button labels, small secondary text  */
+	--text-ui:    0.85rem;   /* company headers, stat lines, filter chip, hobbies */
+	--text-base:  0.88rem;   /* card paragraph text (ExperienceCard, modals)     */
+	--text-md:    0.95rem;   /* contact-lead, vision text                        */
+	--text-lg:    1.20rem;   /* person names, card headings                      */
+	--text-xl:    1.40rem;   /* modal titles, large card names                   */
+	--text-hero:  clamp(1.75rem, 4vw, 2.5rem);  /* section headings (fluid)     */
+
+	/* ── Line heights ─────────────────────────────────────────────────────── */
+
+	--leading-tight:    1.2;    /* UI labels, caps-spaced text     */
+	--leading-snug:     1.4;    /* short descriptive lines         */
+	--leading-normal:   1.55;   /* body paragraphs                 */
+	--leading-relaxed:  1.9;    /* hero sentences, contact lead    */
+
+	/* ── Gaps (content layout) ────────────────────────────────────────────── */
+
+	--gap-xs:  0.4rem;    /* within an element (icon↔label, tiny row)   */
+	--gap-sm:  0.75rem;   /* between items in a card or tag row         */
+	--gap-md:  1.25rem;   /* between cards in a track or list           */
+	--gap-lg:  1.5rem;    /* between tracks or major groups             */
+	--gap-xl:  2.0rem;    /* between top-level timeline sections        */
+
+	/* ── Card padding (inside opaque card/panel boxes) ───────────────────── */
+
+	--pad-card-sm:  0.6rem 0.75rem;    /* compact boxes (track-row-boxed, modal-exp)  */
+	--pad-card:     1rem 1.15rem;      /* standard cards (experience, project rows)   */
+	--pad-card-lg:  1.25rem 1.5rem;    /* roomy cards (company block, contact card)   */
+	--pad-section:  1.5rem;            /* section-level side insets                   */
+
+	/* ── Control padding (buttons, pills, tags, chips) ───────────────────── */
+
+	--pad-tag:    0.25rem 0.6rem;    /* skill tags, filter-tag pills     */
+	--pad-btn:    0.55rem 1rem;      /* Skills / LinkedIn pills          */
+	--pad-btn-cv: 1rem 1.2rem;       /* CV download (intentionally tall) */
+	--pad-btn-lg: 0.85rem 1.4rem;    /* Contact action pills             */
+	--pad-chip:   0.4rem 0.95rem;    /* filter chip                      */
+
+	/* ── Border radii ─────────────────────────────────────────────────────── */
+
+	--r-badge:    6px;     /* small indicators, thumbnail corners  */
+	--r-card:     14px;    /* standard cards (experience, row boxes) */
+	--r-panel:    16px;    /* panels (side-panel, modal-exp, header) */
+	--r-block:    20px;    /* major blocks (company block)           */
+	--r-feature:  24px;    /* featured cards (contact card, envelopes) */
+	--r-full:     999px;   /* pills and circles                      */
+
+}
+
+
+/* ── Mobile density overrides ──────────────────────────────────────────────
+ *
+ * This is the single place to tune ALL mobile visual density.
+ * Desktop is untouched — every change here is mobile-only.
+ *
+ * Quick-adjustment handles:
+ *
+ *   Typography — change --text-density to scale ALL font sizes at once:
+ *     0.75  = current default  (~10.6px body on a 16px base)
+ *     0.80  = slightly larger
+ *     0.875 = desktop-like     (~12.3px body)
+ *   Then override individual --text-* tokens below for fine per-level control.
+ *
+ *   Spacing — adjust --pad-* and --gap-* tokens directly.
+ *   Radii   — adjust --r-* tokens directly.
+ *
+ * ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+	:root {
+
+		/* ── Typography density dial ──────────────────────────────────────────
+		   Change this ONE value to scale all font sizes proportionally.        */
+		--text-density: 0.75;
+
+		--text-xs:    calc(0.72rem  * var(--text-density));   /* ≈ 0.54rem */
+		--text-sm:    calc(0.80rem  * var(--text-density));   /* ≈ 0.60rem */
+		--text-ui:    calc(0.85rem  * var(--text-density));   /* ≈ 0.64rem */
+		--text-base:  calc(0.88rem  * var(--text-density));   /* ≈ 0.66rem */
+		--text-md:    calc(0.95rem  * var(--text-density));   /* ≈ 0.71rem */
+		--text-lg:    calc(1.20rem  * var(--text-density));   /* ≈ 0.90rem */
+		--text-xl:    calc(1.40rem  * var(--text-density));   /* ≈ 1.05rem */
+		--text-hero:  clamp(1.35rem, 4vw, 1.75rem);          /* fluid, own range */
+
+		/* ── Line heights ─────────────────────────────────────────────────── */
+		--leading-snug:    1.3;
+		--leading-normal:  1.45;
+		--leading-relaxed: 1.65;
+
+		/* ── Gaps ─────────────────────────────────────────────────────────── */
+		--gap-xs:  0.3rem;
+		--gap-sm:  0.5rem;
+		--gap-md:  0.75rem;
+		--gap-lg:  0.85rem;
+		--gap-xl:  1.25rem;
+
+		/* ── Card padding ─────────────────────────────────────────────────── */
+		--pad-card-sm:  0.28rem 0.4rem;
+		--pad-card:     0.44rem 0.5rem;
+		--pad-card-lg:  0.55rem 0.7rem;
+		--pad-section:  0.65rem;
+
+		/* ── Control padding ──────────────────────────────────────────────── */
+		--pad-tag:    0.14rem 0.3rem;
+		--pad-btn:    0.3rem  0.5rem;
+		--pad-btn-cv: 0.5rem  0.65rem;
+		--pad-btn-lg: 0.44rem 0.8rem;
+		--pad-chip:   0.24rem 0.5rem;
+
+		/* ── Border radii ─────────────────────────────────────────────────── */
+		--r-badge:    4px;
+		--r-card:     8px;
+		--r-panel:    10px;
+		--r-block:    12px;
+		--r-feature:  14px;
+
+	}
+}

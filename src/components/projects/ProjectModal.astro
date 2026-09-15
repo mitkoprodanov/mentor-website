@@ -158,4 +158,24 @@ const titleId = `project-modal-title-${modalId}`;
 			animation: none;
 		}
 	}
+
+	/* On narrow/portrait screens the sticky person bar (promoted to the top
+	   layer above the dialog) would cover the modal title. The panel gets a
+	   generous padding-block-start so there is room above the title for the
+	   JS open handler to scroll past — placing the title exactly at the bar's
+	   frame bottom. The close button is absolute, so it stays at the panel's
+	   own top-right regardless of scroll. */
+	@media (max-width: 900px) {
+		.project-modal {
+			width: calc(100vw - 0.75rem);
+			max-height: 100dvh;
+			margin-block: 0;
+			border-radius: 0 0 18px 18px;
+		}
+
+		.project-modal__panel {
+			max-height: 100dvh;
+			padding: 8rem 1rem 2rem;
+		}
+	}
 </style>

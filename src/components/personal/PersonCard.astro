@@ -56,13 +56,13 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 	.skill-groups {
 		display: flex;
 		flex-direction: column;
-		gap: 0.85rem;
-		margin-bottom: 1.25rem;
+		gap: var(--gap-sm);
+		margin-bottom: var(--gap-md);
 	}
 
 	.skill-group h4 {
 		margin: 0 0 0.4rem;
-		font-size: 0.7rem;
+		font-size: var(--text-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--fg-muted);
@@ -71,30 +71,30 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 	.tag-row {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.4rem;
+		gap: var(--gap-xs);
 	}
 
 	.stat-line {
-		font-size: 0.85rem;
+		font-size: var(--text-ui);
 		color: var(--fg);
 		margin: 0 0 0.25rem;
 	}
 
 	.edu-line {
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		color: var(--fg-muted);
 		margin: 0;
 	}
 
 	.hobbies {
-		margin-top: 1.25rem;
-		padding-top: 1.25rem;
+		margin-top: var(--gap-md);
+		padding-top: var(--gap-md);
 		border-top: 1px solid var(--border);
 	}
 
 	.hobbies h4 {
 		margin: 0 0 0.6rem;
-		font-size: 0.7rem;
+		font-size: var(--text-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.1em;
 		color: var(--fg-muted);
@@ -106,12 +106,12 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 		list-style: none;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--gap-xs);
 	}
 
 	.hobbies li {
-		font-size: 0.85rem;
-		line-height: 1.4;
+		font-size: var(--text-ui);
+		line-height: var(--leading-snug);
 		color: var(--fg);
 		padding-left: 1rem;
 		position: relative;
@@ -126,5 +126,11 @@ const tagGroups = groupTagsByCategory(person.tagIds);
 		height: 5px;
 		border-radius: 50%;
 		background: var(--person-color);
+	}
+
+	@media (max-width: 900px) {
+		.person-card {
+			padding: 0.25rem 0.65rem 0.5rem;
+		}
 	}
 </style>

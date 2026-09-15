@@ -28,7 +28,7 @@ import { asset } from '../../utils/asset';
 		position: relative;
 		background: var(--bg);
 		border: 1px solid color-mix(in srgb, var(--mentor) 55%, var(--border));
-		border-radius: 24px;
+		border-radius: var(--r-feature);
 		padding: 3.5rem 3rem;
 		text-align: center;
 		display: flex;
@@ -98,9 +98,9 @@ import { asset } from '../../utils/asset';
 		align-items: center;
 		justify-content: center;
 		gap: 0.45rem;
-		padding: 0.85rem 1.4rem;
-		border-radius: 999px;
-		font-size: 0.9rem;
+		padding: var(--pad-btn-lg);
+		border-radius: var(--r-full);
+		font-size: var(--text-base);
 		font-weight: 600;
 		text-decoration: none;
 		color: var(--mentor);
@@ -152,10 +152,10 @@ import { asset } from '../../utils/asset';
 	/* The generous desktop padding squeezes the content column to a sliver on
 	   a phone (a ~295px card would leave ~200px of usable width) — pull it in
 	   so the studio name, lead line, and links have room to breathe. */
-	@media (max-width: 600px) {
+	@media (max-width: 900px) {
 		.company-card {
-			padding: 2.5rem 1.5rem;
-			border-radius: 20px;
+			padding: 2rem 1.5rem;
+			border-radius: var(--r-feature);
 		}
 
 		.company-card__wordmark {

@@ -21,7 +21,7 @@ const { person } = Astro.props;
 		   PersonContactCard's border-top — only the top corners, since this
 		   sits flush above the scrollable card below with no bottom edge of
 		   its own. */
-		border-radius: 16px 16px 0 0;
+		border-radius: var(--r-panel) var(--r-panel) 0 0;
 		background: var(--bg);
 		padding: 1.25rem 1.75rem 0.5rem;
 		text-align: left;
@@ -29,12 +29,18 @@ const { person } = Astro.props;
 
 	.person-header h3 {
 		margin: 0 0 0.15rem;
-		font-size: 1.2rem;
+		font-size: var(--text-lg);
 	}
 
 	.role {
 		color: var(--person-color);
 		margin: 0;
-		font-size: 0.9rem;
+		font-size: var(--text-base);
+	}
+
+	@media (max-width: 900px) {
+		.person-header {
+			padding: 0.7rem 0.9rem 0.35rem;
+		}
 	}
 </style>

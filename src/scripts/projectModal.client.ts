@@ -249,7 +249,27 @@ function init(): void {
 			const dialog = mutation.target as HTMLElement;
 			if (dialog.hasAttribute('open')) {
 				const panel = dialog.querySelector<HTMLElement>('.project-modal__panel');
-				if (panel) panel.scrollTop = 0;
+				if (panel) {
+					requestAnimationFrame(() => {
+						// Scroll so the project title sits just below the person card frame.
+						// Desktop reference: .decor-frame (extends 15px below card, hidden on mobile).
+						// Mobile fallback: #person-bar bottom (promoted to top layer, overlaps modal).
+						const titleId = dialog.getAttribute('aria-labelledby');
+						const head = titleId
+							? dialog.querySelector<HTMLElement>(`#${titleId}`)
+							: dialog.querySelector<HTMLElement>('.project-modal__title');
+						const decor = document.querySelector<HTMLElement>('.decor-frame');
+						const bar = document.getElementById('person-bar');
+						const ref = (decor && decor.offsetParent !== null) ? decor : bar;
+						if (head && ref) {
+							const refBottom = ref.getBoundingClientRect().bottom;
+							const headTop = head.getBoundingClientRect().top;
+							panel.scrollTop = Math.max(0, headTop - refBottom - 8);
+						} else {
+							panel.scrollTop = 0;
+						}
+					});
+				}
 				void activateYouTube(dialog);
 			} else {
 				pauseYouTube(dialog);

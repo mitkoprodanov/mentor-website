@@ -63,10 +63,21 @@ const { side, emphasized = false } = Astro.props;
 	}
 
 	@media (max-width: 900px) {
-		/* .apart collapses to a single column here, so a two-column bridge
-		   no longer lines up with anything — just let the normal gap show. */
-		.track-connector {
+		/* Non-mentor connectors disappear on narrow screens — without a visible
+		   gap between box pairs the bridge adds nothing. */
+		.track-connector:not(.emphasized) {
 			display: none;
+		}
+
+		/* Mentor connector: keep two columns, but shrink column-gap from 2rem
+		   to 0.5rem to match .apart's mobile gap — otherwise the left fill
+		   sits in the middle of the gap instead of over Mitko's column.
+		   Only the left fill (Mitko's) gets the yellow; the right column stays
+		   transparent so no mentor tint bleeds onto Ádám's side. */
+		.track-connector.emphasized {
+			column-gap: 0.5rem;
+			height: 2rem;
+			margin: -2rem 0;
 		}
 	}
 </style>

@@ -56,9 +56,9 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 		/* Same pill radius as the filter tags. Vertical padding is set so the
 		   button lands a touch over 2x a filter tag's height (~24px → ~50px),
 		   reading as an action button rather than another tag. */
-		border-radius: 999px;
-		padding: 1rem 1.2rem;
-		font-size: 0.8rem;
+		border-radius: var(--r-full);
+		padding: var(--pad-btn-cv);
+		font-size: var(--text-sm);
 		font-weight: 600;
 		text-decoration: none;
 		/* Color-coded to the person, unlike the tags' fixed orange — a soft

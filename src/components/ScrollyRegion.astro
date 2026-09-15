@@ -612,7 +612,7 @@ const adam = getPerson('adam');
 	   gap eases away with the row rather than snapping at the end of the
 	   height/display transition. */
 	.side-panel > * + * {
-		margin-top: 0.4rem;
+		margin-top: var(--gap-xs);
 	}
 
 	/* Collapsible row wrapper — the two rows inside the card that can grow
@@ -799,15 +799,15 @@ const adam = getPerson('adam');
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		padding: 0.55rem 1rem;
+		padding: var(--pad-btn);
 		font: inherit;
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
 		cursor: pointer;
 		color: var(--person-color);
 		background: color-mix(in srgb, var(--person-color) 14%, transparent);
 		border: 1px solid color-mix(in srgb, var(--person-color) 45%, transparent);
-		border-radius: 999px;
+		border-radius: var(--r-full);
 		/* Same person-tinted glint as the CV pill above it, offset the other
 		   way so the pair drift out of step. */
 		--sheen-color: var(--person-color);
@@ -876,9 +876,9 @@ const adam = getPerson('adam');
 		align-items: center;
 		justify-content: center;
 		gap: 0.45rem;
-		padding: 0.55rem 1rem;
-		border-radius: 999px;
-		font-size: 0.8rem;
+		padding: var(--pad-btn);
+		border-radius: var(--r-full);
+		font-size: var(--text-sm);
 		font-weight: 600;
 		text-decoration: none;
 		color: var(--person-color);
@@ -1010,10 +1010,10 @@ const adam = getPerson('adam');
 		cursor: pointer;
 		border: none;
 		display: inline-block;
-		font-size: 0.75rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		padding: 0.25rem 0.65rem;
-		border-radius: 999px;
+		padding: var(--pad-tag);
+		border-radius: var(--r-full);
 		background: var(--person-color);
 		color: var(--bg);
 		box-shadow: 0 0 14px 1px color-mix(in srgb, var(--person-color) 55%, transparent);
@@ -1140,10 +1140,10 @@ const adam = getPerson('adam');
 		align-items: center;
 		gap: 0.55rem;
 		width: max-content;
-		padding: 0.4rem 0.95rem;
-		border-radius: 999px;
+		padding: var(--pad-chip);
+		border-radius: var(--r-full);
 		font-family: inherit;
-		font-size: 0.85rem;
+		font-size: var(--text-ui);
 		font-weight: 600;
 		letter-spacing: 0.02em;
 		line-height: 1.2;

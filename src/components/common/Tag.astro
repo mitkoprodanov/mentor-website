@@ -22,9 +22,9 @@ const { label, linked = false, tagId } = Astro.props;
 
 <style>
 	.tag {
-		font-size: 0.75rem;
-		padding: 0.25rem 0.6rem;
-		border-radius: 999px;
+		font-size: var(--text-sm);
+		padding: var(--pad-tag);
+		border-radius: var(--r-full);
 		background: var(--accent-soft);
 		color: var(--accent-3);
 		border: 1px solid rgba(255, 122, 0, 0.3);

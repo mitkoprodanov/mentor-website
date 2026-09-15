@@ -235,7 +235,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 	.project-row--boxed {
 		border: 1px solid var(--row-line);
-		border-radius: 16px;
+		border-radius: var(--r-panel);
 		background: var(--row-fill);
 		padding: 1.25rem;
 	}
@@ -373,7 +373,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 	   right so it reads toward his own card on that edge. */
 	.modal-exp {
 		position: relative;
-		padding: 1rem 1.15rem;
+		padding: var(--pad-card);
 		border-radius: 10px;
 		border: 1px solid color-mix(in oklab, var(--person-color, var(--accent)) 45%, var(--border));
 		background: color-mix(in oklab, var(--person-color, var(--accent)) 8%, var(--bg));
@@ -430,7 +430,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 	.node-info {
 		margin: 0.3rem 0 0;
-		font-size: 0.82rem;
+		font-size: var(--text-sm);
 		line-height: 1.4;
 		color: var(--fg-muted);
 	}
@@ -447,7 +447,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 	.experience-row {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 1.25rem;
+		gap: var(--gap-md);
 	}
 
 	/* A solo project belongs to one person — the whole box (node + card) sits
@@ -615,9 +615,13 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 		.project-row--bridge-left.project-row--boxed,
 		.project-row--square-bottom-right.project-row--boxed {
-			border-radius: 16px;
+			border-radius: var(--r-panel);
 			border-left: 1px solid var(--row-line);
 			border-right: 1px solid var(--row-line);
+		}
+
+		.project-row--boxed {
+			padding: var(--pad-card-lg);
 		}
 	}
 
