@@ -1405,7 +1405,6 @@ const adam = getPerson('adam');
 			flex: 0 0 auto;
 			min-width: 0;
 			max-width: calc(50% - 0.15rem);
-			transform: none !important;
 		}
 
 		.person-slot:has(.side-panel.is-open) {
@@ -1470,13 +1469,13 @@ const adam = getPerson('adam');
 		}
 	}
 
-	/* Portrait phones: hide the floating headshots entirely — they belong to
-	   the About→Timeline slide-in experience (landscape / desktop). The rotate
-	   overlay guides portrait users to flip their phone; if they Continue anyway
-	   the person cards should be compact, not photo-topped. */
-	@media (max-width: 600px) and (orientation: portrait) {
-		.person-photo {
-			display: none;
+	/* Portrait mobile: disable the centering animation — no horizontal space
+	   for the converge-to-centre travel — but keep photos visible so they
+	   animate vertically (lift/zoom + fade) as the bar rises from About into
+	   the Timeline, just like landscape and desktop. */
+	@media (max-width: 900px) and (orientation: portrait) {
+		.person-slot {
+			transform: none !important;
 		}
 	}
 </style>
