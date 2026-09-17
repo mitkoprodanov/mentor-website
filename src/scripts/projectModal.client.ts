@@ -215,10 +215,41 @@ function pauseYouTube(scope: HTMLElement): void {
 	});
 }
 
-function openById(id: string | null): void {
-	if (!id) return;
-	const dialog = document.querySelector<HTMLDialogElement>(`dialog[data-project-modal="${id}"]`);
-	if (dialog && !dialog.open) dialog.showModal();
+/**
+ * Facebook video/reel iframes have no JS API — blanking src is the only way to
+ * fully stop them (a hidden dialog still plays audio otherwise). We save the
+ * original src once in `data-fb-base` and restore it when a modal opens so the
+ * user can click to play; blanking again on close stops any in-progress audio.
+ *
+ * `about:blank` (not empty string) is important — `src=""` resolves relative
+ * to the document base and would load the entire page inside each iframe.
+ *
+ * `loading="eager"` is set in `initFacebook`: inside a <dialog> top-layer or
+ * position:fixed panel the browser's IntersectionObserver can't determine
+ * visibility, so `loading="lazy"` (the template default) would never trigger
+ * and the iframes would stay blank.
+ */
+function initFacebook(): void {
+	document.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
+		const initial = iframe.getAttribute('src') ?? '';
+		if (initial) iframe.dataset.fbBase = initial;
+		iframe.loading = 'eager';
+		iframe.src = 'about:blank';
+	});
+}
+
+function stopFacebook(scope: HTMLElement): void {
+	scope.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
+		iframe.src = 'about:blank';
+	});
+}
+
+function activateFacebook(scope: HTMLElement): void {
+	Array.from(scope.querySelectorAll<HTMLElement>('.shot-frame--video')).filter(isFrameLive).forEach((frame) => {
+		const iframe = frame.querySelector<HTMLIFrameElement>('.shot-video');
+		if (!iframe?.dataset.fbBase) return;
+		iframe.src = iframe.dataset.fbBase;
+	});
 }
 
 function init(): void {
@@ -227,13 +258,19 @@ function init(): void {
 
 	initVideos();
 	initImageRows();
+	initFacebook();
 
 	document.addEventListener('click', (event) => {
 		const el = event.target as HTMLElement;
 
 		const opener = el.closest<HTMLElement>('[data-project-open]');
 		if (opener) {
-			openById(opener.getAttribute('data-project-open'));
+			const id = opener.getAttribute('data-project-open');
+			if (!id) return;
+			const dialog = document.querySelector<HTMLDialogElement>(`dialog[data-project-modal="${id}"]`);
+			if (dialog && !dialog.open) {
+				dialog.showModal();
+			}
 			return;
 		}
 
@@ -271,8 +308,10 @@ function init(): void {
 					});
 				}
 				void activateYouTube(dialog);
+				activateFacebook(dialog);
 			} else {
 				pauseYouTube(dialog);
+				stopFacebook(dialog);
 			}
 		}
 	});
@@ -296,7 +335,11 @@ function init(): void {
 		const results = document.getElementById('filter-results');
 		if (!results) return;
 		pauseYouTube(results);
-		if ((event as CustomEvent<{ active: boolean }>).detail?.active) void activateYouTube(results);
+		stopFacebook(results);
+		if ((event as CustomEvent<{ active: boolean }>).detail?.active) {
+			void activateYouTube(results);
+			activateFacebook(results);
+		}
 	});
 }
 
