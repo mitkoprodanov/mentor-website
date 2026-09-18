@@ -1,6 +1,5 @@
 ---
 const links = [
-	{ href: '#about', label: 'About' },
 	{ href: '#timeline', label: 'Timeline' },
 	{ href: '#contact', label: 'Contact' },
 ];
@@ -31,73 +30,134 @@ const links = [
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 1rem 1.5rem;
+		/* Outer padding reduced so that the links' own padding can absorb most
+		   of the vertical space — the click/tap zones now reach into what was
+		   purely decorative white-space. Visual navbar height is unchanged. */
+		padding: 0.45rem 1rem;
 		background: rgba(11, 13, 18, 0.7);
 		backdrop-filter: blur(10px);
 		border-bottom: 1px solid var(--border);
 	}
 
+	/* ── Brand link ─────────────────────────────────────────────────────── */
+
 	.navbar-brand {
 		font-size: 0.85rem;
 		text-decoration: none;
 		color: var(--fg);
+		/* Prevent the brand from wrapping to two lines on narrow viewports —
+		   font-size / letter-spacing tuning at mobile breakpoints ensures it
+		   fits in one line without overflow. */
+		white-space: nowrap;
+		/* Padding extends the hit area into the surrounding navbar space while
+		   keeping the brand text visually at the same position as before. */
+		padding: 0.55rem 0.5rem;
+		border-radius: 4px;
+		/* Persistent warm amber glow: identifies this as the studio home anchor,
+		   not just another nav link. Two shadows kept in sync across states for
+		   a smooth transition without flicker. */
+		text-shadow:
+			0 0 20px var(--nav-glow-rest),
+			0 0 10px var(--nav-glow-rest-inner);
+		transition: color 0.2s ease, text-shadow 0.2s ease;
 	}
+
+	.navbar-brand:hover {
+		color: var(--mentor-strong);
+		text-shadow:
+			0 0 24px var(--nav-glow-active),
+			0 0 10px var(--nav-glow-active-mid);
+	}
+
+	.navbar-brand:focus-visible {
+		outline: 2px solid var(--mentor);
+		outline-offset: 3px;
+	}
+
+	/* ── Nav links ──────────────────────────────────────────────────────── */
 
 	.navbar-links {
 		display: flex;
-		gap: 1.5rem;
+		/* Gap is reduced because the links' horizontal padding now provides the
+		   visual text-to-text spacing — net perceived gap is unchanged. */
+		gap: 0.3rem;
 		list-style: none;
 		margin: 0;
 		padding: 0;
 	}
 
 	.navbar-links a {
+		display: block;
+		/* Padding makes the hit area substantially larger than the text alone.
+		   Combined with the reduced outer navbar padding above, the visual
+		   height and position of the text is preserved exactly. */
+		padding: 0.55rem 0.6rem;
 		text-decoration: none;
 		color: var(--fg-muted);
 		font-size: 0.85rem;
 		font-weight: var(--font-weight-bold);
-		/* Uppercase to match the `.brand-heading` treatment used across
-		   section titles and the studio wordmark. */
 		text-transform: uppercase;
 		letter-spacing: var(--letter-brand);
-		transition: color 0.15s ease;
+		border-radius: 4px;
+		/* Pre-define the glow at zero opacity so the transition is smooth. */
+		text-shadow: 0 0 14px transparent;
+		transition: color 0.2s ease, text-shadow 0.2s ease;
 	}
 
 	.navbar-links a:hover {
-		color: var(--accent);
+		color: var(--mentor);
+		text-shadow: 0 0 14px var(--nav-glow-active-mid);
 	}
+
+	.navbar-links a:focus-visible {
+		outline: 2px solid var(--mentor);
+		outline-offset: 3px;
+		color: var(--mentor);
+	}
+
+	/* ── Mobile portrait ≤ 600px ────────────────────────────────────────── */
 
 	@media (max-width: 600px) {
 		.navbar {
-			padding: 0.85rem 1rem;
+			padding: 0.4rem 0.55rem;
+		}
+
+		.navbar-brand {
+			/* 0.08em is noticeably tighter than the desktop 0.15em but still
+			   clearly wide-tracked. Combined with the smaller font size it keeps
+			   the brand on one line at typical portrait-phone widths (393 px+). */
+			font-size: 0.78rem;
+			padding: 0.45rem 0.45rem;
+			letter-spacing: 0.08em;
 		}
 
 		.navbar-links {
-			gap: 1rem;
+			gap: 0.1rem;
 		}
 
 		.navbar-links a {
-			font-size: 0.8rem;
+			font-size: 0.78rem;
+			padding: 0.45rem 0.45rem;
+			letter-spacing: 0.08em;
 		}
 	}
 
-	/* At the narrowest widths the brand and the links run flush into each other
-	   (space-between pushes them to the edges until they touch). The brand's
-	   wide 0.15em tracking is the biggest space hog — tightening it (plus a
-	   slightly smaller font and link gap) reclaims enough room for a real gap
-	   between the two, without shrinking the text to the point of illegibility. */
+	/* ── Very narrow portrait (≈ 340 – 380 px) ─────────────────────────── */
+
 	@media (max-width: 380px) {
 		.navbar-brand {
-			font-size: 0.72rem;
+			font-size: 0.70rem;
 			letter-spacing: 0.05em;
 		}
 
 		.navbar-links {
-			gap: 0.6rem;
+			gap: 0.05rem;
 		}
 
 		.navbar-links a {
-			font-size: 0.72rem;
+			font-size: 0.70rem;
+			letter-spacing: 0.05em;
+			padding: 0.45rem 0.35rem;
 		}
 	}
 </style>

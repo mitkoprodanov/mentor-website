@@ -72,6 +72,15 @@
 	--mentor-bg: color-mix(in oklab, var(--mentor) 12%, var(--bg-alt));
 	--mentor-border: color-mix(in oklab, var(--mentor) 45%, var(--border));
 
+	/* Navbar text-shadow — all derived from --mentor so the entire bar reads
+	   as one brand-tinted surface at every interaction state.
+	   rest      = ambient glow on the brand at rest (outer + inner layers).
+	   active     = full-on glow for hover/focus (brand peak, shared mid for links). */
+	--nav-glow-rest:       color-mix(in srgb, var(--mentor) 22%, transparent);
+	--nav-glow-rest-inner: color-mix(in srgb, var(--mentor) 8%,  transparent);
+	--nav-glow-active:     color-mix(in srgb, var(--mentor-strong) 65%, transparent);
+	--nav-glow-active-mid: color-mix(in srgb, var(--mentor-strong) 40%, transparent);
+
 	/* Per-person accent, used to color-code the timeline thread and skill tags. */
 	--mitko-color: var(--accent);
 	--adam-color: var(--accent-3);
