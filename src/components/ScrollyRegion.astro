@@ -1478,4 +1478,72 @@ const adam = getPerson('adam');
 			transform: none !important;
 		}
 	}
+
+	/* ---- Mobile filter view: person cards visible above results ------------
+	   Desktop promotes the bar via z-index framing (see @media min-width:901px
+	   block above). On mobile the bar stacks above the results instead of
+	   flanking them — pin it fixed at the same top:3rem it holds normally,
+	   z-index above the backdrop (25) and the results panel (26), with the
+	   same minimal name+role card as desktop. The results panel top is pushed
+	   down to 8rem so it clears the bar (same offset the project modal uses
+	   for its 8rem panel padding on mobile). */
+	@media (max-width: 900px) {
+		:global(body.filter-active) .person-bar {
+			position: fixed;
+			top: 3rem;
+			left: 0;
+			right: 0;
+			z-index: 27;
+			pointer-events: none;
+		}
+
+		:global(body.filter-active) .person-slot {
+			pointer-events: auto;
+			transform: none !important;
+		}
+
+		/* Minimal card: headshots are not shown. */
+		:global(body.filter-active) .person-photo {
+			display: none;
+		}
+
+		/* Strip skills / CV / LinkedIn controls — same collapse as desktop. */
+		:global(body.filter-active) .side-panel > .collapse-row {
+			grid-template-rows: 0fr;
+			margin-top: 0;
+			transition: none;
+		}
+
+		:global(body.filter-active) .side-panel-action,
+		:global(body.filter-active) .side-panel-cv,
+		:global(body.filter-active) .side-panel-linkedin {
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		:global(body.filter-active) .side-panel > .side-panel-stack,
+		:global(body.filter-active) .side-panel.is-open > .side-panel-stack {
+			height: 0;
+			overflow: hidden;
+			margin-top: 0;
+		}
+
+		:global(body.filter-active) .card-filter {
+			display: none;
+		}
+
+		:global(body.filter-active) .side-panel {
+			padding-bottom: 0;
+		}
+
+		:global(body.filter-active) .side-panel :global(.person-header) {
+			padding: 0.6rem 1rem;
+		}
+
+		/* Results panel: start below the bar, shrink max-height to match. */
+		:global(body.filter-active) .timeline-area {
+			top: 8rem;
+			max-height: calc(100dvh - 9.5rem);
+		}
+	}
 </style>

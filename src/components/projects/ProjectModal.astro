@@ -42,9 +42,14 @@ const titleId = `project-modal-title-${modalId}`;
 	data-project-people={personIds.join(' ')}
 	aria-labelledby={titleId}
 >
-	<div class="project-modal__panel">
-		<button type="button" class="project-modal__close" data-project-close aria-label="Close dialog">×</button>
+	<!-- Outside the scroll panel so `position: fixed` resolves to the viewport
+	     (the panel's transform animation would make it the containing block). -->
+	<button type="button" class="project-modal__close btn-sheen" data-project-close aria-label="Close dialog">
+		<span class="project-modal__close-label">Project: <strong>{title}</strong></span>
+		<span class="project-modal__close-icon" aria-hidden="true">✕</span>
+	</button>
 
+	<div class="project-modal__panel">
 		<ProjectDetail title={title} subtitle={subtitle} dateRange={dateRange} people={people} tags={tags} media={media} url={url} urlLabel={urlLabel} titleId={titleId}>
 			<slot />
 		</ProjectDetail>
@@ -60,7 +65,11 @@ const titleId = `project-modal-title-${modalId}`;
 		   still fits without spilling. See .shot / .shot--person in
 		   ProjectDetail.astro. */
 		width: min(1040px, calc(100vw - 2rem));
-		max-height: min(88vh, 900px);
+		/* Top-aligned to the same anchor as the skill filter view (top: 4.5rem),
+		   leaving a 1.5rem gap at the bottom — matching the filter modal's
+		   `top: 4.5rem` + `max-height: calc(100vh - 6rem)`. */
+		margin-block-start: 4.5rem;
+		max-height: min(900px, calc(100vh - 6rem));
 		padding: 0;
 		border: 1px solid var(--border);
 		border-radius: 18px;
@@ -75,15 +84,28 @@ const titleId = `project-modal-title-${modalId}`;
 		backdrop-filter: blur(3px);
 	}
 
+	/* Dialog fades in with opacity only — no transform on the dialog itself so
+	   that `position: fixed` children (the close button) always resolve to the
+	   viewport rather than to a transform-created containing block. The panel
+	   gets the slide/scale so the entry motion is unchanged visually. */
 	.project-modal[open] {
-		animation: modal-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+		animation: modal-fade-in 0.24s ease;
+	}
+
+	.project-modal[open] .project-modal__panel {
+		animation: modal-panel-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 	}
 
 	.project-modal[open]::backdrop {
 		animation: backdrop-in 0.24s ease;
 	}
 
-	@keyframes modal-in {
+	@keyframes modal-fade-in {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+
+	@keyframes modal-panel-in {
 		from {
 			opacity: 0;
 			transform: translateY(12px) scale(0.98);
@@ -95,12 +117,8 @@ const titleId = `project-modal-title-${modalId}`;
 	}
 
 	@keyframes backdrop-in {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
-		}
+		from { opacity: 0; }
+		to   { opacity: 1; }
 	}
 
 	/* The panel owns all padding so a click anywhere outside it lands on the
@@ -108,7 +126,7 @@ const titleId = `project-modal-title-${modalId}`;
 	   off of (see projectModal.client.ts). */
 	.project-modal__panel {
 		position: relative;
-		max-height: min(88vh, 900px);
+		max-height: min(900px, calc(100vh - 6rem));
 		overflow-y: auto;
 		padding: 1.75rem;
 		overscroll-behavior: contain;
@@ -121,39 +139,66 @@ const titleId = `project-modal-title-${modalId}`;
 		width: 8px;
 	}
 
+	/* Floats above the modal at the same anchor as .filter-chip-shield:
+	   fixed, centered, top: 2rem. Lives outside the scroll panel so
+	   fixed resolves to the viewport (panel has a transform animation). */
 	.project-modal__close {
-		position: absolute;
-		top: 0.9rem;
-		right: 0.9rem;
-		width: 2rem;
-		height: 2rem;
-		display: grid;
-		place-items: center;
-		font-size: 1.4rem;
-		line-height: 1;
-		color: var(--fg-muted);
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 8px;
+		position: fixed;
+		top: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 2;
+		/* Shared close-dismiss visual: same language as .filter-chip */
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
+		width: max-content;
+		padding: var(--pad-chip);
+		border-radius: var(--r-full);
+		font-family: inherit;
+		font-size: var(--text-ui);
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		line-height: 1.2;
+		color: var(--accent-3);
+		background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+		border: 1px solid color-mix(in srgb, var(--accent-3) 55%, var(--border));
 		cursor: pointer;
-		z-index: 1;
+		--sheen-color: var(--accent-3);
+		--sheen-strength: 0.35;
 		transition:
+			background 0.2s ease,
+			border-color 0.2s ease,
 			color 0.2s ease,
-			border-color 0.2s ease;
+			box-shadow 0.2s ease;
 	}
 
-	.project-modal__close:hover {
-		color: var(--fg);
-		border-color: var(--accent);
+	.project-modal__close:hover,
+	.project-modal__close:focus-visible,
+	.project-modal__close:active {
+		color: var(--bg);
+		background: var(--accent-3);
+		border-color: var(--accent-3);
+		box-shadow: 0 0 18px 1px color-mix(in srgb, var(--accent-3) 55%, transparent);
 	}
 
 	.project-modal__close:focus-visible {
 		outline: 2px solid var(--accent-3);
-		outline-offset: 2px;
+		outline-offset: 3px;
+	}
+
+	.project-modal__close-label strong {
+		color: inherit;
+	}
+
+	.project-modal__close-icon {
+		font-size: 0.9em;
+		line-height: 1;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.project-modal[open],
+		.project-modal[open] .project-modal__panel,
 		.project-modal[open]::backdrop {
 			animation: none;
 		}
@@ -161,21 +206,22 @@ const titleId = `project-modal-title-${modalId}`;
 
 	/* On narrow/portrait screens the sticky person bar (promoted to the top
 	   layer above the dialog) would cover the modal title. The panel gets a
-	   generous padding-block-start so there is room above the title for the
-	   JS open handler to scroll past — placing the title exactly at the bar's
-	   frame bottom. The close button is absolute, so it stays at the panel's
-	   own top-right regardless of scroll. */
+	   padding-block-start so there is room above the title for the JS open
+	   handler to scroll past — placing the title exactly at the bar's frame
+	   bottom. margin-block-start: 4.5rem leaves room for the floating close
+	   button (same offset as desktop); padding is reduced by the same amount
+	   so the content-to-bar clearance is unchanged (3.5 + 4.5 = 8rem). */
 	@media (max-width: 900px) {
 		.project-modal {
 			width: calc(100vw - 0.75rem);
-			max-height: 100dvh;
-			margin-block: 0;
-			border-radius: 0 0 18px 18px;
+			margin-block-start: 4.5rem;
+			margin-block-end: 0;
+			max-height: calc(100dvh - 4.5rem);
 		}
 
 		.project-modal__panel {
-			max-height: 100dvh;
-			padding: 8rem 1rem 2rem;
+			max-height: calc(100dvh - 4.5rem);
+			padding: 3.5rem 1rem 2rem;
 		}
 	}
 </style>
