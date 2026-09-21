@@ -1374,6 +1374,16 @@ const adam = getPerson('adam');
 			/* Tighter side padding frees horizontal space for the two-column
 			   person bar and timeline tracks below it. */
 			padding: 0.5rem 0.5rem 3rem;
+			/* Clip the decor-frame's 15 px outset at the viewport edges —
+			   the cards hug the sides on mobile so the frame would otherwise
+			   extend past x=0/xMax and cause horizontal scroll. overflow-x:
+			   clip is safe: unlike hidden it does NOT create a scroll
+			   container, so position: sticky on .person-bar still finds the
+			   viewport as its scroll container. overflow-y also stays visible
+			   (CSS spec exception: clip on one axis does not force the other
+			   to change from visible), so the photos above the cards remain
+			   unclipped. */
+			overflow-x: clip;
 		}
 
 		/* Sticky on mobile too — the bar floats on top as the reader scrolls
@@ -1452,11 +1462,50 @@ const adam = getPerson('adam');
 			display: none;
 		}
 
-		/* Corner flourishes and blur ring add visual complexity that doesn't
-		   translate well to narrow mobile slots. */
+		/* Blur ring and glow blob add visual complexity that doesn't translate
+		   well to narrow mobile slots. The decor-frame stays visible — the
+		   overflow-x: clip on .scrolly above clips its outer outset cleanly
+		   at the viewport edges without causing horizontal scroll. The cradle
+		   hexagon around the photo is also unaffected (it's centred, not
+		   near the edges) and fades with the headshot via --photo-opacity. */
 		.person-slot::before,
-		.slot-decor {
+		.decor-glow {
 			display: none;
+		}
+
+		/* Scale the decor-frame down for the narrow mobile layout.
+		   The outer (viewport-edge) side uses 8 px outset — still clipped
+		   cleanly by overflow-x: clip on .scrolly, same as the 15 px desktop
+		   value. The inner (centre-gap-facing) side is reduced to 2 px so the
+		   two opposing frames never overlap: with a gap of 0.3rem (≈ 4.8 px)
+		   between the cards, 2 + 2 = 4 px < 4.8 px with room to spare even
+		   when both skills panels are open and the cards fill the full width.
+		   Top and bottom are both 8 px (down from 15 px) to reclaim vertical
+		   space. */
+		.person-slot--left .decor-frame {
+			left: -8px;
+			right: -2px;
+			top: -8px;
+			bottom: -8px;
+			width: auto;
+			height: auto;
+			border-radius: 16px;
+		}
+
+		.person-slot--right .decor-frame {
+			left: -2px;
+			right: -8px;
+			top: -8px;
+			bottom: -8px;
+			width: auto;
+			height: auto;
+			border-radius: 16px;
+		}
+
+		/* Inner hairline ring: proportionally tighter inset and radius. */
+		.decor-frame::before {
+			inset: 4px;
+			border-radius: 12px;
 		}
 
 		/* Photos stay absolute (above their card, out of flow) on mobile — the
