@@ -74,7 +74,7 @@ export const people: Person[] = [
 		cv: '/cv/CV_Adam_Nemeshazi_2026.pdf',
 		tagIds: ['systems-design', 'level-design', 'encounter', 'ux-design', 'ui', 'blueprint-scripting', 'progression', 'devtools', 'board-game-design', 'prototyping', 'playtesting', 'balance', 'puzzle-design', 'proprietary-engine', 'ip-critical-design', 'ai', 'navigation', 'co-dev-teams', 'ability', 'metagame', 'narrative-design', 'board-game', 'unreal-engine', 'gameplay'],
 		hobbies: [
-			'Began creating custom maps at the age of 12 for popular titles of the era (Doom II, Duke Nukem 3D, Age of Empires II, Warcraft III)',
+			'Self-taught level designer since childhood',
 			'Designing, prototyping, and playtesting two original board games',
 			'Gardening and growing edible plants',
 			'Active player of video games and board games',
