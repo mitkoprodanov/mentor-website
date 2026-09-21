@@ -7,7 +7,7 @@ import type { ProjectMedia } from './types';
 export const aroundMedia: ProjectMedia[] = [
 	{
 		src: 'https://www.facebook.com/watch/?v=297734748254498',
-		kind: 'facebook-reel',
+		kind: 'facebook-video',
 		caption: 'Around trailer',
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'prototyping', 'playtesting'],
 	},
@@ -27,7 +27,7 @@ export const aroundMedia: ProjectMedia[] = [
 	},
 	{
 		src: 'https://www.facebook.com/watch/?v=291274308860973',
-		kind: 'facebook-reel',
+		kind: 'facebook-video',
 		caption: 'Around gameplay showing narrative flow supported by inventory usage',
 		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'navigation'],
 	},
@@ -47,13 +47,13 @@ export const aroundMedia: ProjectMedia[] = [
 	},
 	{
 		src: 'https://www.facebook.com/watch/?v=323920638727021',
-		kind: 'facebook-reel',
+		kind: 'facebook-video',
 		caption: 'Around - Some of our memories are unclear like a blurry painting',
 		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay'],
 	},
 	{
 		src: 'https://www.facebook.com/reel/651147125502357',
-		kind: 'facebook-reel',
+		kind: 'facebook-video',
 		caption: 'An immersive hand-drawn world',
 		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay', 'navigation'],
 	},
