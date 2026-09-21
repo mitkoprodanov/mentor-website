@@ -64,6 +64,7 @@ if (navbar) {
 	style.textContent = `
 		body.nav-jumping .side-panel-cv,
 		body.nav-jumping .side-panel-action,
+		body.nav-jumping .collapse-row,
 		body.nav-jumping .contact-title,
 		body.nav-jumping .contact-zone .company-card {
 			transition: none !important;
@@ -80,11 +81,16 @@ if (navbar) {
 		const isMobile = window.matchMedia(MOBILE_NAV_QUERY).matches;
 
 		if (isMobile && id === 'timeline') {
-			// Mobile: person bar is static, scroll to its top (minus navbar) so it
-			// sits at the viewport top with the timeline visible below it.
+			// Mobile: scroll so the sticky person-bar's natural top sits just below
+			// the navbar. getBoundingClientRect().top is wrong for sticky elements
+			// when they are currently "stuck" — it returns the stuck viewport position
+			// instead of the natural document position. Use the timeline-area below it
+			// (not sticky) to derive the correct document offset instead.
 			const personBar = document.querySelector<HTMLElement>('.person-bar');
-			if (personBar) {
-				const y = personBar.getBoundingClientRect().top + scrollingEl.scrollTop - navbar.offsetHeight;
+			const timelineArea = document.querySelector<HTMLElement>('.timeline-area');
+			if (personBar && timelineArea) {
+				const areaDocTop = timelineArea.getBoundingClientRect().top + scrollingEl.scrollTop;
+				const y = areaDocTop - personBar.offsetHeight - navbar.offsetHeight;
 				return Math.max(0, Math.min(maxY, Math.round(y)));
 			}
 		}
