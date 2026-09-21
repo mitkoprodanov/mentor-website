@@ -3,6 +3,13 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for the Hypha project (see data/projects.ts). */
 export const hyphaMedia: ProjectMedia[] = [
 	{
+		src: '',
+		kind: 'text',
+		person: 'mitko',
+		caption: 'Co-designed and polished several core mechanics and variations iteratively, guided by playtesting and the broader game vision.',
+		tagIds: ['board-game-design', 'gameplay', 'board-game', 'prototyping', 'playtesting'],
+	},
+	{
 		src: '/projects/hypha/board.jpg',
 		kind: 'image',
 		person: 'adam',
