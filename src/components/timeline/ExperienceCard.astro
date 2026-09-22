@@ -194,10 +194,18 @@ const { personId, tagIds, color, side, link, previewImage, interactive = true } 
 			grid-column: auto;
 		}
 
-		.card--left,
-		.card--right {
+		/* Keep each person's accent on their own semantic side even in the
+		   single-column mobile layout — left person stays left-accented,
+		   right person stays right-accented — so the colored edge still
+		   points toward the correct person regardless of layout. */
+		.card--left {
 			border-left: 2px solid var(--person-color, var(--accent));
 			border-right: 1px solid var(--border);
+		}
+
+		.card--right {
+			border-right: 2px solid var(--person-color, var(--accent));
+			border-left: 1px solid var(--border);
 		}
 
 		.card {
