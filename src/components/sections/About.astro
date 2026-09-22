@@ -17,7 +17,6 @@ const maskUrl = `url(${logoSrc})`;
 		    tagline + vision lines. */}
 		<Vision variant="hero" scopeId="hero" />
 	</div>
-	<a href="#timeline" class="scroll-cue" aria-label="Scroll to timeline section">↓</a>
 </Section>
 
 <noscript>
@@ -151,29 +150,6 @@ const maskUrl = `url(${logoSrc})`;
 		}
 	}
 
-	.scroll-cue {
-		position: absolute;
-		/* Anchored to the viewport height, not `bottom` (which now measures
-		   from .about's much-taller bottom edge, thanks to #about's extra
-		   padding-bottom above) — this keeps it visible near the bottom of
-		   the first screen without scrolling, while that extra gap still
-		   grows the section underneath it as intended. */
-		top: calc(80vh - 3.5rem);
-		text-decoration: none;
-		font-size: 1.5rem;
-		color: var(--fg-muted);
-		animation: bounce 2s infinite;
-	}
-
-	@keyframes bounce {
-		0%,
-		100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(8px);
-		}
-	}
 </style>
 
 <script>
