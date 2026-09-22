@@ -103,7 +103,20 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 		project.name && (project.info || !project.hideTitle) && (
 			<div class="node">
 				<div class="node-text">
-					{!project.hideTitle && <h5 class="node-label">{project.name}</h5>}
+					{!project.hideTitle && (
+						<div class="node-title-row">
+							<h5 class="node-label">{project.name}</h5>
+							{project.logo && (
+								<img
+									class="node-logo"
+									src={project.logo.src}
+									alt=""
+									aria-hidden="true"
+									style={`width: ${project.logo.previewWidth ?? 80}px;`}
+								/>
+							)}
+						</div>
+					)}
 					{project.info && <p class="node-info">{project.info}</p>}
 				</div>
 			</div>
@@ -187,6 +200,7 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 				tags={modalTagLabels}
 				media={modalMedia}
 				url={project.url}
+				logo={project.logo}
 			>
 				{modalCards.map((c) => (
 					<div class="modal-exp" data-person={c.person.id}>
@@ -414,6 +428,24 @@ const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 	.node-text {
 		min-width: 0;
+	}
+
+	/* Title + partner logo on one flex line, wrapped so the logo drops
+	   below the title on narrow screens rather than overlapping. */
+	.node-title-row {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	/* Partner / IP-owner logo inline with the title. Width set per-project. */
+	.node-logo {
+		flex-shrink: 0;
+		height: auto;
+		object-fit: contain;
+		opacity: 0.85;
 	}
 
 	/* Project preview names render as small-and-large capitals — capitals

@@ -30,9 +30,11 @@ interface Props {
 	media?: ProjectMedia[];
 	url?: string;
 	urlLabel?: string;
+	/** Optional partner/IP logo shown in the modal header. */
+	logo?: { src: string; detailWidth?: number };
 }
 
-const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel } = Astro.props;
+const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel, logo } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 ---
 
@@ -50,7 +52,7 @@ const titleId = `project-modal-title-${modalId}`;
 	</button>
 
 	<div class="project-modal__panel">
-		<ProjectDetail title={title} subtitle={subtitle} dateRange={dateRange} people={people} tags={tags} media={media} url={url} urlLabel={urlLabel} titleId={titleId}>
+		<ProjectDetail title={title} subtitle={subtitle} dateRange={dateRange} people={people} tags={tags} media={media} url={url} urlLabel={urlLabel} titleId={titleId} logo={logo}>
 			<slot />
 		</ProjectDetail>
 	</div>

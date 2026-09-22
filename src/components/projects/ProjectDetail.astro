@@ -29,9 +29,11 @@ interface Props {
 	titleId?: string;
 	/** Heading level for the title — h3 in a modal, h4 when nested in the results view. */
 	as?: 'h3' | 'h4';
+	/** Optional partner/IP logo shown above the title in the header. */
+	logo?: { src: string; detailWidth?: number };
 }
 
-const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3' } = Astro.props;
+const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3', logo } = Astro.props;
 const Title = as;
 
 /** Compact, human-friendly label for a project's external link — the host
@@ -143,7 +145,18 @@ function personStyle(m: ProjectMedia): string | undefined {
 ---
 
 <header class="project-modal__head">
-	<Title id={titleId} class="project-modal__title">{title}</Title>
+	<div class="project-modal__title-row">
+		<Title id={titleId} class="project-modal__title">{title}</Title>
+		{logo && (
+			<img
+				class="project-modal__logo"
+				src={logo.src}
+				alt=""
+				aria-hidden="true"
+				style={`width: ${logo.detailWidth ?? 130}px;`}
+			/>
+		)}
+	</div>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
 </header>
 
@@ -294,6 +307,25 @@ function personStyle(m: ProjectMedia): string | undefined {
 	.project-modal__head {
 		padding-inline: 2.5rem;
 		text-align: center;
+	}
+
+	/* Title + partner logo on one flex line, centered as a unit. Wrapped so
+	   the logo drops below the title on narrow screens instead of squishing
+	   the text. Gap is the adjustable spacing between title and logo. */
+	.project-modal__title-row {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	/* Partner / IP-owner logo inline with the title. Width set per-project. */
+	.project-modal__logo {
+		flex-shrink: 0;
+		height: auto;
+		object-fit: contain;
+		opacity: 0.9;
 	}
 
 	.project-modal__head .project-modal__meta {

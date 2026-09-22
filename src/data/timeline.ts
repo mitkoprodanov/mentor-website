@@ -206,6 +206,20 @@ export interface ProjectDef {
 	 * project's own name.
 	 */
 	hideTitle?: boolean;
+	/**
+	 * Optional partner / publisher / IP-owner logo shown in two places:
+	 *   - the preview node card (above the project title, small)
+	 *   - the detail modal header (above the title, larger)
+	 * Both sizes have sensible defaults and can be overridden per-project.
+	 */
+	logo?: {
+		/** Path under /public (e.g. '/logos/riot/riot-games-lockup-red.png'). */
+		src: string;
+		/** Width in CSS pixels for the preview node badge. Default: 80. */
+		previewWidth?: number;
+		/** Width in CSS pixels for the modal-header display. Default: 130. */
+		detailWidth?: number;
+	};
 }
 
 export interface CompanyDef {
@@ -357,6 +371,11 @@ export const timeline: TimelineEntry[] = [
 					name: 'League of Legends Universe',
 					url: 'https://universe.leagueoflegends.com/',
 					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
+					logo: {
+						src: '/logos/riot/riot-games-lockup-red.png',
+						previewWidth: 80,
+						detailWidth: 130,
+					},
 					media: lolUniverseMedia,
 					experiences: [
 						{
