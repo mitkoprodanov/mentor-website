@@ -348,4 +348,14 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 			transform: none;
 		}
 	}
+
+	/* On portrait mobile the tooltip drops below the sentence and can overlap
+	   the person photos that appear in the lower viewport. Extra bottom margin
+	   makes #about taller, pushing the person bar down so the photos clear
+	   the tooltip's maximum extent. */
+	@media (max-width: 900px) and (orientation: portrait) {
+		.vision--hero {
+			margin-bottom: 9rem;
+		}
+	}
 </style>
