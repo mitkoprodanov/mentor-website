@@ -159,6 +159,7 @@ const adam = getPerson('adam');
 	import '../scripts/navScroll.client';
 	import '../scripts/personPhotos.client';
 	import '../scripts/personCardResize.client';
+	import '../scripts/tapFlash.client';
 </script>
 
 <style>
@@ -900,8 +901,25 @@ const adam = getPerson('adam');
 		--sheen-delay: -5s;
 	}
 
-	.side-panel-linkedin :global(.linkedin-pill:hover),
-	.side-panel-linkedin :global(.linkedin-pill:focus-visible) {
+	/* Hover only on pointer devices — prevents :hover sticking after touch tap. */
+	@media (hover: hover) {
+		.side-panel-linkedin :global(.linkedin-pill:hover) {
+			color: var(--bg);
+			background: var(--person-color);
+			border-color: var(--person-color);
+			transform: translateY(-1px);
+			box-shadow:
+				0 0 20px 2px color-mix(in srgb, var(--person-color) 55%, transparent),
+				0 0 0 1px var(--person-color);
+		}
+		.side-panel-linkedin :global(.linkedin-pill:hover .external-link-icon) {
+			transform: translate(2px, -2px);
+		}
+	}
+
+	/* Keyboard focus and JS tap-flash (touch devices). */
+	.side-panel-linkedin :global(.linkedin-pill:focus-visible),
+	.side-panel-linkedin :global(.linkedin-pill.is-tapping) {
 		color: var(--bg);
 		background: var(--person-color);
 		border-color: var(--person-color);
@@ -916,14 +934,13 @@ const adam = getPerson('adam');
 		outline-offset: 2px;
 	}
 
-	/* Drop the ExternalLink's underline sweep on the filled pill; keep the "↗"
-	   icon nudging on hover as a hint. */
+	/* Drop the ExternalLink's underline sweep on the filled pill. */
 	.side-panel-linkedin :global(.linkedin-pill .external-link-label::after) {
 		display: none;
 	}
 
-	.side-panel-linkedin :global(.linkedin-pill:hover .external-link-icon),
-	.side-panel-linkedin :global(.linkedin-pill:focus-visible .external-link-icon) {
+	.side-panel-linkedin :global(.linkedin-pill:focus-visible .external-link-icon),
+	.side-panel-linkedin :global(.linkedin-pill.is-tapping .external-link-icon) {
 		transform: translate(2px, -2px);
 	}
 

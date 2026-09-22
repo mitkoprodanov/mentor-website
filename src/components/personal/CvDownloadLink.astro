@@ -78,10 +78,25 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 			transform 0.2s ease;
 	}
 
-	/* Fills solid on hover, same as a filter tag going active, with a glowing
-	   halo in the person's colour. */
-	.cv-download:hover,
-	.cv-download:focus-visible {
+	/* Hover only on pointer devices — prevents :hover sticking after touch tap. */
+	@media (hover: hover) {
+		.cv-download:hover {
+			color: var(--bg);
+			background: var(--person-color);
+			border-color: var(--person-color);
+			transform: translateY(-1px);
+			box-shadow:
+				0 0 20px 2px color-mix(in srgb, var(--person-color) 55%, transparent),
+				0 0 0 1px var(--person-color);
+		}
+		.cv-download:hover .cv-icon {
+			transform: translateY(1px);
+		}
+	}
+
+	/* Keyboard focus and JS tap-flash (touch devices). */
+	.cv-download:focus-visible,
+	.cv-download.is-tapping {
 		color: var(--bg);
 		background: var(--person-color);
 		border-color: var(--person-color);
@@ -101,9 +116,8 @@ const label = `Download ${person.name.split(' ')[0]}'s CV (PDF)`;
 		transition: transform 0.2s ease;
 	}
 
-	/* Nudge the arrow down on hover to hint "download". */
-	.cv-download:hover .cv-icon,
-	.cv-download:focus-visible .cv-icon {
+	.cv-download:focus-visible .cv-icon,
+	.cv-download.is-tapping .cv-icon {
 		transform: translateY(1px);
 	}
 </style>

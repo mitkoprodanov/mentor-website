@@ -193,8 +193,25 @@ import { asset } from '../../utils/asset';
 		--sheen-delay: -3s;
 	}
 
-	.company-card :global(.contact-pill:hover),
-	.company-card :global(.contact-pill:focus-visible) {
+	/* Hover only on pointer devices — prevents :hover sticking after touch tap. */
+	@media (hover: hover) {
+		.company-card :global(.contact-pill:hover) {
+			color: var(--bg);
+			background: var(--mentor);
+			border-color: var(--mentor);
+			transform: translateY(-1px);
+			box-shadow:
+				0 0 20px 2px color-mix(in srgb, var(--mentor) 55%, transparent),
+				0 0 0 1px var(--mentor);
+		}
+		.company-card :global(.contact-pill:hover .external-link-icon) {
+			transform: translate(2px, -2px);
+		}
+	}
+
+	/* Keyboard focus and JS tap-flash (touch devices). */
+	.company-card :global(.contact-pill:focus-visible),
+	.company-card :global(.contact-pill.is-tapping:not(.contact-email-pill)) {
 		color: var(--bg);
 		background: var(--mentor);
 		border-color: var(--mentor);
@@ -216,8 +233,8 @@ import { asset } from '../../utils/asset';
 		display: none;
 	}
 
-	.company-card :global(.contact-pill:hover .external-link-icon),
-	.company-card :global(.contact-pill:focus-visible .external-link-icon) {
+	.company-card :global(.contact-pill:focus-visible .external-link-icon),
+	.company-card :global(.contact-pill.is-tapping .external-link-icon) {
 		transform: translate(2px, -2px);
 	}
 
@@ -231,8 +248,29 @@ import { asset } from '../../utils/asset';
 		gap: 0;
 	}
 
-	.company-card :global(.contact-pill.contact-email-pill:hover),
-	.company-card :global(.contact-pill.contact-email-pill:focus-within) {
+	/* Wrapper glow: pointer hover only on hover-capable devices; focus/tap-flash
+	   and the copy animation always. :has(.is-copied) keeps the glow alive for
+	   the full 1.5 s checkmark animation even after blur clears :focus-within. */
+	@media (hover: hover) {
+		.company-card :global(.contact-pill.contact-email-pill:hover) {
+			color: var(--mentor);
+			background: color-mix(in srgb, var(--mentor) 14%, transparent);
+			border-color: color-mix(in srgb, var(--mentor) 45%, transparent);
+			transform: none;
+			box-shadow:
+				0 0 20px 2px color-mix(in srgb, var(--mentor) 55%, transparent),
+				0 0 0 1px var(--mentor);
+		}
+		/* Suppress the global icon nudge on the outer pill hover — the mailto
+		   segment manages its own nudge on its individual hover. */
+		.company-card :global(.contact-email-pill:hover .external-link-icon) {
+			transform: none;
+		}
+	}
+
+	.company-card :global(.contact-pill.contact-email-pill:focus-within),
+	.company-card :global(.contact-pill.contact-email-pill:has(.is-copied)),
+	.company-card :global(.contact-pill.contact-email-pill:has(.is-tapping)) {
 		color: var(--mentor);
 		background: color-mix(in srgb, var(--mentor) 14%, transparent);
 		border-color: color-mix(in srgb, var(--mentor) 45%, transparent);
@@ -240,12 +278,6 @@ import { asset } from '../../utils/asset';
 		box-shadow:
 			0 0 20px 2px color-mix(in srgb, var(--mentor) 55%, transparent),
 			0 0 0 1px var(--mentor);
-	}
-
-	/* Suppress the global icon nudge on the outer pill hover — the mailto
-	   segment manages its own nudge on its individual hover. */
-	.company-card :global(.contact-email-pill:hover .external-link-icon) {
-		transform: none;
 	}
 
 	/* Copy button — left segment */
@@ -269,8 +301,16 @@ import { asset } from '../../utils/asset';
 			background 0.2s ease;
 	}
 
-	.company-card :global(.email-copy-btn:hover),
-	.company-card :global(.email-copy-btn:focus-visible) {
+	@media (hover: hover) {
+		.company-card :global(.email-copy-btn:hover) {
+			color: var(--bg);
+			background: var(--mentor);
+		}
+	}
+
+	.company-card :global(.email-copy-btn:focus-visible),
+	.company-card :global(.email-copy-btn.is-tapping),
+	.company-card :global(.email-copy-btn.is-copied) {
 		color: var(--bg);
 		background: var(--mentor);
 	}
@@ -307,8 +347,18 @@ import { asset } from '../../utils/asset';
 			background 0.2s ease;
 	}
 
-	.company-card :global(.email-mailto-link:hover),
-	.company-card :global(.email-mailto-link:focus-visible) {
+	@media (hover: hover) {
+		.company-card :global(.email-mailto-link:hover) {
+			color: var(--bg);
+			background: var(--mentor);
+		}
+		.company-card :global(.email-mailto-link:hover .external-link-icon) {
+			transform: translate(2px, -2px);
+		}
+	}
+
+	.company-card :global(.email-mailto-link:focus-visible),
+	.company-card :global(.email-mailto-link.is-tapping) {
 		color: var(--bg);
 		background: var(--mentor);
 	}
@@ -318,9 +368,8 @@ import { asset } from '../../utils/asset';
 		outline-offset: -2px;
 	}
 
-	/* Nudge the arrow on mailto-link hover (not on outer pill hover). */
-	.company-card :global(.email-mailto-link:hover .external-link-icon),
-	.company-card :global(.email-mailto-link:focus-visible .external-link-icon) {
+	.company-card :global(.email-mailto-link:focus-visible .external-link-icon),
+	.company-card :global(.email-mailto-link.is-tapping .external-link-icon) {
 		transform: translate(2px, -2px);
 	}
 
