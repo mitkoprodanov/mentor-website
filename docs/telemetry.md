@@ -223,7 +223,7 @@ Current V1 vocabulary:
 
 ### Session/environment
 - `session_start`
-- `orientation_change`
+- `viewport_changed`
 
 ### Skills/state
 - `skills_open`
@@ -347,8 +347,10 @@ Create once per anonymous visit:
 - UTM content
 - viewport width/height
 - screen width/height
-- orientation
-- pointer/input capability
+- primary pointer coarse capability
+- primary pointer fine capability
+- any-pointer coarse capability
+- any-pointer fine capability
 - hover capability
 - touch capability
 - `telemetry_version`
@@ -356,6 +358,16 @@ Create once per anonymous visit:
 - optional coarse country added server-side
 
 Do not create a persistent returning-visitor identifier.
+
+### 13.1 Viewport changes
+
+Use `viewport_changed` rather than a separate `orientation_change` event.
+
+The event records the new viewport width/height. Portrait versus landscape is derived from those dimensions, so orientation is not redundantly stored.
+
+The purpose is broader than rotation: it can reveal meaningful resizing behavior such as a visitor enlarging/maximizing the browser to give the site more room, and lets analysis compare viewport use against the session's screen width/height.
+
+Resize events can fire continuously while a window is dragged. Do not emit every browser resize event. Coalesce/rate-limit them to at most approximately one telemetry event every few seconds during active resizing, while preserving the final settled viewport size with a trailing emission. Ignore tiny/no-op dimension changes if they do not materially change the viewport.
 
 ## 14. Transport and batching
 
@@ -368,7 +380,7 @@ Flush:
 - Project Detail close;
 - Skills close/state boundary as useful;
 - Skill Filter close;
-- orientation change;
+- viewport changes, rate-limited/coalesced;
 - before external navigation where practical;
 - periodic safety flush around 20 active seconds;
 - opportunistically on `visibilitychange -> hidden` / `pagehide` using `sendBeacon` or `fetch(..., {keepalive:true})`.
@@ -412,17 +424,18 @@ CREATE TABLE sessions (
   viewport_height INTEGER,
   screen_width INTEGER,
   screen_height INTEGER,
-  orientation TEXT,
-  pointer_capability TEXT,
-  hover_capable INTEGER,
-  touch_capable INTEGER,
+  primary_pointer_coarse INTEGER NOT NULL CHECK (primary_pointer_coarse IN (0, 1)),
+  primary_pointer_fine INTEGER NOT NULL CHECK (primary_pointer_fine IN (0, 1)),
+  any_pointer_coarse INTEGER NOT NULL CHECK (any_pointer_coarse IN (0, 1)),
+  any_pointer_fine INTEGER NOT NULL CHECK (any_pointer_fine IN (0, 1)),
+  hover_capable INTEGER NOT NULL CHECK (hover_capable IN (0, 1)),
+  touch_capable INTEGER NOT NULL CHECK (touch_capable IN (0, 1)),
   country TEXT,
   telemetry_version INTEGER NOT NULL,
   site_version TEXT
-);
+) STRICT;
 
 CREATE INDEX idx_sessions_started_at ON sessions(started_at);
-CREATE INDEX idx_sessions_campaign ON sessions(utm_campaign);
 ```
 
 ### `events`
@@ -462,29 +475,27 @@ CREATE TABLE events (
 
   FOREIGN KEY (session_id) REFERENCES sessions(session_id),
   UNIQUE(session_id, event_id)
-);
+) STRICT;
 
 CREATE INDEX idx_events_session_elapsed
   ON events(session_id, elapsed_ms);
 
-CREATE INDEX idx_events_type
-  ON events(event_type);
-
-CREATE INDEX idx_events_target
-  ON events(target_type, target_id);
-
-CREATE INDEX idx_events_appearance
-  ON events(appearance_id);
 ```
 
 Notes:
+- Tables are `STRICT` so D1/SQLite rejects values outside the declared storage classes.
+- Initial orientation is deliberately not stored: it is derived from viewport width/height.
+- Screen width/height are retained so analysis can compare the page viewport with the available device screen area.
+- Pointer capabilities are represented as booleans rather than one categorical field because hybrid devices can expose multiple pointer capabilities simultaneously.
 - `event_id` is client-generated and makes retries idempotent.
 - `elapsed_ms` provides robust within-session chronology.
+- For explicit pointer-driven interactions, `properties.pointer_type` may record `mouse`, `touch`, or `pen` when exposed by the actual PointerEvent. Keyboard-triggered actions are represented by their trigger method rather than pretending they have a pointer type.
 - `occurred_at` is useful wall-clock context but should not replace elapsed chronology.
 - `properties` is JSON text for sparse event-specific facts such as trigger method, trigger person, origin section, skill ID, close method, or pointer type.
 - Frequently queried stable measurements get real columns rather than being buried in JSON.
 - Null means "not applicable", not zero.
 - Do not create one table per feature.
+- Start with minimal indexes. `UNIQUE(session_id, event_id)` provides idempotency indexing; `idx_events_session_elapsed` supports the core per-session chronology query. Add further indexes only after real query patterns justify their write/storage cost.
 
 This schema is V1 proposed/frozen-for-implementation; change it here if implementation uncovers a concrete reason.
 
