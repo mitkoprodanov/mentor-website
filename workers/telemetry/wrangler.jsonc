@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mentor-telemetry",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // Keep variables/secrets configured in the Cloudflare dashboard (e.g. ALLOWED_ORIGINS).
+  "keep_vars": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mentor-telemetry-db",
+      // Copy from Cloudflare dashboard (D1 -> mentor-telemetry-db) or `npx wrangler d1 list`.
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}

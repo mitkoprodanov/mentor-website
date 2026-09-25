@@ -9,13 +9,19 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "worker:test": "node --test \"workers/telemetry/test/*.test.ts\"",
+    "worker:typecheck": "tsc -p workers/telemetry",
+    "worker:dev": "wrangler dev --config workers/telemetry/wrangler.jsonc",
+    "worker:deploy": "wrangler deploy --config workers/telemetry/wrangler.jsonc"
   },
   "dependencies": {
     "astro": "^7.3.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "typescript": "^6.0.3"
+    "@cloudflare/workers-types": "^5.20260925.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.139.0"
   }
 }

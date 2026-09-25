@@ -550,6 +550,37 @@ Worker responsibilities:
 - return minimal responses;
 - never return stored telemetry to public clients.
 
+### 16.1 Implemented V1 contract
+
+Source: `workers/telemetry/` (`src/index.ts` handler, `src/validate.ts` validation, `test/` tests). Config: `workers/telemetry/wrangler.jsonc` (Worker `mentor-telemetry`, D1 binding `DB` -> `mentor-telemetry-db`). The Astro site stays on GitHub Pages; the Worker is deployed separately with Wrangler.
+
+**Routing/CORS**
+- Only `POST /v1/batch` (and its `OPTIONS` preflight); other paths 404, other methods 405.
+- A request whose `Origin` is present and not allowed gets 403 with no CORS headers. Allowed: `https://mentorgamestudio.com`, plus origins listed in the optional `ALLOWED_ORIGINS` Worker variable (comma-separated; unset in production).
+- Requests with no `Origin` header (non-browser clients) are not rejected by CORS. CORS is not authentication; validation and size limits apply to every request.
+- Request `Content-Type` must be `application/json` (so `sendBeacon` must send a `Blob` of that type, which triggers a preflight).
+
+**Limits**: body <= 64 KiB; <= 100 events per batch; `elapsed_ms` <= 24 h; each delta (`v*_ms`, `playing*_ms`) <= 10 min; viewport/screen dimensions <= 20000; `referrer` truncated to 512 chars and UTM values to 128 (free-form context is truncated rather than rejected); `properties` <= 2 KiB and 20 keys.
+
+**Session** (`session_id` and `telemetry_version` = 1 always required)
+- Creation batch: includes `started_at` and all capability booleans (strict JSON booleans, stored as 0/1). Optional: referrer, UTM fields, viewport/screen dimensions, `site_version`. Stored with `INSERT OR IGNORE`, so re-sending is harmless (first write wins).
+- Follow-up batch: only `session_id` + `telemetry_version`, plus events. Events for a session that was never created return 409 `unknown_session`.
+- `country` is never accepted from the client; it is set from Cloudflare's `request.cf.country` (`XX`/`T1` become null). Raw IPs are never read or stored.
+
+**Events**
+- `event_id`, `occurred_at` (ISO 8601), `elapsed_ms`, and `event_type` (must be in the section 10 vocabulary; adding a type requires a Worker change) are required. IDs (`session_id`, `event_id`, `appearance_id`, `view_instance_id`) match `[A-Za-z0-9_-]{8,64}`.
+- `target_type` (`[a-z][a-z0-9_]*`) and `target_id` (`[A-Za-z0-9_.:-]{1,64}`) must be provided together, and are required on `visibility_delta`.
+- Visibility and playback fields are only accepted on `visibility_delta`. Nested thresholds must not increase (`v50 >= v70 >= v85 >= v95`; `playing_ms >= playing_v50 >= ...`). `max_visibility_ratio` is 0..1.
+- `properties` is a flat object with `[a-z][a-z0-9_]*` keys and string/number/boolean/null values, stored as JSON text.
+- Unknown fields anywhere are rejected (400), never stored.
+- The event `telemetry_version` column is taken from the session's version.
+
+**Writes**: one D1 `batch()` (a single transaction) of prepared statements: optional session insert, then `INSERT OR IGNORE` per event, so retries never duplicate rows (`UNIQUE(session_id, event_id)`). Duplicate `event_id`s within one batch are rejected as a client bug.
+
+**Responses**: `200 {"ok":true}` on success; errors are `{"error":"<code>","detail":"<field: reason>"}` (`detail` only for payload validation) with 400/403/404/405/409/413/415/500. All responses are `Cache-Control: no-store`. Stored telemetry is never returned.
+
+**Local development**: the Worker can run locally with `npm run worker:dev`. Browser telemetry stays disabled in local Astro dev by default (client not yet implemented).
+
 A separate public read/query API is not required for V1. Analysis can initially use D1 SQL/Cloudflare tooling.
 
 ## 17. Client architecture
