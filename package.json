@@ -13,7 +13,8 @@
     "worker:test": "node --test \"workers/telemetry/test/*.test.ts\"",
     "worker:typecheck": "tsc -p workers/telemetry",
     "worker:dev": "wrangler dev --config workers/telemetry/wrangler.jsonc",
-    "worker:deploy": "wrangler deploy --config workers/telemetry/wrangler.jsonc"
+    "worker:deploy": "wrangler deploy --config workers/telemetry/wrangler.jsonc",
+    "telemetry:test": "node --test \"src/lib/telemetry/test/*.test.ts\""
   },
   "dependencies": {
     "astro": "^7.3.2"

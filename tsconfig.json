@@ -6,6 +6,7 @@
   ],
   "exclude": [
     "dist",
-    "workers"
+    "workers",
+    "src/lib/telemetry/test"
   ]
 }

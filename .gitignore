@@ -26,3 +26,5 @@ pnpm-debug.log*
 # wrangler
 .wrangler/
 .dev.vars
+.env.*
+.dev.vars.*

@@ -579,7 +579,7 @@ Source: `workers/telemetry/` (`src/index.ts` handler, `src/validate.ts` validati
 
 **Responses**: `200 {"ok":true}` on success; errors are `{"error":"<code>","detail":"<field: reason>"}` (`detail` only for payload validation) with 400/403/404/405/409/413/415/500. All responses are `Cache-Control: no-store`. Stored telemetry is never returned.
 
-**Local development**: the Worker can run locally with `npm run worker:dev`. Browser telemetry stays disabled in local Astro dev by default (client not yet implemented).
+**Local development**: the Worker can run locally with `npm run worker:dev`. Browser telemetry stays disabled in local Astro dev by default (see 17.1).
 
 A separate public read/query API is not required for V1. Analysis can initially use D1 SQL/Cloudflare tooling.
 
@@ -613,6 +613,39 @@ Principles:
 - explicit test/debug mode available.
 
 Existing events such as `filter:willopen`, `filter:opened`, `filter:closed`, `filter:change`, and `filter:unlocked` are a useful integration pattern.
+
+
+### 17.1 Implemented client foundation (step 4)
+
+Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Only session creation, `session_start`, the queue, transport and lifecycle flushing exist; no feature instrumentation, `viewport_changed` or visibility engine yet.
+
+| File | Responsibility |
+|------|----------------|
+| `types.ts` | Wire types mirroring the Worker contract |
+| `config.ts` | The single enablement decision (pure) |
+| `session.ts` | Random ID, UTM parsing, session context |
+| `queue.ts` | In-memory queue, event creation, `elapsed_ms` |
+| `transport.ts` | Batching, single-flight flush, retry/backoff |
+| `client.ts` | Browser wiring: session start, timers, page lifecycle |
+| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()` |
+
+**Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`. The current page URL is never sent. No User-Agent is collected.
+
+**Events**: `event_id` is generated when the event is created and never regenerated. `elapsed_ms` = `performance.now()` since session start (`session_start` is 0); `occurred_at` is the ISO wall-clock time.
+
+**Queue / flush / retry**:
+- Events accumulate in memory (hard cap 500; when full, newly emitted events are dropped so recorded chronology is preserved; debug mode warns once). Batches are at most 100 events / 48 KiB.
+- The first batch carries the full session context (`INSERT OR IGNORE` server-side); it is resent in full until a 2xx acknowledges it, after which batches carry only `session_id` + `telemetry_version`.
+- One request in flight at a time; a flush requested meanwhile runs once afterwards. Flushes never send when nothing is queued. Success removes exactly the sent events. Network error / 5xx / 408 / 429: events stay queued with the same IDs; exponential backoff 30 s, 60 s, ... capped at 5 min, applied to non-lifecycle flushes only. 409 `unknown_session`: full context is resent. Other 4xx: that batch is dropped (it can never succeed and would block the queue).
+- `credentials: 'omit'`; `Content-Type: application/json`.
+
+**Lifecycle**: a flush ~1.5 s after start (so short visits still record the session), a 20 s periodic flush only while the document is visible (no timer while hidden), a flush on `visibilitychange` -> hidden, and on `pagehide`. Lifecycle flushes use `fetch(..., {keepalive: true})` and ignore backoff. `sendBeacon` and `unload` are not used.
+
+**Enablement** (`config.ts`, the only place this is decided): on when the build is a production build AND `location.hostname === 'mentorgamestudio.com'`; otherwise off (so `astro dev` and `astro preview` on localhost send nothing). Deliberate local override: build-time `PUBLIC_TELEMETRY=1` (also turns on console diagnostics), optionally with `PUBLIC_TELEMETRY_ENDPOINT` (e.g. `http://localhost:8787/v1/batch` from `npm run worker:dev`; add the dev origin to the Worker's `ALLOWED_ORIGINS`). `?telemetry_debug` adds console diagnostics on an already-enabled site but never enables telemetry.
+
+**`site_version`**: short (7-char) commit SHA, injected at build by `astro.config.mjs` (`GITHUB_SHA` in the GitHub Pages workflow, else `git rev-parse`, else `dev`).
+
+**Failure behavior**: all client entry points are wrapped; failures are silent (debug logging only).
 
 ## 18. Derived analysis (not browser events)
 
@@ -661,7 +694,7 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 1. Commit this specification.
 2. Create D1 tables/indexes.
 3. Implement Worker `/v1/batch` validation + idempotent inserts.
-4. Implement minimal client session + transport.
+4. Implement minimal client session + transport. (Done: section 17.1.)
 5. Prove end-to-end pipeline with a few explicit events.
 6. Add semantic state coordinator.
 7. Add Visibility Matrix engine and appearance tracking.
