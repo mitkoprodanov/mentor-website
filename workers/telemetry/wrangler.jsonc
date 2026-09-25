@@ -10,7 +10,7 @@
       "binding": "DB",
       "database_name": "mentor-telemetry-db",
       // Copy from Cloudflare dashboard (D1 -> mentor-telemetry-db) or `npx wrangler d1 list`.
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "f32414c4-151f-4bf3-89ae-a0ffc9283fbe"
     }
   ]
 }
