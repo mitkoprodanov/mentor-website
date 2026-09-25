@@ -118,6 +118,11 @@ interface YtEntry {
 	start: number;
 	end: number | null;
 	timer: number | null;
+	/** Set when the scroll-visibility observer (see initVisibilityPause below)
+	 *  paused this player because it scrolled out of view — as opposed to the
+	 *  user pausing it themselves via the player's own controls. Only a
+	 *  visibility-driven pause is ever auto-resumed. */
+	autoPaused: boolean;
 }
 
 const ytPlayers = new WeakMap<HTMLElement, YtEntry>();
@@ -162,6 +167,7 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 	frames.forEach((frame) => {
 		const existing = ytPlayers.get(frame);
 		if (existing) {
+			existing.autoPaused = false;
 			existing.player.seekTo?.(existing.start, true);
 			existing.player.playVideo?.();
 			return;
@@ -171,7 +177,7 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 
 		const start = Number(mount.dataset.start ?? 0) || 0;
 		const end = mount.dataset.end ? Number(mount.dataset.end) : null;
-		const entry: YtEntry = { player: null, start, end, timer: null };
+		const entry: YtEntry = { player: null, start, end, timer: null, autoPaused: false };
 
 		entry.player = new YT.Player(mount, {
 			width: '100%',
@@ -211,7 +217,9 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 
 function pauseYouTube(scope: HTMLElement): void {
 	scope.querySelectorAll<HTMLElement>('.shot-frame--youtube').forEach((frame) => {
-		ytPlayers.get(frame)?.player?.pauseVideo?.();
+		const entry = ytPlayers.get(frame);
+		entry?.player?.pauseVideo?.();
+		if (entry) entry.autoPaused = false;
 	});
 }
 
@@ -228,6 +236,15 @@ function pauseYouTube(scope: HTMLElement): void {
  * position:fixed panel the browser's IntersectionObserver can't determine
  * visibility, so `loading="lazy"` (the template default) would never trigger
  * and the iframes would stay blank.
+ *
+ * Deliberately NOT wired into the scroll-visibility feature below (unlike
+ * native video and YouTube): several attempts at pausing/unloading Facebook
+ * embeds purely on scroll position (blanking src with a CSS-hidden overlay,
+ * then fully detaching/reattaching the iframe) all fell short of hiding and
+ * reshowing them cleanly, given the plugin's total lack of a JS/postMessage
+ * API. Facebook videos are left alone once their modal/panel is open — they
+ * only start (on open) and stop (on close), same as before that feature
+ * existed.
  */
 function initFacebook(): void {
 	document.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
@@ -252,6 +269,124 @@ function activateFacebook(scope: HTMLElement): void {
 	});
 }
 
+/* ---- Scroll-visibility pause/resume ---------------------------------------
+ * Native video and the YouTube API players both auto-play as soon as their
+ * modal/panel opens, regardless of which of the gallery's several media items
+ * actually sits in view — a project with more than one video would otherwise
+ * play all of them at once, off-screen ones included. This observer keeps
+ * only the visible one(s) running: below 50% visible, pause whatever's
+ * currently playing; back above 50%+hysteresis, resume only what *this*
+ * observer paused — never a video the visitor paused themselves via its own
+ * controls, and never one that was simply never started.
+ *
+ * The two thresholds (rather than one) are the hysteresis band: without it,
+ * hovering right at the 50% edge while scrolling would rapidly pause/resume
+ * on every tiny wobble. `50% hide / 65% show` matches the Visibility Matrix
+ * v50 threshold planned for telemetry (see docs/telemetry.md) while keeping
+ * enough of a gap that the two states don't flap.
+ *
+ * Facebook embeds are deliberately excluded — see the comment on
+ * initFacebook above.
+ *
+ * IntersectionObserver's ratio already accounts for clipping by scrollable
+ * ancestors — the modal's own internally-scrolled panel included — so `root:
+ * null` (the page viewport) is correct for frames inside the <dialog> and
+ * inside the fixed filter-results panel alike; no per-container root needed.
+ * A closed dialog / inactive filter panel is `display: none`, which reports
+ * ratio 0 unconditionally, so this naturally leaves already-inactive media
+ * alone without any extra scope checks.
+ */
+const VISIBILITY_HIDE_THRESHOLD = 0.5;
+const VISIBILITY_SHOW_THRESHOLD = 0.65;
+
+function pauseFrameMedia(frame: HTMLElement): void {
+	if (frame.classList.contains('shot-frame--native-video')) {
+		const video = frame.querySelector<HTMLVideoElement>('.shot-video-native');
+		if (video && !video.paused) {
+			video.pause();
+			video.dataset.autoPaused = '1';
+		}
+		return;
+	}
+	if (frame.classList.contains('shot-frame--youtube')) {
+		const entry = ytPlayers.get(frame);
+		const YT = (window as any).YT;
+		if (entry?.player?.getPlayerState && YT && entry.player.getPlayerState() === YT.PlayerState.PLAYING) {
+			entry.player.pauseVideo();
+			entry.autoPaused = true;
+		}
+	}
+}
+
+function resumeFrameMedia(frame: HTMLElement): void {
+	if (frame.classList.contains('shot-frame--native-video')) {
+		const video = frame.querySelector<HTMLVideoElement>('.shot-video-native');
+		if (video?.dataset.autoPaused === '1') {
+			delete video.dataset.autoPaused;
+			void video.play().catch(() => {
+				/* autoplay may still be blocked by the browser — leave it paused */
+			});
+		}
+		return;
+	}
+	if (frame.classList.contains('shot-frame--youtube')) {
+		const entry = ytPlayers.get(frame);
+		if (entry?.autoPaused) {
+			entry.autoPaused = false;
+			entry.player.playVideo?.();
+		}
+	}
+}
+
+// IntersectionObserver only *delivers* a callback when the ratio actually
+// crosses one of the given thresholds (plus one guaranteed initial delivery
+// per target). With only [0.5, 0.65] declared, a video that scrolls straight
+// from 0% to, say, 39% — never landing exactly on either threshold — would
+// get no callback at all and so never get evaluated/paused. A fine-grained
+// threshold list (every 5%) just ensures frequent delivery; the actual
+// hide/show decision still runs off VISIBILITY_HIDE/SHOW_THRESHOLD below,
+// evaluated against whatever exact ratio each delivery reports.
+const VISIBILITY_OBSERVER_THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20);
+const VISIBILITY_MEDIA_SELECTOR = '.shot-frame--native-video, .shot-frame--youtube';
+
+let visibilityObserver: IntersectionObserver | null = null;
+
+function initVisibilityPause(): void {
+	const frames = document.querySelectorAll<HTMLElement>(VISIBILITY_MEDIA_SELECTOR);
+	if (frames.length === 0) return;
+	visibilityObserver = new IntersectionObserver(
+		(entries) => {
+			for (const entry of entries) {
+				const frame = entry.target as HTMLElement;
+				if (entry.intersectionRatio < VISIBILITY_HIDE_THRESHOLD) pauseFrameMedia(frame);
+				else if (entry.intersectionRatio >= VISIBILITY_SHOW_THRESHOLD) resumeFrameMedia(frame);
+			}
+		},
+		{ threshold: VISIBILITY_OBSERVER_THRESHOLDS },
+	);
+	frames.forEach((frame) => visibilityObserver!.observe(frame));
+}
+
+/**
+ * A frame that's already off-screen (below the fold, or scrolled past) at the
+ * moment its dialog opens / its filter activates has ratio 0 both before and
+ * after — no *change*, so the IntersectionObserver above would never deliver
+ * a callback for it, leaving it "playing" invisibly forever (native video and
+ * YouTube both start themselves the instant they're activated, regardless of
+ * scroll position — see activateYouTube/the native `autoplay` attribute).
+ * Re-observing forces the same guaranteed first-delivery that
+ * `initVisibilityPause` relies on at page load, this time against the frame's
+ * current post-activation geometry, so anything born below 50% visible gets
+ * paused immediately instead of only on the next scroll.
+ */
+function refreshVisibility(scope: HTMLElement): void {
+	if (!visibilityObserver) return;
+	scope.querySelectorAll<HTMLElement>(VISIBILITY_MEDIA_SELECTOR).forEach((frame) => {
+		visibilityObserver!.unobserve(frame);
+		visibilityObserver!.observe(frame);
+	});
+}
+
 function init(): void {
 	const dialogs = document.querySelectorAll<HTMLDialogElement>('dialog[data-project-modal]');
 	if (dialogs.length === 0) return;
@@ -259,6 +394,7 @@ function init(): void {
 	initVideos();
 	initImageRows();
 	initFacebook();
+	initVisibilityPause();
 
 	document.addEventListener('click', (event) => {
 		const el = event.target as HTMLElement;
@@ -309,6 +445,10 @@ function init(): void {
 				}
 				void activateYouTube(dialog);
 				activateFacebook(dialog);
+				// Queued after the scroll-position fix above (same animation frame,
+				// registration order), so it measures frames against their final
+				// opening scroll position rather than scrollTop 0.
+				requestAnimationFrame(() => refreshVisibility(dialog));
 			} else {
 				pauseYouTube(dialog);
 				stopFacebook(dialog);
@@ -339,6 +479,7 @@ function init(): void {
 		if ((event as CustomEvent<{ active: boolean }>).detail?.active) {
 			void activateYouTube(results);
 			activateFacebook(results);
+			requestAnimationFrame(() => refreshVisibility(results));
 		}
 	});
 }
