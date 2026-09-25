@@ -6,6 +6,7 @@ import { browserClock, EventQueue } from './queue.ts';
 import { browserSessionEnv, buildSessionContext, randomId } from './session.ts';
 import { Transport } from './transport.ts';
 import type { EmitOptions } from './types.ts';
+import { ViewportTracker } from './viewport.ts';
 
 /** Periodic safety flush while the page is visible. */
 const FLUSH_INTERVAL_MS = 20_000;
@@ -45,11 +46,45 @@ export function startClient(config: TelemetryConfig): TelemetryClient | null {
 			log,
 		);
 
-		const safeFlush = (lifecycle: boolean): Promise<void> =>
-			transport.flush({ lifecycle }).catch(() => {});
-
 		queue.emit('session_start');
 		log('session started', session);
+
+		const viewport = new ViewportTracker(
+			session.viewport_width !== undefined && session.viewport_height !== undefined
+				? { width: session.viewport_width, height: session.viewport_height }
+				: null,
+			{
+				read: () => ({ width: window.innerWidth, height: window.innerHeight }),
+				emit: ({ width, height }) => {
+					queue.emit('viewport_changed', {
+						properties: { viewport_width: width, viewport_height: height },
+					});
+					log('viewport_changed', width, height);
+				},
+				setTimer: (fn, ms) => setTimeout(fn, ms),
+				clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+				coarsePointer: session.primary_pointer_coarse,
+			},
+		);
+		window.addEventListener('resize', () => {
+			try {
+				viewport.onResize();
+			} catch {
+				/* never affect the site */
+			}
+		});
+
+		const safeFlush = (lifecycle: boolean): Promise<void> => {
+			if (lifecycle) {
+				// Finalize any pending resize so it is queued before the flush.
+				try {
+					viewport.finalize();
+				} catch {
+					/* never affect the site */
+				}
+			}
+			return transport.flush({ lifecycle }).catch(() => {});
+		};
 
 		let timer: ReturnType<typeof setInterval> | undefined;
 		const startTimer = () => {

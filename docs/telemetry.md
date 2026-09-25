@@ -369,6 +369,16 @@ The purpose is broader than rotation: it can reveal meaningful resizing behavior
 
 Resize events can fire continuously while a window is dragged. Do not emit every browser resize event. Coalesce/rate-limit them to at most approximately one telemetry event every few seconds during active resizing, while preserving the final settled viewport size with a trailing emission. Ignore tiny/no-op dimension changes if they do not materially change the viewport.
 
+#### Implemented behavior (`src/lib/telemetry/viewport.ts`, wired in `client.ts`)
+
+- **Source**: `window.innerWidth` / `window.innerHeight` (rounded CSS px; values outside 1..20000 are ignored). Nothing else is read.
+- **Payload**: `event_type: viewport_changed`, no target, `properties: {"viewport_width": <int>, "viewport_height": <int>}`. Created via the normal queue, so `event_id`, `occurred_at`, `elapsed_ms`, batching and retry are unchanged.
+- **Baseline**: the last emitted size, initially the session row's viewport. Nothing is emitted on page load.
+- **Coalescing**: every `resize` callback (re)starts a 500 ms settle timer (`SETTLE_MS`). When it fires (500 ms with no resize) the current size is measured and emitted (the trailing, settled emission).
+- **Rate limiting**: during a continuous burst, one 5 s timer (`INTERMEDIATE_INTERVAL_MS`) started at the first resize of the burst emits the current size (if meaningful) and re-arms while resizing continues, so at most one intermediate event per 5 s plus the trailing one.
+- **Noise threshold** (compared with the baseline, so slow drift accumulates rather than being lost): emit only if |Δwidth| >= 10 px or |Δheight| >= 10 px. On a coarse primary pointer (phones/tablets), a height-only change (|Δwidth| < 10 px) must be >= 120 px, to ignore mobile URL-bar show/hide (~50-100 px). Rotation, maximize/restore and deliberate desktop resizes exceed these. An on-screen keyboard (~250+ px height change) can still emit.
+- **Lifecycle**: `client.ts` keeps its single `visibilitychange -> hidden` / `pagehide` listeners. Before a lifecycle flush it calls `ViewportTracker.finalize()`, which cancels pending timers, measures the current size and, if meaningful, queues `viewport_changed`; the existing lifecycle flush then sends it. There is no second lifecycle listener.
+
 ## 14. Transport and batching
 
 Use DELTAS, not snapshots/upserts.
@@ -617,7 +627,7 @@ Existing events such as `filter:willopen`, `filter:opened`, `filter:closed`, `fi
 
 ### 17.1 Implemented client foundation (step 4)
 
-Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Only session creation, `session_start`, the queue, transport and lifecycle flushing exist; no feature instrumentation, `viewport_changed` or visibility engine yet.
+Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Only session creation, `session_start`, the queue, transport, lifecycle flushing and `viewport_changed` (section 13.1) exist; no feature instrumentation or visibility engine yet.
 
 | File | Responsibility |
 |------|----------------|
@@ -626,7 +636,8 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 | `session.ts` | Random ID, UTM parsing, session context |
 | `queue.ts` | In-memory queue, event creation, `elapsed_ms` |
 | `transport.ts` | Batching, single-flight flush, retry/backoff |
-| `client.ts` | Browser wiring: session start, timers, page lifecycle |
+| `viewport.ts` | Resize coalescing / noise filtering for `viewport_changed` (pure, injected timers) |
+| `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener |
 | `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()` |
 
 **Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`. The current page URL is never sent. No User-Agent is collected.
