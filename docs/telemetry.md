@@ -7,6 +7,68 @@
 
 This document is the source of truth for custom telemetry on the Mentor Game Studio website. Update it when telemetry behavior, privacy rules, event semantics, storage, or implementation changes.
 
+## Local development
+
+Everything below runs on your machine against a **local** D1 database (`workers/telemetry/.wrangler/`, git-ignored). Helper: `scripts/telemetry.mjs`. Works in PowerShell, cmd, bash.
+
+### One-time setup
+
+```powershell
+npm install
+npm run telemetry:db:init     # applies migrations/*.sql to LOCAL D1
+npm run telemetry:check       # readiness summary
+```
+
+`telemetry:dev` creates and maintains `workers/telemetry/.dev.vars` (git-ignored), setting `ALLOWED_ORIGINS` to the localhost and LAN Astro origins on port 4321. That is CORS configuration, not authentication. Setup succeeded when `npm run telemetry:db:check` prints `[ OK ]` for `sessions` and `events`.
+
+### Every time I want to test
+
+| | Command |
+|---|---|
+| Terminal 1 (Worker + local D1, `:8787`) | `npm run telemetry:dev` |
+| Terminal 2 (Astro with telemetry ON, `:4321`) | `npm run dev:telemetry` |
+| Open | <http://localhost:4321/> (use `localhost`, not another host or port) |
+
+`dev:telemetry` runs `astro dev --host --force --port 4321` and sets `PUBLIC_TELEMETRY=1` and `PUBLIC_TELEMETRY_ENDPOINT` (to `http://<your LAN IP>:8787/v1/batch`, or `localhost` if there is no LAN address) itself; no environment variables to set. `--force` replaces an already-running Astro dev server and clears the content cache. Plain `npm run dev` still keeps telemetry off.
+
+**From a phone (same Wi-Fi):** run the same two commands and open the `Phone (same Wi-Fi)` URL that `dev:telemetry` prints (e.g. `http://192.168.0.148:4321/`). `telemetry:dev` listens on all interfaces and adds your LAN origins to `ALLOWED_ORIGINS` in `.dev.vars` (it rewrites that one line at each start). If the phone cannot connect, allow inbound TCP 4321 and 8787 for the Private network in Windows Firewall. The LAN IP can change between sessions; restart both commands if it does.
+
+### After a code change
+
+- Astro code (pages, components, `src/lib/telemetry/`): hot-reloads. Reload the page for a fresh session (a reload is a new session; telemetry state is in memory only).
+- Worker code (`workers/telemetry/src/`): Wrangler reloads automatically.
+- Restart the Worker (Terminal 1) after editing `.dev.vars` or `wrangler.jsonc`.
+- Restart Astro (Terminal 2) after editing `astro.config.mjs` or changing the endpoint/port.
+- New migration in `migrations/`: `npm run telemetry:db:init` (applies only unapplied files).
+
+### Check what happened
+
+Events flush ~1.5 s after page load, every 20 s while visible, and when the tab is hidden or closed.
+
+```powershell
+npm run telemetry:sessions    # recent sessions (viewport, pointer, UTM, event count)
+npm run telemetry:events      # recent events (id, session, elapsed_ms, type, target, properties)
+npm run telemetry:viewport    # recent viewport_changed events with size + orientation
+npm run telemetry:events -- --limit 100 --session 3fa9c1d2   # options for all three
+```
+
+Sessions are shown by their first 8 characters; `--session` takes any prefix. `--limit` is 1..500 (default 20).
+
+### Start a clean test
+
+```powershell
+npm run telemetry:clear       # deletes LOCAL events, then sessions
+```
+
+Then reload/open <http://localhost:4321/> for a fresh session.
+
+### Important safety
+
+- **Guaranteed local:** every `telemetry:*` command and `dev:telemetry`. All D1 access goes through one function in `scripts/telemetry.mjs` that hard-codes `wrangler d1 execute --local` and rejects `--remote`, `--env`, `--config`, `--persist-to`; there is no flag or environment variable that switches to remote. `telemetry:dev` runs `wrangler dev --local --ip 0.0.0.0` (reachable from your local network, local D1 only). Options on `sessions`/`events`/`viewport` are limited to `--limit` and `--session`.
+- **Remote/production (not part of this workflow):** `npm run worker:deploy` (deploys the Worker) and any manual `wrangler d1 ... --remote` command. Never run those from this section's commands.
+- None of the convenience commands deploy or modify production D1. `worker:dev` is the older, unscripted way to start the Worker; prefer `telemetry:dev`.
+- `telemetry:check` is read-only. If it reports a CORS 403, a Worker started before `.dev.vars` existed is still running: restart it.
+
 ## 1. Goals
 
 Telemetry should help answer:
@@ -589,7 +651,7 @@ Source: `workers/telemetry/` (`src/index.ts` handler, `src/validate.ts` validati
 
 **Responses**: `200 {"ok":true}` on success; errors are `{"error":"<code>","detail":"<field: reason>"}` (`detail` only for payload validation) with 400/403/404/405/409/413/415/500. All responses are `Cache-Control: no-store`. Stored telemetry is never returned.
 
-**Local development**: the Worker can run locally with `npm run worker:dev`. Browser telemetry stays disabled in local Astro dev by default (see 17.1).
+**Local development**: the Worker runs locally with local D1 via `npm run telemetry:dev`; see "Local development" at the top of this document. Browser telemetry stays disabled in plain `npm run dev` (see 17.1); `npm run dev:telemetry` enables it against the local Worker.
 
 A separate public read/query API is not required for V1. Analysis can initially use D1 SQL/Cloudflare tooling.
 
@@ -652,7 +714,7 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 
 **Lifecycle**: a flush ~1.5 s after start (so short visits still record the session), a 20 s periodic flush only while the document is visible (no timer while hidden), a flush on `visibilitychange` -> hidden, and on `pagehide`. Lifecycle flushes use `fetch(..., {keepalive: true})` and ignore backoff. `sendBeacon` and `unload` are not used.
 
-**Enablement** (`config.ts`, the only place this is decided): on when the build is a production build AND `location.hostname === 'mentorgamestudio.com'`; otherwise off (so `astro dev` and `astro preview` on localhost send nothing). Deliberate local override: build-time `PUBLIC_TELEMETRY=1` (also turns on console diagnostics), optionally with `PUBLIC_TELEMETRY_ENDPOINT` (e.g. `http://localhost:8787/v1/batch` from `npm run worker:dev`; add the dev origin to the Worker's `ALLOWED_ORIGINS`). `?telemetry_debug` adds console diagnostics on an already-enabled site but never enables telemetry.
+**Enablement** (`config.ts`, the only place this is decided): on when the build is a production build AND `location.hostname === 'mentorgamestudio.com'`; otherwise off (so `astro dev` and `astro preview` on localhost send nothing). Deliberate local override: build-time `PUBLIC_TELEMETRY=1` (also turns on console diagnostics), optionally with `PUBLIC_TELEMETRY_ENDPOINT` (e.g. `http://localhost:8787/v1/batch`). `npm run dev:telemetry` sets both for you; the dev origin is in the local Worker's git-ignored `.dev.vars` `ALLOWED_ORIGINS`. `?telemetry_debug` adds console diagnostics on an already-enabled site but never enables telemetry.
 
 **`site_version`**: short (7-char) commit SHA, injected at build by `astro.config.mjs` (`GITHUB_SHA` in the GitHub Pages workflow, else `git rev-parse`, else `dev`).
 

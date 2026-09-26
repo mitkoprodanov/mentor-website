@@ -14,7 +14,16 @@
     "worker:typecheck": "tsc -p workers/telemetry",
     "worker:dev": "wrangler dev --config workers/telemetry/wrangler.jsonc",
     "worker:deploy": "wrangler deploy --config workers/telemetry/wrangler.jsonc",
-    "telemetry:test": "node --test \"src/lib/telemetry/test/*.test.ts\""
+    "telemetry:test": "node --test \"src/lib/telemetry/test/*.test.ts\"",
+    "dev:telemetry": "node scripts/telemetry.mjs astro",
+    "telemetry:dev": "node scripts/telemetry.mjs dev",
+    "telemetry:check": "node scripts/telemetry.mjs check",
+    "telemetry:db:init": "node scripts/telemetry.mjs db-init",
+    "telemetry:db:check": "node scripts/telemetry.mjs db-check",
+    "telemetry:sessions": "node scripts/telemetry.mjs sessions",
+    "telemetry:events": "node scripts/telemetry.mjs events",
+    "telemetry:viewport": "node scripts/telemetry.mjs viewport",
+    "telemetry:clear": "node scripts/telemetry.mjs clear"
   },
   "dependencies": {
     "astro": "^7.3.2"
