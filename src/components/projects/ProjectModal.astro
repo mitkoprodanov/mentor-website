@@ -14,6 +14,9 @@ import ProjectDetail from './ProjectDetail.astro';
 interface Props {
 	/** Unique across the page — must equal the trigger's `data-project-open`. */
 	modalId: string;
+	/** Canonical project id (the catalog key) — what telemetry records. `modalId`
+	 *  is a presentation detail and is never used as an analytics id. */
+	projectId?: string;
 	title: string;
 	/** Strap-line under the title (a project's `detail`/`info`). */
 	subtitle?: string;
@@ -34,13 +37,14 @@ interface Props {
 	logo?: { src: string; detailWidth?: number };
 }
 
-const { modalId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel, logo } = Astro.props;
+const { modalId, projectId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel, logo } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 ---
 
 <dialog
 	class="project-modal"
 	data-project-modal={modalId}
+	data-project-id={projectId}
 	data-project-people={personIds.join(' ')}
 	aria-labelledby={titleId}
 >

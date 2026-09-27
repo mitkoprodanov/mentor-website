@@ -15,10 +15,24 @@
  * it (chip ✕, Escape, or an outside click — see filterModal.client.ts).
  */
 
+import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
+
 const hoverMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
 
 function panels(): HTMLElement[] {
 	return Array.from(document.querySelectorAll<HTMLElement>('.side-panel'));
+}
+
+/** Which person a control belongs to, for telemetry (`.side-panel[data-person]`). */
+function personOf(el: Element | null | undefined): string | undefined {
+	return el?.closest<HTMLElement>('.side-panel')?.dataset.person;
+}
+
+/** How the visitor acted, as far as the click event can tell. */
+function clickMethod(event: MouseEvent): string {
+	const pt = (event as PointerEvent).pointerType;
+	if (pt === 'mouse' || pt === 'touch' || pt === 'pen') return pt;
+	return event.detail === 0 ? 'keyboard' : 'mouse';
 }
 
 function setOpen(panel: HTMLElement, open: boolean): void {
@@ -128,7 +142,11 @@ if (bar) {
 	panels().forEach((card) => {
 		card.addEventListener('pointerenter', () => {
 			if (!hoverMQ.matches || suppressed) return;
+			const wasRevealed = bar.classList.contains('reveal');
 			showReveal();
+			if (!wasRevealed) {
+				announce(UI_EVENT.skillsOpen, { person: card.dataset.person, method: 'hover', locked: false });
+			}
 		});
 		card.addEventListener('pointerleave', () => {
 			// Locked open via the Skills button, or auto-locked by picking a
@@ -142,6 +160,7 @@ if (bar) {
 			if (!anyCardHovered()) {
 				hideReveal();
 				suppressed = false;
+				announce(UI_EVENT.skillsClose, { reason: 'hover_leave' });
 			}
 		});
 	});
@@ -236,10 +255,14 @@ document.addEventListener('click', (event) => {
 			// has since moved off the cards, unlocking collapses them right away,
 			// otherwise normal hover takes over and they collapse on pointer-out.
 			locked = !locked;
+			const who = personOf(toggle);
 			if (locked) {
 				suppressed = false;
 				bar?.classList.add('reveal', 'locked');
 				syncBodyScrollLock();
+				// Already hovered open -> the coordinator treats this as a lock,
+				// not a second open.
+				announce(UI_EVENT.skillsOpen, { person: who, method: clickMethod(event), locked: true });
 			} else {
 				bar?.classList.remove('locked');
 				// Pressing Skills is an explicit close intent — force-collapse
@@ -250,6 +273,8 @@ document.addEventListener('click', (event) => {
 				suppressed = true;
 				closeAll();
 				syncBodyScrollLock();
+				announce(UI_EVENT.skillsUnlock, { person: who });
+				announce(UI_EVENT.skillsClose, { reason: 'explicit', person: who });
 			}
 			return;
 		}
@@ -259,6 +284,13 @@ document.addEventListener('click', (event) => {
 		if (!panel) return;
 		const willOpen = !panel.classList.contains('is-open');
 		panels().forEach(p => setOpen(p, willOpen));
+		// Touch has no hover: the accordion stays until toggled, so it opens locked.
+		if (willOpen) {
+			const method = clickMethod(event);
+			announce(UI_EVENT.skillsOpen, { person: personOf(toggle), method: method === 'mouse' ? 'touch' : method, locked: true });
+		} else {
+			announce(UI_EVENT.skillsClose, { reason: 'explicit', person: personOf(toggle) });
+		}
 		return;
 	}
 
@@ -273,6 +305,10 @@ document.addEventListener('click', (event) => {
 			suppressed = false;
 			bar?.classList.add('reveal', 'locked');
 			syncBodyScrollLock();
+			announce(UI_EVENT.skillsLock, {
+				cause: target.closest('.card-filter-tag') ? 'filter_pill' : 'skill_click',
+				person: personOf(target),
+			});
 		}
 		return;
 	}
@@ -298,6 +334,7 @@ document.addEventListener('click', (event) => {
 		blurInsideBar();
 		suppressed = false;
 		syncBodyScrollLock();
+		announce(UI_EVENT.skillsClose, { reason: target.closest('.navbar') ? 'navigation' : 'outside' });
 	}
 });
 
@@ -310,6 +347,7 @@ document.addEventListener('keydown', (event) => {
 		blurInsideBar();
 		suppressed = false;
 		syncBodyScrollLock();
+		announce(UI_EVENT.skillsClose, { reason: 'escape' });
 	}
 });
 

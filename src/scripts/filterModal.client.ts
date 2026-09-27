@@ -134,6 +134,11 @@ document.addEventListener('filter:closed', () => {
 });
 
 // Click the dimmed backdrop to dismiss — the modal's "click outside".
-backdrop?.addEventListener('click', () => clearButton()?.click());
+backdrop?.addEventListener('click', () => {
+	const chip = clearButton();
+	if (!chip) return;
+	chip.dataset.closeReason = 'backdrop'; // read (and cleared) by tagFilter, telemetry only
+	chip.click();
+});
 
 export {};

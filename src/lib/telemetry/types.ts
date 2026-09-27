@@ -42,6 +42,7 @@ export interface TelemetryEvent {
 	event_type: string;
 	target_type?: string;
 	target_id?: string;
+	view_instance_id?: string;
 	properties?: Record<string, PropertyValue>;
 }
 
@@ -53,5 +54,7 @@ export interface Batch {
 export interface EmitOptions {
 	target_type?: string;
 	target_id?: string;
+	/** Groups the events (later, visibility deltas) of one blocking-view instance. */
+	view_instance_id?: string;
 	properties?: Record<string, PropertyValue>;
 }

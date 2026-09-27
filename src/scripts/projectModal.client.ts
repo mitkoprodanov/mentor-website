@@ -14,6 +14,12 @@
  * which the click/keyboard paths alone wouldn't all cover.
  */
 
+import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
+
+/** Why the dialog is closing, set by the code path that closes it (telemetry
+ *  only). Native Escape has no click path, so it is recorded from `cancel`. */
+let pendingCloseReason: string | undefined;
+
 function syncScrollLock(): void {
 	const anyOpen = document.querySelector('dialog[data-project-modal][open]');
 	document.body.style.overflow = anyOpen ? 'hidden' : '';
@@ -411,6 +417,7 @@ function init(): void {
 		}
 
 		if (el.closest('[data-project-close]')) {
+			pendingCloseReason = 'explicit';
 			el.closest<HTMLDialogElement>('dialog[data-project-modal]')?.close();
 		}
 	});
@@ -420,7 +427,11 @@ function init(): void {
 		syncPersonBarPopover();
 		for (const mutation of mutations) {
 			const dialog = mutation.target as HTMLElement;
+			// The `open` attribute is the authoritative open/close signal; the
+			// canonical project id is content data, not the presentation modal id.
+			const projectId = dialog.dataset.projectId;
 			if (dialog.hasAttribute('open')) {
+				announce(UI_EVENT.projectOpen, { projectId });
 				const panel = dialog.querySelector<HTMLElement>('.project-modal__panel');
 				if (panel) {
 					requestAnimationFrame(() => {
@@ -452,6 +463,8 @@ function init(): void {
 			} else {
 				pauseYouTube(dialog);
 				stopFacebook(dialog);
+				announce(UI_EVENT.projectClose, { projectId, reason: pendingCloseReason });
+				pendingCloseReason = undefined;
 			}
 		}
 	});
@@ -460,7 +473,13 @@ function init(): void {
 		// The panel owns all the padding, so a click whose target is the
 		// <dialog> element itself can only have landed on the backdrop.
 		dialog.addEventListener('click', (event) => {
-			if (event.target === dialog) dialog.close();
+			if (event.target === dialog) {
+				pendingCloseReason = 'backdrop';
+				dialog.close();
+			}
+		});
+		dialog.addEventListener('cancel', () => {
+			pendingCloseReason = 'escape';
 		});
 
 		observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });

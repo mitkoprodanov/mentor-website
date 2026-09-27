@@ -259,6 +259,7 @@ const tracks = await Promise.all(
 										project.name && (
 											<ProjectModal
 												modalId={modalId}
+												projectId={project.modalId ?? project.id}
 												title={project.name}
 												subtitle={project.info}
 												dateRange={modalDateRange}

@@ -47,7 +47,7 @@ Events flush ~1.5 s after page load, every 20 s while visible, and when the tab 
 
 ```powershell
 npm run telemetry:sessions    # recent sessions (viewport, pointer, UTM, event count)
-npm run telemetry:events      # recent events (id, session, elapsed_ms, type, target, properties)
+npm run telemetry:events      # recent events (id, session, elapsed_ms, type, target, view, properties)
 npm run telemetry:viewport    # recent viewport_changed events with size + orientation
 npm run telemetry:events -- --limit 100 --session 3fa9c1d2   # options for all three
 ```
@@ -689,7 +689,7 @@ Existing events such as `filter:willopen`, `filter:opened`, `filter:closed`, `fi
 
 ### 17.1 Implemented client foundation (step 4)
 
-Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Only session creation, `session_start`, the queue, transport, lifecycle flushing and `viewport_changed` (section 13.1) exist; no feature instrumentation or visibility engine yet.
+Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Session creation, `session_start`, the queue, transport, lifecycle flushing and `viewport_changed` (section 13.1), plus the semantic state coordinator and its state-transition events (section 17.2). There is no visibility engine yet.
 
 | File | Responsibility |
 |------|----------------|
@@ -699,8 +699,10 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 | `queue.ts` | In-memory queue, event creation, `elapsed_ms` |
 | `transport.ts` | Batching, single-flight flush, retry/backoff |
 | `viewport.ts` | Resize coalescing / noise filtering for `viewport_changed` (pure, injected timers) |
+| `uiEvents.ts` | Dependency-free contract between UI scripts and the coordinator (event names, detail types, `announce()`) |
+| `state.ts` | Semantic state coordinator + `bindUiEvents()` (section 17.2) |
 | `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener |
-| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()` |
+| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `semanticState` |
 
 **Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`. The current page URL is never sent. No User-Agent is collected.
 
@@ -719,6 +721,86 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 **`site_version`**: short (7-char) commit SHA, injected at build by `astro.config.mjs` (`GITHUB_SHA` in the GitHub Pages workflow, else `git rev-parse`, else `dev`).
 
 **Failure behavior**: all client entry points are wrapped; failures are silent (debug logging only).
+
+### 17.2 Implemented semantic state model and state-transition events (step 6)
+
+Source: `src/lib/telemetry/state.ts` and `uiEvents.ts`; tests in `test/state.test.ts`. No visibility, appearance, Vision, Contact, navbar or noninteractive-click telemetry exists yet.
+
+**Surfaces.** `main` | `skills` | `project_modal` | `skill_filtered`. About/Timeline/Contact scrolling is *not* a surface change; they are sections of `main`.
+
+**Layers.** `main` is always present. Skills is an optional layer over it. A blocking view (Project Detail or Skill Filtered View) is an optional layer over both. The current surface is the topmost layer; everything beneath is *suspended*. Closing a blocking view restores what was beneath: `skills` if the Skills layer is still up (the real UI leaves Skills locked beneath the filtered view and it reappears when the filter closes), otherwise `main`. Restoration never emits a second `skills_open`.
+
+**Reading state** (`import { semanticState } from '../lib/telemetry'`):
+
+| Field | Meaning |
+|---|---|
+| `surface` | current surface |
+| `projectId` | canonical project ID while `project_modal` |
+| `skillId` | canonical skill/tag ID while `skill_filtered` |
+| `skillsMode` | `hover` / `locked` whenever a Skills layer is up (also while suspended); else null |
+| `viewInstanceId` | instance ID of the current blocking surface; null on `main` |
+| `underlying` | `main` / `skills`: what the surface becomes if the current blocking view closes |
+| `navbarAvailable` | true on `main` and `skills`; false on `project_modal` and `skill_filtered` |
+
+`semanticState.isActive(owner)` is the question the visibility engine asks: a target is eligible only if its owning surface *is* the current surface. `subscribe(fn)` reports changes. State is tracked whenever `initTelemetry()` has run, even with telemetry disabled (emission is then a no-op); the coordinator only listens and never drives the UI.
+
+**How the UI feeds it.** UI scripts announce transitions they have *already performed* as `document` CustomEvents (`ui:skills-open`, `ui:skills-lock`, `ui:skills-unlock`, `ui:skills-close`, `ui:skill-click`, `ui:filter-open`, `ui:filter-close`, `ui:project-open`, `ui:project-close`), the same pattern as `filter:opened`. The coordinator never polls DOM/CSS. Announcing cannot throw, and with no listener the UI behaves identically.
+
+| UI code | Announces |
+|---|---|
+| `panelToggle.client.ts` card `pointerenter` (not already revealed) | `skills-open` (hover) |
+| card `pointerleave`, pointer off both cards | `skills-close` `hover_leave` |
+| Skills button, desktop, becomes locked | `skills-open` locked (a lock if already hovered open) |
+| Skills button, desktop, unlocked again | `skills-unlock` then `skills-close` `explicit` |
+| Skills button, touch | open (locked) / close `explicit` |
+| skill tag or filter pill click (desktop; auto-locks) | `skills-lock` (`cause`: `skill_click` / `filter_pill`) |
+| click outside the cards | `skills-close` `outside` (`navigation` if the click was in the navbar) |
+| Escape (only when not locked) | `skills-close` `escape` |
+| `tagFilter.client.ts` linked tag click | `skill-click`, then `filter-open` / `filter-close` |
+| `tagFilter` filter cleared | `filter-close` with reason `chip`, `backdrop` (handed over by `filterModal`), `card_pill`, `escape`, `skill_toggle` |
+| `tagFilter` direct swap to another skill (code path exists; currently unreachable because the skills panel is collapsed in the filtered view) | `filter-close` `skill_switch` + `filter-open` |
+| `projectModal.client.ts` dialog `open` attribute (MutationObserver, the authoritative signal) | `project-open` / `project-close` |
+
+**Events emitted.** All go through the normal queue (`telemetry.emit`); all pass the Worker's strict validator.
+
+| Event | target | `view_instance_id` | properties |
+|---|---|---|---|
+| `skills_open` | none | new Skills instance | `trigger_person` (mitko/adam), `trigger_method` (hover/mouse/touch/pen/keyboard), `locked` |
+| `skills_lock` | none | Skills instance | optional `trigger_person`, `cause` |
+| `skills_unlock` | none | Skills instance | optional `trigger_person` |
+| `skills_close` | none | Skills instance | `reason` (hover_leave / explicit / outside / escape / navigation), `locked` (was locked), `trigger_person` only for the explicit toggle |
+| `skill_click` | `skill` : tag ID | current Skills instance if any | `trigger_person` (owner of the clicked card) |
+| `skill_filter_open` | `skill` : tag ID | new filter instance | none |
+| `skill_filter_close` | `skill` : tag ID | that filter instance | `reason` |
+| `project_open` | `project` : canonical ID | new project instance | none |
+| `project_close` | `project` : canonical ID | that project instance | `reason` (explicit / backdrop / escape) |
+
+Properties whose value the code cannot determine are omitted, never guessed. `trigger_person` on Skills means who caused the transition, not whose skills were viewed (both are always shown). Ordering within one click is by queue order; `elapsed_ms` can tie.
+
+**Canonical IDs.** `project_id` is the project catalog key (`project.modalId ?? project.id`, matching `key` in `data/projectCatalog.ts`), emitted on the dialog as `data-project-id`. The `tl-...` modal ID is never used. `skill_id` is the WorkTag id (`data-tag-id`). IDs failing the Worker's `[A-Za-z0-9_.:-]{1,64}` rule are dropped before emitting (the surface still changes), because one invalid event would make the Worker reject its whole batch.
+
+**`view_instance_id` lifecycle.** A fresh random ID (`randomId()`) per Skills opening, Project Detail opening and Skill Filtered View opening. It is constant for that instance, including Skills lock/unlock and all its close events, and changes on the next distinct opening (reopening the same project is a new instance). `main` has none: scrolling never creates one. Skills lock/unlock/close and `skill_click` carry the Skills instance so later visibility deltas and clicks group correctly.
+
+**Nesting / suspension details.**
+- Skills is announced only when actually presented. If the UI raises the Skills class while a blocking view is up (e.g. hovering a person card in a project dialog, where CSS keeps the panel collapsed), the layer is remembered silently; if it is still up when the blocking view closes, `skills_open` is emitted then; if it went away first, no open/close pair is emitted.
+- A click that both dismisses Skills and opens a project ends the same way in either listener order: `project_modal`, then `main` on close.
+- A blocking open while another blocking view is up closes the first (reason `superseded`); unreachable in the current UI.
+- Duplicate callbacks (repeated `pointerenter`, a second outside-click with nothing open, repeated open/close) are ignored by state, so they emit nothing.
+
+**Known limits / differences from the UI (reported, not redesigned).**
+- Keyboard focus alone reveals Skills through CSS `:focus-within`, with no JS transition, so it produces no `skills_open`. Only a keyboard-activated Skills *button* is seen (`trigger_method: keyboard`).
+- Touch Skills opens `locked: true` (it persists until toggled or dismissed, like a lock).
+- `escape` for a project comes from the dialog's `cancel` event, so a mobile back gesture that cancels the dialog is also `escape`.
+- Section 11 lists close reason `outside`; the request for this step suggested `outside_click`. The documented name `outside` is used.
+- Navbar clicks while Skills is up close Skills (the navbar click is also an outside click), reason `navigation`. `nav_click` itself is not instrumented yet.
+- Clicking a tag inside the Skills panel on desktop auto-locks it (existing UI behavior not previously documented); that is the `skills_lock` with `cause: skill_click`.
+
+**Manual browser test** (local workflow above; `npm run telemetry:events` now also prints a `view` column, the first 8 chars of `view_instance_id`):
+1. `npm run telemetry:clear`. Terminal 1: `npm run telemetry:dev`. Terminal 2: `npm run dev:telemetry`. Open <http://localhost:4321/> in a desktop browser and scroll into the Timeline so the person cards dock.
+2. Hover a card, then move away: `skills_open` (hover, `locked:false`) then `skills_close` `hover_leave`.
+3. Hover, click Skills (locks), click a skill tag, click the dimmed backdrop, click Skills again: `skills_open`, `skills_lock`, `skill_click`, `skill_filter_open`, `skill_filter_close` (`backdrop`), `skills_unlock`, `skills_close` (`explicit`). The Skills events and the click share one `view`; the filter has another.
+4. Click a timeline project and close it with the ✕; reopen it and press Escape: `project_open` / `project_close` (`explicit`, then `escape`) with the same `project:<id>` and different `view` values.
+5. Wait ~20 s (or switch tabs to force a flush), then `npm run telemetry:events -- --limit 40`. Repeat on a phone: Skills opens with `touch` and `locked:true`.
 
 ## 18. Derived analysis (not browser events)
 
@@ -769,7 +851,7 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 3. Implement Worker `/v1/batch` validation + idempotent inserts.
 4. Implement minimal client session + transport. (Done: section 17.1.)
 5. Prove end-to-end pipeline with a few explicit events.
-6. Add semantic state coordinator.
+6. Add semantic state coordinator. (Done: section 17.2.)
 7. Add Visibility Matrix engine and appearance tracking.
 8. Instrument Vision.
 9. Instrument Skills/person exposure.

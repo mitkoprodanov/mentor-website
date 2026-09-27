@@ -12,6 +12,8 @@
  * simply drops the empty gallery frame. Empty groups/columns collapse away.
  */
 
+import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
+
 type Filter = string | null;
 
 let currentFilter: Filter = null;
@@ -97,8 +99,10 @@ function updateCardTags(filter: Filter): void {
 	});
 }
 
-function setFilter(filter: Filter): void {
-	const wasActive = currentFilter !== null;
+/** `reason` only feeds telemetry (why a filter view closed); it changes nothing here. */
+function setFilter(filter: Filter, reason?: string): void {
+	const previous = currentFilter;
+	const wasActive = previous !== null;
 	const willBeActive = filter !== null;
 	currentFilter = filter;
 
@@ -132,8 +136,14 @@ function setFilter(filter: Filter): void {
 
 	if (!wasActive && willBeActive) {
 		document.dispatchEvent(new CustomEvent('filter:opened'));
+		announce(UI_EVENT.filterOpen, { skillId: filter });
 	} else if (wasActive && !willBeActive) {
 		document.dispatchEvent(new CustomEvent('filter:closed'));
+		announce(UI_EVENT.filterClose, { skillId: previous, reason });
+	} else if (wasActive && willBeActive && previous !== filter) {
+		// Directly swapped to another skill: the view's content is a new one.
+		announce(UI_EVENT.filterClose, { skillId: previous, reason: 'skill_switch' });
+		announce(UI_EVENT.filterOpen, { skillId: filter });
 	}
 	setTagPressedState(filter);
 	updateChip(filter);
@@ -152,23 +162,29 @@ function init(): void {
 		if (tagButton) {
 			const tagId = tagButton.dataset.tagId;
 			if (!tagId) return;
-			setFilter(currentFilter === tagId ? null : tagId);
+			announce(UI_EVENT.skillClick, { skillId: tagId, person: tagButton.closest<HTMLElement>('.side-panel')?.dataset.person });
+			setFilter(currentFilter === tagId ? null : tagId, 'skill_toggle');
 			return;
 		}
 
-		if (target.closest('#timeline-filter-chip-clear')) {
-			setFilter(null);
+		const chip = target.closest<HTMLElement>('#timeline-filter-chip-clear');
+		if (chip) {
+			// filterModal's backdrop handler clicks the chip programmatically and
+			// leaves its reason here; a real chip click has none.
+			const reason = chip.dataset.closeReason ?? 'chip';
+			delete chip.dataset.closeReason;
+			setFilter(null, reason);
 			return;
 		}
 
 		// The active-skill pill echoed under each person card clears the filter.
 		if (target.closest('.card-filter-tag')) {
-			setFilter(null);
+			setFilter(null, 'card_pill');
 		}
 	});
 
 	document.addEventListener('keydown', (event) => {
-		if (event.key === 'Escape' && currentFilter !== null) setFilter(null);
+		if (event.key === 'Escape' && currentFilter !== null) setFilter(null, 'escape');
 	});
 }
 

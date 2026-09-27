@@ -361,6 +361,7 @@ function cmdEvents(argv) {
 		SELECT * FROM (
 			SELECT id, substr(session_id, 1, 8) AS session, elapsed_ms AS elapsed_ms, event_type AS type,
 			       CASE WHEN target_type IS NULL THEN '' ELSE target_type || ':' || target_id END AS target,
+			       COALESCE(substr(view_instance_id, 1, 8), '') AS view,
 			       COALESCE(properties, '') AS properties
 			FROM events
 			${f.session ? `WHERE session_id LIKE '${f.session}%'` : ''}
@@ -368,7 +369,7 @@ function cmdEvents(argv) {
 		) ORDER BY id ASC`);
 	if (!rows.length) return out('No local events.');
 	out(`Last ${rows.length} local event(s), oldest first:`);
-	table(['id', 'session', 'elapsed_ms', 'type', 'target', 'properties'], rows, 60);
+	table(['id', 'session', 'elapsed_ms', 'type', 'target', 'view', 'properties'], rows, 60);
 }
 
 function cmdViewport(argv) {

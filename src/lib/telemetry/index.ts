@@ -10,7 +10,12 @@
 import { startClient } from './client.ts';
 import type { TelemetryClient } from './client.ts';
 import { resolveConfig } from './config.ts';
+import { randomId } from './session.ts';
+import { bindUiEvents, SemanticStateCoordinator } from './state.ts';
+import type { SemanticState, Surface } from './state.ts';
 import type { EmitOptions } from './types.ts';
+
+export type { SemanticState, Surface } from './state.ts';
 
 // Injected by astro.config.mjs (vite `define`).
 declare const __SITE_VERSION__: string;
@@ -18,10 +23,24 @@ declare const __SITE_VERSION__: string;
 let client: TelemetryClient | null = null;
 let started = false;
 
+// Semantic UI state (main / skills / project_modal / skill_filtered). Always
+// tracked once initTelemetry() has run, even with telemetry disabled: emit is a
+// silent no-op then, and the coordinator only listens to UI announcements.
+let coordinator: SemanticStateCoordinator | null = null;
+
 /** Call once from the page entry point. Later calls do nothing. */
 export function initTelemetry(): void {
 	if (started) return;
 	started = true;
+	try {
+		coordinator = new SemanticStateCoordinator({
+			emit: (type, opts) => telemetry.emit(type, opts),
+			newId: () => randomId(),
+		});
+		bindUiEvents(coordinator, document);
+	} catch {
+		coordinator = null;
+	}
 	try {
 		const config = resolveConfig({
 			isProductionBuild: import.meta.env.PROD,
@@ -44,5 +63,30 @@ export const telemetry = {
 	/** Best-effort immediate send of anything queued. Never rejects. */
 	flush(): Promise<void> {
 		return client ? client.flush() : Promise.resolve();
+	},
+};
+
+const MAIN_STATE: SemanticState = {
+	surface: 'main',
+	projectId: null,
+	skillId: null,
+	skillsMode: null,
+	viewInstanceId: null,
+	underlying: 'main',
+	navbarAvailable: true,
+};
+
+/** Which blocking surface owns attention right now. For future telemetry code
+ *  (visibility engine, nav_click); read-only. */
+export const semanticState = {
+	get(): SemanticState {
+		return coordinator ? coordinator.state : MAIN_STATE;
+	},
+	/** Is `owner` the current surface? Anything else is suspended. */
+	isActive(owner: Surface): boolean {
+		return this.get().surface === owner;
+	},
+	subscribe(listener: (s: SemanticState) => void): () => void {
+		return coordinator ? coordinator.subscribe(listener) : () => {};
 	},
 };

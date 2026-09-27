@@ -68,6 +68,7 @@ export class EventQueue {
 			ev.target_type = opts.target_type;
 			ev.target_id = opts.target_id;
 		}
+		if (opts.view_instance_id) ev.view_instance_id = opts.view_instance_id;
 		if (opts.properties) ev.properties = opts.properties;
 		this.items.push(ev);
 		return ev;

@@ -78,7 +78,7 @@ const adam = getPerson('adam');
 								<polygon class="decor-line decor-line--inner" points="75,15 136,54 136,120 75,153 14,120 14,54" />
 							</svg>
 						</div>
-						<div class="side-panel">
+						<div class="side-panel" data-person={entry.person.id}>
 							<PersonHeader person={entry.person} />
 							{/* Each collapsible row is wrapped in a .collapse-row grid so its
 							    height can be animated by transitioning `grid-template-rows`
