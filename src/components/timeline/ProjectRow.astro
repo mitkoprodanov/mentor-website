@@ -66,11 +66,23 @@ const peopleLabel = modalCards.map((c) => c.person.name).join(' & ');
 // same order regardless of which experience contributed the tag.
 const modalTagLabels = sortTagIdsByIndex([...new Set(modalCards.flatMap((c) => c.tagIds))]).map((id) => getTag(id).label);
 const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
+
+// Visibility Matrix (docs/telemetry.md sections 6/8/17.3): every ProjectDef
+// rendered here is a genuine Timeline project preview, named/boxed or not —
+// "has a modal" is presentation, not the definition of a project (an unnamed
+// single-project company like Ericsson Hungary still gets its own row via
+// ExperienceCard below, just without the boxed/clickable styling). Canonical
+// ID matches the one project_open/project_close already use (state.ts), so a
+// split project's two boxed halves (sharing one modalId) instrument as the
+// same canonical project via two independent DOM targets, exactly as spec'd.
+const visibilityId = project.modalId ?? project.id;
 ---
 
 <div
 	class="project-row"
 	data-modal-group={project.modalId}
+	data-visibility-target-type="timeline_project"
+	data-visibility-target-id={visibilityId}
 	class:list={{
 		'project-row--boxed': Boolean(project.name),
 		'btn-sheen': Boolean(project.name),

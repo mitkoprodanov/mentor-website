@@ -19,6 +19,11 @@ export const UI_EVENT = {
 	filterClose: 'ui:filter-close',
 	projectOpen: 'ui:project-open',
 	projectClose: 'ui:project-close',
+	/** The main Vision's tooltip (thought detail panel) shown/hidden — consumed
+	 *  by the Visibility Matrix wiring (visibility.client.ts), not by the
+	 *  semantic state coordinator (Vision never changes `surface`). */
+	visionTooltipShow: 'ui:vision-tooltip-show',
+	visionTooltipHide: 'ui:vision-tooltip-hide',
 } as const;
 
 export type PersonId = 'mitko' | 'adam';
@@ -66,6 +71,17 @@ export interface ProjectCloseDetail {
 	 *  another platform cancellation such as a back gesture; omitted when the
 	 *  code path is unknown) */
 	reason?: string;
+}
+export interface VisionTooltipShowDetail {
+	/** The thought's own stable content id (data/thoughts.ts), not the
+	 *  scope-prefixed DOM element id. */
+	tooltipId?: string;
+	/** hover | focus | click | touch — only ever a value the DOM event
+	 *  actually exposes (see vision.client.ts); never guessed. */
+	method?: string;
+}
+export interface VisionTooltipHideDetail {
+	tooltipId?: string;
 }
 
 /** Announce a transition. Never throws. */

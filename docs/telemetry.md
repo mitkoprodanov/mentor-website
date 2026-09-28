@@ -202,7 +202,7 @@ Tracked content uses cumulative active visibility thresholds:
 - `v70_ms`: time at >=70%
 - `v85_ms`: time at >=85%
 - `v95_ms`: time at >=95%
-- `max_visibility_ratio`
+- `max_visibility_ratio`: the maximum actual intersection ratio observed **while the target was eligible for visibility measurement** (see 6.1) — DEFINITIVE as of the increment in 17.3. Ratio observed while suspended, hidden, or disconnected must never raise it. It is not a "time" field and is not itself nested against the thresholds above, but it shares their eligibility gate.
 
 Thresholds are nested. If an element is 92% visible for four active seconds, v50/v70/v85 each gain four seconds and v95 gains zero.
 
@@ -212,13 +212,27 @@ There is no universal "seen" threshold. Interpretation depends on content type.
 
 ### 6.1 Eligibility and occlusion
 
-DOM intersection alone is insufficient. A target must belong to the active owning state. If Skills or a blocking modal suspends the Timeline, Timeline elements stop accumulating even if their DOM rectangles technically intersect the viewport.
+DOM intersection alone is insufficient. A target is eligible only while ALL of:
+
+- document is visible;
+- target is rendered/connected;
+- target's owning semantic surface is the current surface (not suspended by any other surface, blocking or not).
+
+If Skills or a blocking modal suspends the Timeline, Timeline elements stop accumulating even if their DOM rectangles technically intersect the viewport — and, per the `max_visibility_ratio` change above, geometry observed during that suspension cannot raise the target's max ratio either.
 
 V1 does not require a pixel-perfect arbitrary occlusion engine.
 
 ### 6.2 Oversized content
 
 Large content may never reach 85% or 95%. Do not interpret zero high-threshold time as ignored. Coverage-based measurement is a possible future extension, not a V1 requirement.
+
+**Audited (17.3 increment; do not classify a low `max_visibility_ratio` as poor attention without checking this first):**
+
+- `timeline_project`: measured on a 390px-wide mobile viewport (the worst case — `.experience-row`/`.cards` collapse to a single column below 900px, stacking a shared project's two experience cards instead of showing them side by side), the tallest current row (`heroes6`, a two-person shared project) is ~374px — well inside any realistic phone viewport height. Not currently oversized. `ProjectDef.rowSpan`/`squareBottomRight`/`bridgeLeft` (see data/timeline.ts) exist specifically to let a future project card span multiple grid rows and grow much taller than a normal box, but no current entry sets `rowSpan` — if one does, that card could plausibly become genuinely unable to reach 95%/100% on common viewports.
+- `skills_person` (`.side-panel-stack`): deliberately capped, on both desktop (`.side-panel { max-height: calc(100vh - 4.5rem) }`) and mobile (`.side-panel.is-open { max-height: calc(100dvh - 3.5rem) }`), so the instrumented box itself cannot grow past roughly one viewport height even when a person's tag content is taller (observed: Ádám's rendered skill list content is taller than Mitko's) — it scrolls internally (`overflow-y: auto`) instead. The box is not oversized; its available height is viewport-relative by design, which matters for future `max_attainable_ratio` work (below).
+- `vision_content` / `vision_tooltip`: modest, non-scrolling, in-flow sizes; no clipping ancestor found. `vision_tooltip` panels are absolutely positioned flanking the sentence on wide screens (`.detail-left`/`.detail-right`), so their attainability is a function of total page width and the sentence's own centering, not vertical viewport size — not currently observed to be clipped, but a concrete example of why width matters too, not just height.
+- No currently-instrumented target sits inside a smaller inner scroll container in its instrumented context. Skill Filtered View and Project Detail *do* introduce such containers (`.timeline-area` becomes `max-height: calc(100vh - 6rem); overflow-y: auto` while filtering), but content inside them is out of this increment's scope.
+- **Future `max_attainable_ratio` note**: none of the above should be solved now, and it is not being added in this increment. When it is, it cannot be computed from raw viewport width/height alone — `skills_person`'s cap is viewport-relative but mediated through two ancestor rules (desktop vs. mobile/`dvh`) with different fixed offsets, and `vision_tooltip`'s constraint is about page width and sibling layout, not the target's own scroll ancestry. Any attainability model needs the complete relevant clipping/scrolling ancestor chain for each target, not just `window.innerHeight`/`innerWidth`.
 
 ## 7. Appearances
 
@@ -240,17 +254,15 @@ Scrolling away and later returning creates another appearance.
 V1 candidates:
 
 ### Main surface
-- `vision_content`
-- `vision_tooltip`
-- `timeline_project`
+- `vision_content` — Instrumented (17.3/17.4). DEFINITIVE scope: only the actual main-page Vision (the one `hero`-variant instance, rendered once in About.astro). See 17.4.
+- `vision_tooltip` — Instrumented (17.4). One target per thought/tooltip; see 17.4 for IDs and trigger semantics.
+- `timeline_project` — Instrumented (17.3). DEFINITIVE scope: **every genuine Timeline project preview**, named/boxed or not. The criterion is semantic — "is this a project preview presented to the visitor on the Timeline?" — never "does it have a modal, a name, or boxed styling". Concretely: every `ProjectDef` in `data/timeline.ts` renders exactly one preview row, via one of two component paths (`ProjectRow.astro` for `together` entries, `ApartBlock.astro`'s own inline row markup for `apart` entries — both instrumented identically), and both are instrumented unconditionally, including a company's sole, unnamed project (e.g. `ericsson-consulting`, which still renders its own row — company header + one experience card — just without the boxed/clickable styling that only a *named* project also gets). There are no current exclusions: every `ProjectDef` is a genuine preview. `target_id` is the canonical id (`project.modalId ?? project.id`) — the same one `project_open`/`project_close` already use — never a `tl-*` presentation id.
 - `contact`
 - person-relevant Contact exposure where useful
 
-Both the Vision content itself and individual Vision tooltip content are important targets.
-
 ### Skills
-- `skills_person:mitko`
-- `skills_person:adam`
+- `skills_person:mitko` — Instrumented (17.3).
+- `skills_person:adam` — Instrumented (17.3).
 
 ### Detailed project surfaces
 - `filtered_project`
@@ -690,7 +702,7 @@ Existing events such as `filter:willopen`, `filter:opened`, `filter:closed`, `fi
 
 ### 17.1 Implemented client foundation (step 4)
 
-Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Session creation, `session_start`, the queue, transport, lifecycle flushing and `viewport_changed` (section 13.1), plus the semantic state coordinator and its state-transition events (section 17.2). There is no visibility engine yet.
+Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm run telemetry:test`). Entry point: `src/scripts/telemetry.client.ts`, loaded from `src/pages/index.astro`. Session creation, `session_start`, the queue, transport, lifecycle flushing and `viewport_changed` (section 13.1), the semantic state coordinator and its state-transition events (section 17.2), and the Visibility Matrix engine (section 17.3).
 
 | File | Responsibility |
 |------|----------------|
@@ -702,8 +714,9 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 | `viewport.ts` | Resize coalescing / noise filtering for `viewport_changed` (pure, injected timers) |
 | `uiEvents.ts` | Dependency-free contract between UI scripts and the coordinator (event names, detail types, `announce()`) |
 | `state.ts` | Semantic state coordinator + `bindUiEvents()` (section 17.2) |
-| `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener |
-| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `semanticState` |
+| `visibility.ts` | Visibility Matrix engine: appearance lifecycle + nested-threshold accounting (section 17.3) |
+| `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener, the Visibility Matrix engine's materialize/pause/resume |
+| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `telemetry.observeVisibility(el, type, id)`, `semanticState` |
 
 **Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`. The current page URL is never sent. No User-Agent is collected.
 
@@ -808,6 +821,85 @@ Properties whose value the code cannot determine are omitted, never guessed. `tr
 6. Tab onto a card's Skills button (opens, `focus`), then also hover that same card (no 2nd `skills_open`), then move the pointer away (stays revealed — still focused, no event): only Shift+Tab out of the bar then actually closes it, `skills_close` (`focus_leave`). Reversed (hover first to open, then Tab into it, then move the pointer away first — stays revealed, still focused, no event — then Tab out last): closes on that last step instead, `skills_close` (`focus_leave`) again, since focus was what was still holding it open either way. Swap which one leaves last (Tab out first while still hovering, then move the pointer away) and the recorded reason swaps to `hover_leave` — whichever reason is still true right before the other one leaves is the one recorded on the close that actually happens.
 7. Wait ~20 s (or switch tabs to force a flush), then `npm run telemetry:events -- --limit 40`. Repeat on a phone: Skills opens with `touch` and `locked:true`.
 
+### 17.3 Implemented Visibility Matrix engine (step 7)
+
+Source: `src/lib/telemetry/visibility.ts` (tests in `test/visibility.test.ts`). DOM wiring: `src/scripts/visibility.client.ts`, loaded from `src/pages/index.astro`. Public entry points on `telemetry` (`index.ts`; all silent no-ops until `initTelemetry()` has run or whenever telemetry is disabled): `observeVisibility(el, targetType, targetId)`, `setVisibilityTriggerContext(el, method)`, `endVisibilityAppearance(el)` (the latter two exist for `vision_tooltip` — see 17.4).
+
+**Scope.** Four target types, matching section 8:
+
+| `target_type` | Owning surface | DOM source | `target_id` | `view_instance_id` |
+|---|---|---|---|---|
+| `vision_content` | `main` | the one hero `Vision` instance (`About.astro`) — DEFINITIVE, see 17.4 | `vision` (stable, singular) | none (main never acquires one) |
+| `vision_tooltip` | `main` | each thought's `.detail` panel (`Vision.astro`, hero instance only) — see 17.4 | the thought's own content id (`data/thoughts.ts`) | none |
+| `timeline_project` | `main` | **every** `.project-row` (`ProjectRow.astro`, `together` entries) / `.track-row` (`ApartBlock.astro`, `apart` entries) — see the audit below | `project.modalId ?? project.id` — the same canonical id `project_open`/`project_close` already use (section 17.2) | none |
+| `skills_person` | `skills` | each person's `.side-panel-stack` (`ScrollyRegion.astro`) — the actual skills-tag content, not the whole card | `mitko` / `adam` | the current Skills `view_instance_id` |
+
+Owner is derived from `targetType` in code (`OWNER` map in `visibility.ts`), not read from the DOM — the markup only carries `data-visibility-target-type` / `data-visibility-target-id`. Registering an unrecognized `targetType` is a no-op (a deliberate scope guard). Everything else section 8 lists (`contact`, `filtered_project`, `project_experience`, `project_text`, `project_image`, `project_video`) is out of scope.
+
+**Timeline project audit (this pass).** The first increment only instrumented `ProjectRow.astro`'s named/boxed rows, which covers `together` entries (Mentor/shared companies) but **completely missed `ApartBlock.astro`**, a second, independent rendering path with its own inline `.track-row` markup used for every `apart` entry (each person's own separate company/project — all of Mitko's and Ádám's solo/personal/Mentor-era work). That path is now instrumented identically. Both paths are also now unconditional on `project.name` (previously gated on it), because "has a name/modal/boxed styling" is presentation, not the definition of a project — the sole current example this matters for is `ericsson-consulting` (Mitko's 2007–2008 Ericsson Hungary consulting work), a genuine, single-project company whose project omits `name` (the UI folds the project preview into the company header instead of showing a separate title), but which still renders its own row (company header + one `ExperienceCard`) and is therefore a genuine preview. **Every one of the 16 current `ProjectDef` entries is a genuine Timeline project preview; there are no current exclusions.** `ProjectDef.rowSpan`/`modalId`/`noModal`/`squareBottomRight`/`bridgeLeft` (the split/spanning machinery referenced in code comments) are not exercised by any current entry — there is currently no split project with two DOM representations in the live data, though the engine still supports it (two DOM targets, one canonical id) for when one reappears.
+
+**Two independent concerns.**
+
+- **Appearance identity** (`startAppearance`/`endAppearance`) is driven purely by IntersectionObserver geometry (thresholds `[0, 0.5, 0.7, 0.85, 0.95, 1]`, `intersectionRatio` read directly) plus the 300 ms grace period (section 7) and one additional rule below. An appearance is "one continuous opportunity to encounter the target" — it does **not** end just because a blocking surface suspends counting, the same reasoning section 5/19 already give for a hidden tab: lost measurement opportunity, not evidence the visitor scrolled away.
+- **Active-time accounting** (nested `v50`/`v70`/`v85`/`v95` counters, and — as of this pass — `max_visibility_ratio` too) only adds/raises while ALL of: the document is visible, the target is connected (`Element.isConnected`), and its owning surface is the current semantic surface (`semanticState`-equivalent check, cached internally). Suspending a target pauses counting without touching its appearance.
+
+**Instance-boundary rule (the one addition beyond section 7).** A `skills_person` appearance is force-ended immediately when the current Skills `view_instance_id` changes away from the one it started under — even before geometry reflects it — because opening a blocking view (Project Detail / Skill Filtered View) over Skills, or Skills itself closing, must stop that accounting immediately, and "never let visibility deltas from one blocking view instance leak into another" (section 17.2) applies to visibility deltas exactly as it does to click/open/close events. In the real UI this is never a bare truncation: the `.side-panel-stack` CSS already collapses to `height: 0` (ratio 0) under `body[data-modal-people]` and revives when Skills is restored, so geometry independently backs up the same conclusion — the forced end just makes it immediate instead of waiting on that transition. `vision_content`, `vision_tooltip`, and `timeline_project` (owner `main`) have no view instance and are unaffected by this rule; suspending them (e.g. Skills opening over the Timeline) pauses counting on the *same* appearance, which resumes once `main` is current again.
+
+**Timing/accounting boundaries.** Every place ratio, semantic state, or document visibility can change first calls an internal `account(target, now)` that adds elapsed time (since the target's last boundary) to whichever nested counters were eligible *before* the change, then moves the boundary to `now`. This is the single mechanism behind every boundary case: threshold/ratio changes, semantic transitions, document visibility changes, `materialize()`, and appearance end. Ratio and eligibility are safe to treat as constant across an elapsed span because this is the only place either can change.
+
+**Appearance lifecycle.**
+- Starts the first time geometry reaches `intersectionRatio >= 0.5`; gets a fresh `appearance_id` (`crypto`-backed random id; no CSPRNG means that encounter is silently left untracked, like the rest of telemetry).
+- A dip below 50% arms a 300 ms grace timer. Recovering to >=50% before it fires cancels the timer and continues the *same* appearance; no time is added for the dip itself (grace preserves identity only, never visibility time — the counters simply see `ratio < 0.5` and add nothing).
+- The timer firing (>300 ms continuously below 50%) ends the appearance: any unsent deltas are drained under the outgoing `appearance_id` first, then it is cleared. The next `>=0.5` crossing gets a new `appearance_id`.
+- A target's own UI can also end its appearance immediately, bypassing geometry/grace entirely — `endVisibilityAppearance(el)` (used by `vision_tooltip`; see 17.4).
+- `max_visibility_ratio` (**eligibility-aware as of this pass** — see section 6) is the running max `intersectionRatio` observed *while eligible* during the current appearance; it resets to 0 when a new appearance starts, and a ratio observed while suspended/hidden/disconnected is recorded on the target (accounting still needs the real current ratio once eligibility returns) but never raises this max.
+
+**Document visibility.** `client.ts` calls `visibility.pause()` on `visibilitychange -> hidden` (accounts through the hide instant under the still-true visible flag, then flips it false) and `visibility.resume()` on `-> visible` (accounts the hidden span at zero under the still-false flag, then flips it true and moves every target's boundary to now). Neither call ends any appearance: a hide/show pair preserves the same appearance for the same DOM target and semantic view instance, exactly as section 7/19 already reason for a hidden tab being lost measurement opportunity rather than departure evidence.
+
+**Flush integration (the "clean integration point").** `VisibilityMatrixEngine.materialize()` accounts elapsed time through now for every registered target and drains whatever is newly accumulated into the existing queue (via the same injected `emit` the rest of the client uses — no direct `fetch`, no retry/backoff logic in this file). `client.ts`'s `safeFlush(lifecycle)` calls it first, before `transport.flush()`, for every flush path: the periodic ~20 s timer, the `visibilitychange -> hidden` flush, and `pagehide`. This guarantees a delta produced between flushes is captured by the very next batch rather than left stranded past a flush that already ran. The documented hide sequence is: (1) `visibility.pause()` accounts through the hide instant and stops counting, (2) `safeFlush`'s own `materialize()` call drains whatever that just accounted, (3) `transport.flush({ lifecycle: true })` sends it.
+
+**Semantic state-boundary flush (this pass).** Skills open/close, Project Detail open/close, and Skill Filtered View open/close all change `semanticState.surface`. The engine's own `onStateChange` (already subscribed to `semanticState` for eligibility) now, on every `surface` change: accounts every target under the OLD surface through the transition instant (unchanged — this was already correct); applies the instance-boundary rule; switches to the new surface; **drains every target's newly-unsent deltas; then calls the injected `requestFlush()`**, which `client.ts` wires to the same non-lifecycle `safeFlush(false)` the periodic timer uses (respecting backoff, using the existing queue/transport — never a direct `fetch`, and no new logic in any UI script). Concretely this means: opening a blocking surface drains and promptly flushes whatever `main` (or `skills`) had just measured; closing one drains and promptly flushes whatever the blocking surface itself had just measured. A transition with nothing newly accumulated (e.g. Skills locking/unlocking, which doesn't change `surface`; or two transitions back-to-back with no elapsed time between them) still calls `requestFlush()` — so the semantic transition event itself (`skills_open`, `project_close`, ...) is sent promptly too — but never drains a zero delta, so there is no duplicate/zero-time spam. Ordering note: `SemanticStateCoordinator` (17.2) already queues the transition event itself *before* calling `notify()` (which is what triggers `onStateChange`), so by the time `requestFlush()`'s `transport.flush()` call captures its batch, both that event and these deltas are already queued — the task's suggested "materialize, then queue the transition event, then flush" order is inverted relative to what section 17.2's existing emit-then-notify pattern does, but the actual guarantee (both are queued before the network call) holds regardless of which is queued microseconds earlier within the same synchronous turn; changing `state.ts`'s emit/notify order was not necessary and was not done.
+
+**Delta semantics.** `visibility_delta` carries `target_type`, `target_id`, `appearance_id`, `view_instance_id` (only for `skills_person`, and always the instance the appearance *started* under, even if the live instance has since changed — so a late-draining delta still lands on the instance it actually measured), `v50_ms`/`v70_ms`/`v85_ms`/`v95_ms` as **deltas since the previous materialization** (never lifetime snapshots), `max_visibility_ratio` (not a delta — the current eligible running max), and an optional `properties.trigger_method` (only ever present for `vision_tooltip`; see 17.4). A drain is skipped entirely when it would add zero `v50_ms` (nested thresholds mean any real accounted time implies `v50_ms > 0`), so periodic materialization and state-boundary flushes alike never send zero-time noise.
+
+**Testable seams.** `VisibilityMatrixEngine` takes an injected monotonic clock, `setTimer`/`clearTimer`, `newId`, `emit`, `getState`/`subscribe` (the same shape `semanticState` in `index.ts` exposes), an optional `requestFlush`, and an optional `observeElement` (defaults to a real `IntersectionObserver` at `[0, 0.5, 0.7, 0.85, 0.95, 1]`; tests inject a fake that drives ratios manually, with no DOM/layout engine involved).
+
+**Known limits / assumptions (reported, not silently redefined).**
+- Target connectivity (`Element.isConnected`) is checked at every ratio observation, but nothing observes DOM removal directly (no `MutationObserver`) — acceptable because none of the four target types are ever removed from the DOM in the current UI; a future target family that can unmount mid-session would need that added.
+- The instance-boundary forced end for `skills_person` assumes the real `.side-panel-stack` CSS collapse always accompanies a Skills-instance change (verified by reading `ScrollyRegion.astro`), so a subsequent real re-appearance is never missed. The engine does not independently re-check geometry when eligibility is restored — appearance start is geometry-event-driven only, per section 7's wording ("Starts when target reaches >=50%").
+- "Every genuine Timeline project preview registers correctly" (per-category coverage across Mentor/shared, Mitko-only, Ádám-only work) is verified live (17.5's manual verification), not by a `node:test` unit test — that claim is fundamentally about real Astro-rendered markup across both rendering paths, which the pure-engine unit tests (driven by fake elements) cannot exercise.
+
+### 17.4 Implemented Vision tooltip visibility (step 8 completion)
+
+Source: `src/scripts/vision.client.ts` (announces; stays dependency-free of telemetry, importing only `uiEvents.ts`, same as every other UI script) and `src/scripts/visibility.client.ts` (the only place that listens and drives the engine). Markup: `Vision.astro`'s `.detail` panels (the "tooltip" for each clickable thought-phrase).
+
+**Scope — DEFINITIVE main Vision.** `vision_content` and `vision_tooltip` both refer *only* to the actual main-page Vision: the single `variant="hero"` instance rendered once in `About.astro`. The `preview` variant (`Vision.astro`'s other mode, embeddable inside a Timeline project card via `ProjectDef.showVision`) is not a second Vision occurrence — no current entry in `data/timeline.ts` sets `showVision` (it is currently dead code: the historical Together-Again/project-card Vision copy this once supported was removed from the site), and even if it were used again, it would be that project's own content, not the main Vision. Both target types are gated on `variant === 'hero'` in `Vision.astro`, not merely on "there happens to be only one instance" — so this remains correct even if `showVision` is ever reintroduced.
+
+**Tooltip IDs.** Each of the six tooltips uses the corresponding thought's own stable content id from `data/thoughts.ts` (`in-sync`, `shipped-experiences`, `true-ownership`, `easy-integration`, `complete-development`, `built-to-scale`) — never the scope-prefixed DOM element id (`hero-detail-in-sync`) and never generated/positional/translated-text ids. These ids already existed in the content model for an unrelated reason (building the detail panel's element id and matching the description copy); no data-model change was needed.
+
+**Eligibility.** `vision_tooltip` is owned by `main`, exactly like `vision_content`: it accumulates only while `main` is the current surface, pauses immediately when Skills/Project Detail/Skill Filtered View suspend it, and resumes on the same appearance once `main` is current again (main has no view-instance concept, so no forced end — same as `vision_content`/`timeline_project`).
+
+**Appearance lifecycle — immediate end, not grace-based decay.** `vision.client.ts`'s `closeAll()`/`openDetail()` toggle the `hidden` attribute synchronously (no CSS transition on this element, unlike the Skills panel's animated reveal) — a genuinely discrete, UI-known "this tooltip just stopped being presented" moment. Rather than rely on IntersectionObserver eventually reporting the resulting ratio-0 and waiting out the 300 ms grace, `vision.client.ts` announces `ui:vision-tooltip-hide` (see `uiEvents.ts`) on every real open→closed transition, and `visibility.client.ts` resolves the tooltip id back to its DOM element and calls `engine.endAppearanceNow(el)`, which accounts elapsed time up to now and drains the final delta immediately. This was a deliberate choice beyond "obey the existing 300 ms semantics": an explicit, deliberate UI close is a known fact, not geometric ambiguity, so ending immediately (mirroring the `skills_person` instance-boundary rule) is more accurate than waiting — and it is also a defense against IntersectionObserver delivery itself being delayed or suspended in some hosting/embedding contexts (observed firsthand: a browser tab/pane that is occluded/not being composited can suspend all IntersectionObserver callback delivery, even for a plain, non-animated, on-screen element — see 17.5). `openDetail()`/`closeAll()` announce **only on a genuine closed→open / open→closed transition**, never on a redundant re-entry of an already-active part (e.g. `mouseenter` re-firing) — the existing DOM/animation-retrigger behavior for that case is untouched, but telemetry never sees a spurious flicker.
+
+**Trigger method.** Recorded as `properties.trigger_method` on every `visibility_delta` of the appearance it belongs to (via `engine.setTriggerContext(el, method)`, called right when the UI shows the tooltip; consumed into the appearance when geometry confirms it, cleared when the appearance ends). Only values the DOM event actually exposes are ever used — nothing is guessed:
+- `hover` — a hover-capable device's `mouseenter`.
+- `focus` — the `focus` event opened it. This is deliberately used for BOTH real keyboard Tab focus and a touch tap's first-focus-before-click (browsers fire `focus` before `click` on first tap; `FocusEvent` carries no pointer-type information, so these two cases are genuinely indistinguishable here — recording `touch` for a plain `focus` event would be a guess, which section 17.4 (and the general telemetry principle) forbids).
+- `click` — a `click` event opened it (the hover-device "click just ensures shown" path, or non-hover "tap the active part" path) and the browser did not report `pointerType: 'touch'` on that event.
+- `touch` — a `click` event opened it and `(event as PointerEvent).pointerType === 'touch'` — a real, checkable signal (the same technique `panelToggle.client.ts`'s `clickMethod()` already uses for Skills), not an inference.
+
+If a tooltip is opened by whatever caused a stray IntersectionObserver-only re-observation with no matching `ui:vision-tooltip-show` (shouldn't happen in the current UI, since geometry only ever changes as a direct result of the `hidden` toggle), no `trigger_method` is attached — properties are additive, never invented.
+
+### 17.5 Manual verification (this pass)
+
+Local workflow as in 17.1-17.2. Findings, real D1 rows unless noted:
+
+- **Timeline coverage**: after the `ApartBlock.astro` fix, `document.querySelectorAll('[data-visibility-target-type="timeline_project"]')` returns all 16 current `ProjectDef` entries with correct canonical ids, including `ericsson-consulting` (the one unnamed project) — confirmed live in the rendered DOM.
+- **Semantic state-boundary flush (goal 3) — confirmed live, precisely.** Drove the full boundary sequence from the task (Skills open → close → Project Detail open → close → Skills open → skill click → Skill Filtered View open → close) via real DOM interaction, with **no manual flush trigger** (no tab switch, no 20 s wait) between any of them. Every event — `skills_open`, `skills_close`, `project_open`, `project_close`, `skills_open`, `skill_click`, `skill_filter_open`, `skills_lock`, `skill_filter_close` — landed in local D1 within roughly a second of the interaction that caused it, each still in the exact order performed. This is direct, live confirmation that `requestFlush()` (wired to `client.ts`'s non-lifecycle `safeFlush(false)`) fires on every real surface transition and is not waiting on the periodic safety flush.
+- **Vision tooltip UI wiring (goal 5) — confirmed live at the DOM/event level.** With listeners attached for `ui:vision-tooltip-show`/`-hide`, real DOM events produced exactly the expected announcements: hovering the first thought-phrase → `{tooltipId: 'in-sync', method: 'hover'}`; moving the pointer off the Vision root → `{tooltipId: 'in-sync'}` (hide); a plain `click` (no pointer type) on a second phrase → `{tooltipId: 'shipped-experiences', method: 'click'}` (not `'touch'`, correctly, since no pointer type was reported). Canonical ids are confirmed to be the thought content ids, not DOM ids.
+- **`max_visibility_ratio` eligibility (goal 2) and the tooltip appearance/threshold pipeline downstream of geometry** were **not** re-confirmed with fresh live `visibility_delta` rows in this pass — see the concern below. They are covered by 15 new deterministic unit tests (`test/visibility.test.ts`) exercising the exact same code paths, and by this session's earlier live confirmation (same underlying `account()`/suspend/resume machinery, millisecond-exact: a `timeline_project` delta of `4397 ms` against an expected `19991 − 15595 = 4396 ms` eligible span across a Skills suspension).
+- **Concern — this tool's Browser pane stopped delivering IntersectionObserver callbacks partway through this session.** Diagnosed directly: a bare, code-free `new IntersectionObserver(...)` attached to a genuinely on-screen, non-zero-size element delivered **zero** callbacks — not even the guaranteed initial one — while the desktop app's Browser pane was in its "currently hidden" (not composited) state, which is how it stayed for the remainder of this session (a state that comes from the app's own UI not currently displaying that pane to the user — it fluctuates over a long session and is outside the agent's control). This blocked fresh live proof of any *new* geometry-driven appearance start (including for the pre-existing `timeline_project`/`skills_person` targets, not just the new `vision_tooltip`/eligibility work) — it did not block anything that doesn't depend on a fresh IntersectionObserver delivery, which is why the semantic-boundary-flush and tooltip-announcement checks above still worked cleanly.
+- Also observed: a stray, much older local session was still flushing in the background for most of this pass (its own `visibility_delta` rows for `kreator-project`/`biobot`/`mentor` at 600+ seconds of elapsed time appeared mixed into the raw event stream), and the Worker briefly logged a 409 and a 500 under the resulting concurrent-write load. This reads as a leftover browser tab/session from earlier in the overall working session — filtering by `session_id` isolated this pass's own data cleanly, and it is not related to the code changed here. Worth mentioning in case a stray tab against `localhost:4321` is still open.
+
 ## 18. Derived analysis (not browser events)
 
 Examples:
@@ -858,10 +950,10 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 4. Implement minimal client session + transport. (Done: section 17.1.)
 5. Prove end-to-end pipeline with a few explicit events.
 6. Add semantic state coordinator. (Done: section 17.2.)
-7. Add Visibility Matrix engine and appearance tracking.
-8. Instrument Vision.
-9. Instrument Skills/person exposure.
-10. Instrument Timeline project previews.
+7. Add Visibility Matrix engine and appearance tracking. (Done: section 17.3 — engine, semantic state-boundary flush, eligibility-aware `max_visibility_ratio`, full Timeline preview coverage, `vision_content`/`vision_tooltip`/`timeline_project`/`skills_person`.)
+8. Instrument Vision. (Done: section 17.4 — `vision_content` scope made definitive, `vision_tooltip` added with canonical ids/trigger method/immediate-end semantics.)
+9. Instrument Skills/person exposure. (Done as part of step 7: `skills_person`.)
+10. Instrument Timeline project previews. (Done as part of step 7: `timeline_project`.)
 11. Instrument Project Detail and Filtered View through shared ProjectDetail semantics.
 12. Instrument Contact/CV/LinkedIn/email/navbar interactions.
 13. Add video playback-duration enrichment where reliably available.

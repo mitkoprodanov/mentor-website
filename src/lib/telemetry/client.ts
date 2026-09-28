@@ -4,8 +4,10 @@
 import type { TelemetryConfig } from './config.ts';
 import { browserClock, EventQueue } from './queue.ts';
 import { browserSessionEnv, buildSessionContext, randomId } from './session.ts';
+import type { SemanticState } from './state.ts';
 import { Transport } from './transport.ts';
 import type { EmitOptions } from './types.ts';
+import { VisibilityMatrixEngine } from './visibility.ts';
 import { ViewportTracker } from './viewport.ts';
 
 /** Periodic safety flush while the page is visible. */
@@ -16,9 +18,21 @@ const INITIAL_FLUSH_DELAY_MS = 1_500;
 export interface TelemetryClient {
 	emit(eventType: string, opts?: EmitOptions): void;
 	flush(): Promise<void>;
+	/** Registers a DOM element for Visibility Matrix accounting. See visibility.ts. */
+	observeVisibility(el: Element, targetType: string, targetId: string): void;
+	/** Objective trigger context for the next appearance on `el` (e.g. a Vision tooltip's hover/focus/click/touch). */
+	setVisibilityTriggerContext(el: Element, method: string | undefined): void;
+	/** Ends `el`'s active appearance immediately, without waiting on geometry. */
+	endVisibilityAppearance(el: Element): void;
 }
 
-export function startClient(config: TelemetryConfig): TelemetryClient | null {
+/** Read-only semantic state access this client needs — exactly what `semanticState` (index.ts) exposes. */
+export interface SemanticStateReader {
+	get(): SemanticState;
+	subscribe(listener: (s: SemanticState) => void): () => void;
+}
+
+export function startClient(config: TelemetryConfig, semantic: SemanticStateReader): TelemetryClient | null {
 	try {
 		const sessionId = randomId();
 		if (!sessionId) return null; // no secure randomness: stay off
@@ -49,6 +63,25 @@ export function startClient(config: TelemetryConfig): TelemetryClient | null {
 		queue.emit('session_start');
 		log('session started', session);
 
+		// Forward-declared: the engine's requestFlush closes over this and only
+		// calls it later (in response to a real semantic transition), by which
+		// point it is assigned below — see the "Semantic state-boundary flush"
+		// integration point.
+		let safeFlush: (lifecycle: boolean) => Promise<void>;
+
+		const visibility = new VisibilityMatrixEngine({
+			clock: browserClock,
+			setTimer: (fn, ms) => setTimeout(fn, ms),
+			clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+			newId: randomId,
+			emit: (type, opts) => queue.emit(type, opts),
+			getState: () => semantic.get(),
+			subscribe: (fn) => semantic.subscribe(fn),
+			requestFlush: () => {
+				void safeFlush(false);
+			},
+		});
+
 		const viewport = new ViewportTracker(
 			session.viewport_width !== undefined && session.viewport_height !== undefined
 				? { width: session.viewport_width, height: session.viewport_height }
@@ -74,7 +107,18 @@ export function startClient(config: TelemetryConfig): TelemetryClient | null {
 			}
 		});
 
-		const safeFlush = (lifecycle: boolean): Promise<void> => {
+		safeFlush = (lifecycle: boolean): Promise<void> => {
+			// Integration point (docs section "Flush integration"): account
+			// visibility through now and materialize unsent deltas into the queue
+			// BEFORE the transport captures its batch, for every flush path
+			// (periodic, lifecycle hidden/pagehide) — otherwise a delta produced
+			// after the batch was captured would wait for a later flush and could
+			// be lost on page exit.
+			try {
+				visibility.materialize();
+			} catch {
+				/* never affect the site */
+			}
 			if (lifecycle) {
 				// Finalize any pending resize so it is queued before the flush.
 				try {
@@ -98,8 +142,21 @@ export function startClient(config: TelemetryConfig): TelemetryClient | null {
 		document.addEventListener('visibilitychange', () => {
 			if (document.visibilityState === 'hidden') {
 				stopTimer(); // no periodic work while hidden
+				// Account through the hide instant and stop counting (docs section
+				// "Document visibility"); safeFlush's own materialize() call just
+				// after this drains whatever that accounted, so nothing is lost.
+				try {
+					visibility.pause();
+				} catch {
+					/* never affect the site */
+				}
 				void safeFlush(true);
 			} else {
+				try {
+					visibility.resume();
+				} catch {
+					/* never affect the site */
+				}
 				startTimer();
 			}
 		});
@@ -122,6 +179,27 @@ export function startClient(config: TelemetryConfig): TelemetryClient | null {
 				}
 			},
 			flush: () => safeFlush(false),
+			observeVisibility(el, targetType, targetId) {
+				try {
+					visibility.observe(el, targetType, targetId);
+				} catch {
+					/* never affect the site */
+				}
+			},
+			setVisibilityTriggerContext(el, method) {
+				try {
+					visibility.setTriggerContext(el, method);
+				} catch {
+					/* never affect the site */
+				}
+			},
+			endVisibilityAppearance(el) {
+				try {
+					visibility.endAppearanceNow(el);
+				} catch {
+					/* never affect the site */
+				}
+			},
 		};
 	} catch {
 		return null;

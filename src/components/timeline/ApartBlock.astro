@@ -204,9 +204,18 @@ const tracks = await Promise.all(
 							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
 						</div>
 						<div class="track-projects">
+							{/* Visibility Matrix (docs/telemetry.md sections 6/8/17.3): this
+							    is the OTHER rendering path for a genuine Timeline project
+							    preview — every apart-track project (Mitko-only, Ádám-only, or
+							    Mentor-era solo work) renders here rather than through
+							    ProjectRow.astro, so it needs the same instrumentation,
+							    unconditionally (not gated on project.name — see Ericsson
+							    Hungary's unnamed single-project company). */}
 							{projects.map(({ project, cards, modalId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
 								class="track-row"
+								data-visibility-target-type="timeline_project"
+								data-visibility-target-id={project.modalId ?? project.id}
 								class:list={{
 									'track-row--boxed': Boolean(project.name),
 									'btn-sheen': Boolean(project.name),

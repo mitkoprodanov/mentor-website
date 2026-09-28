@@ -104,7 +104,11 @@ const adam = getPerson('adam');
 									</div>
 								</div>
 							</div>
-							<div class="side-panel-stack">
+							<div
+								class="side-panel-stack"
+								data-visibility-target-type="skills_person"
+								data-visibility-target-id={entry.person.id}
+							>
 								<PersonCard person={entry.person} />
 							</div>
 							<div class="card-filter" hidden>

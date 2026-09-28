@@ -68,14 +68,33 @@ const leftIds  = ['in-sync', 'easy-integration', 'complete-development'];
 const rightIds = ['shipped-experiences', 'true-ownership', 'built-to-scale'];
 
 const detailId = (id: string) => `${scopeId}-detail-${id}`;
+
+/**
+ * Visibility Matrix scope (docs/telemetry.md sections 6/8/17.3-17.4) —
+ * DEFINITIVE: `vision_content`/`vision_tooltip` refer only to the actual
+ * main-page Vision, i.e. this component's `hero` instance (rendered once, in
+ * About.astro). The `preview` variant is not a second Vision occurrence to
+ * instrument — no data currently renders it (`ProjectDef.showVision` is never
+ * set), and even if it were, it would be that project's own content, not the
+ * main Vision. Both target types are gated on `variant === 'hero'` for this
+ * reason, not merely because "there happens to be only one instance".
+ */
+const isMainVision = variant === 'hero';
+const contentAttrs = isMainVision
+	? { 'data-visibility-target-type': 'vision_content', 'data-visibility-target-id': 'vision' }
+	: {};
+/** Each tooltip's canonical id is the thought's own stable content id
+ *  (data/thoughts.ts) — never the scope-prefixed DOM element id. */
+const tooltipAttrs = (id: string) =>
+	isMainVision ? { 'data-visibility-target-type': 'vision_tooltip', 'data-visibility-target-id': id } : {};
 ---
 
-<div class:list={['vision', 'thought-sentence', `vision--${variant}`]}>
+<div class:list={['vision', 'thought-sentence', `vision--${variant}`]} {...contentAttrs}>
 	{/* Left detail panel — shown to the left of the sentence on wide screens (hero variant). */}
 	<div class="sentence-detail detail-left" aria-live="polite">
 		{
 			leftIds.map((id) => (
-				<div class="detail" id={detailId(id)} data-detail hidden>
+				<div class="detail" id={detailId(id)} data-detail hidden {...tooltipAttrs(id)}>
 					<span class="detail-title">{labelFor[id]}</span>
 					<span class="detail-text">{byId[id].description}</span>
 				</div>
@@ -95,6 +114,7 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 						class="part btn-sheen"
 						type="button"
 						data-thought-part
+						data-thought-id={seg.id}
 						data-side={seg.side}
 						aria-expanded="false"
 						aria-controls={detailId(seg.id)}
@@ -110,7 +130,7 @@ const detailId = (id: string) => `${scopeId}-detail-${id}`;
 	<div class="sentence-detail detail-right" aria-live="polite">
 		{
 			rightIds.map((id) => (
-				<div class="detail" id={detailId(id)} data-detail hidden>
+				<div class="detail" id={detailId(id)} data-detail hidden {...tooltipAttrs(id)}>
 					<span class="detail-title">{labelFor[id]}</span>
 					<span class="detail-text">{byId[id].description}</span>
 				</div>

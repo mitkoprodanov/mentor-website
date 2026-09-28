@@ -42,7 +42,13 @@ export interface TelemetryEvent {
 	event_type: string;
 	target_type?: string;
 	target_id?: string;
+	appearance_id?: string;
 	view_instance_id?: string;
+	v50_ms?: number;
+	v70_ms?: number;
+	v85_ms?: number;
+	v95_ms?: number;
+	max_visibility_ratio?: number;
 	properties?: Record<string, PropertyValue>;
 }
 
@@ -54,7 +60,14 @@ export interface Batch {
 export interface EmitOptions {
 	target_type?: string;
 	target_id?: string;
-	/** Groups the events (later, visibility deltas) of one blocking-view instance. */
+	/** Groups the events of one blocking-view instance (Skills/Project Detail/Skill Filtered View). */
 	view_instance_id?: string;
+	/** Identifies one continuous visibility appearance (`visibility_delta` only). See visibility.ts. */
+	appearance_id?: string;
+	v50_ms?: number;
+	v70_ms?: number;
+	v85_ms?: number;
+	v95_ms?: number;
+	max_visibility_ratio?: number;
 	properties?: Record<string, PropertyValue>;
 }

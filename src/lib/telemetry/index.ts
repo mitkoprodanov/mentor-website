@@ -50,7 +50,7 @@ export function initTelemetry(): void {
 			search: location.search,
 			siteVersion: typeof __SITE_VERSION__ === 'string' ? __SITE_VERSION__ : undefined,
 		});
-		if (config.enabled) client = startClient(config);
+		if (config.enabled) client = startClient(config, semanticState);
 	} catch {
 		client = null;
 	}
@@ -63,6 +63,21 @@ export const telemetry = {
 	/** Best-effort immediate send of anything queued. Never rejects. */
 	flush(): Promise<void> {
 		return client ? client.flush() : Promise.resolve();
+	},
+	/** Registers a DOM element for Visibility Matrix accounting (`visibility_delta`).
+	 *  A silent no-op until initTelemetry() has run, or whenever telemetry is disabled. */
+	observeVisibility(el: Element, targetType: string, targetId: string): void {
+		client?.observeVisibility(el, targetType, targetId);
+	},
+	/** Objective trigger context (e.g. hover/focus/click/touch) for the next
+	 *  appearance on `el` — call right when the caller's own UI shows it. */
+	setVisibilityTriggerContext(el: Element, method: string | undefined): void {
+		client?.setVisibilityTriggerContext(el, method);
+	},
+	/** Ends `el`'s active Visibility Matrix appearance immediately, for a
+	 *  target whose own UI knows precisely when it stopped being presented. */
+	endVisibilityAppearance(el: Element): void {
+		client?.endVisibilityAppearance(el);
 	},
 };
 

@@ -69,6 +69,12 @@ export class EventQueue {
 			ev.target_id = opts.target_id;
 		}
 		if (opts.view_instance_id) ev.view_instance_id = opts.view_instance_id;
+		if (opts.appearance_id) ev.appearance_id = opts.appearance_id;
+		if (opts.v50_ms !== undefined) ev.v50_ms = opts.v50_ms;
+		if (opts.v70_ms !== undefined) ev.v70_ms = opts.v70_ms;
+		if (opts.v85_ms !== undefined) ev.v85_ms = opts.v85_ms;
+		if (opts.v95_ms !== undefined) ev.v95_ms = opts.v95_ms;
+		if (opts.max_visibility_ratio !== undefined) ev.max_visibility_ratio = opts.max_visibility_ratio;
 		if (opts.properties) ev.properties = opts.properties;
 		this.items.push(ev);
 		return ev;
