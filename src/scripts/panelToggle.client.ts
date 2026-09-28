@@ -13,6 +13,16 @@
  * leaves and returns (a fresh hover), the way the user asked. To change the
  * filter you hover back in for the skills, click the active tag/pill, or clear
  * it (chip ✕, Escape, or an outside click — see filterModal.client.ts).
+ *
+ * Reveal semantics for telemetry (see docs/telemetry.md section 4.3/11):
+ * Skills visibility is `hovered || focused || locked`. Keyboard focus landing
+ * anywhere in the bar reveals it via CSS `:focus-within` (see ScrollyRegion.astro)
+ * independently of the `.reveal`/`.is-open` classes below — so `focusReason` is
+ * tracked here too, and `showReveal`/`hideReveal` are only actually invoked (and
+ * `skills-open`/`skills-close` only actually announced) once ALL of hover,
+ * focus and lock agree the panel should be open or closed. That keeps the
+ * visible UI and the announced semantic state from disagreeing, without ever
+ * removing the `:focus-within` CSS itself.
  */
 
 import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
@@ -65,6 +75,22 @@ let suppressed = false;
 // one unit, so this locks/reveals both. Cleared by clicking Skills again, an
 // outside click, selecting a filter tag, or Escape.
 let locked = false;
+
+// Keyboard focus anywhere in the bar (see the focusin/focusout listeners
+// below) is a reveal reason of its own, tracked independently of hover so a
+// pointer leaving doesn't collapse a card that is still keyboard-focused, and
+// vice versa. Only `hoverMQ`-matching (hover+fine-pointer) devices track it —
+// touch has no keyboard-focus reveal path (see ScrollyRegion.astro's own
+// `(hover: hover) and (pointer: fine)` gate on the `:focus-within` CSS).
+let focusReason = false;
+
+// A force-close path (outside click, Escape) is about to blur whatever is
+// focused inside the bar itself, purely to defeat `:focus-within` — that is
+// not a genuine "focus left the bar" transition, it is a side effect of a
+// close this same code path is already announcing with its own real reason.
+// Without this guard the resulting `focusout` would race that announce and
+// steal the close reason (see the focusout handler below).
+let suppressFocusClose = false;
 
 function unlock(): void {
 	locked = false;
@@ -157,12 +183,46 @@ if (bar) {
 			// :hover reflects where it went: collapse only if it isn't over the
 			// other card either (moving into the centre over the timeline hides;
 			// moving between the two cards keeps both open).
-			if (!anyCardHovered()) {
-				hideReveal();
-				suppressed = false;
-				announce(UI_EVENT.skillsClose, { reason: 'hover_leave' });
-			}
+			if (anyCardHovered()) return;
+			// Keyboard focus is still in the bar: stays revealed (matches
+			// :focus-within) — only the hover reveal reason went away.
+			if (focusReason) return;
+			hideReveal();
+			suppressed = false;
+			announce(UI_EVENT.skillsClose, { reason: 'hover_leave' });
 		});
+	});
+}
+
+/**
+ * Keyboard focus reveal, mirroring hover: CSS already expands the skills
+ * stack via `:focus-within` on `.person-bar-inner` (see ScrollyRegion.astro)
+ * whenever anything in the bar has focus — Tab reaches the always-visible
+ * Skills toggle/CV controls first, then (now visually revealed) the skill
+ * tags themselves. `focusout`'s `relatedTarget` is the element about to
+ * receive focus, so Tab between two elements that are both still inside the
+ * bar is recognised as "focus stayed in the bar", not a leave/re-enter.
+ */
+if (bar) {
+	bar.addEventListener('focusin', () => {
+		if (!hoverMQ.matches) return;
+		focusReason = true;
+		const wasRevealed = bar.classList.contains('reveal');
+		showReveal();
+		if (!wasRevealed) {
+			announce(UI_EVENT.skillsOpen, { person: personOf(document.activeElement), method: 'focus', locked: false });
+		}
+	});
+	bar.addEventListener('focusout', (event) => {
+		if (!hoverMQ.matches) return;
+		const related = (event as FocusEvent).relatedTarget as Node | null;
+		if (related && bar.contains(related)) return; // focus moved to another element still inside the bar
+		focusReason = false;
+		if (suppressFocusClose) return; // a force-close path is already announcing its own close reason
+		if (locked || anyCardHovered()) return; // another reason still holds it open
+		hideReveal();
+		suppressed = false;
+		announce(UI_EVENT.skillsClose, { reason: 'focus_leave' });
 	});
 }
 
@@ -265,16 +325,24 @@ document.addEventListener('click', (event) => {
 				announce(UI_EVENT.skillsOpen, { person: who, method: clickMethod(event), locked: true });
 			} else {
 				bar?.classList.remove('locked');
-				// Pressing Skills is an explicit close intent — force-collapse
-				// regardless of whether the pointer is still over the card, and
-				// suppress hover re-open until the pointer leaves and comes back.
-				bar?.classList.remove('reveal');
-				blurInsideBar();
-				suppressed = true;
-				closeAll();
-				syncBodyScrollLock();
 				announce(UI_EVENT.skillsUnlock, { person: who });
-				announce(UI_EVENT.skillsClose, { reason: 'explicit', person: who });
+				// Unlocking removes the lock reveal reason, but hover or keyboard focus
+				// may still be holding the panel open (e.g. the pointer is still over
+				// the card, or focus never left it) — in that case it only stops being
+				// locked, it does not collapse. The coordinator makes the same call
+				// from the same skills-unlock, so the announced semantic state and
+				// this visible behavior agree.
+				if (anyCardHovered() || focusReason) {
+					syncBodyScrollLock();
+				} else {
+					// Neither reason remains: an explicit close intent — force-collapse
+					// and suppress hover re-open until the pointer leaves and comes back.
+					bar?.classList.remove('reveal');
+					blurInsideBar();
+					suppressed = true;
+					closeAll();
+					syncBodyScrollLock();
+				}
 			}
 			return;
 		}
@@ -331,7 +399,10 @@ document.addEventListener('click', (event) => {
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
+		suppressFocusClose = true;
 		blurInsideBar();
+		suppressFocusClose = false;
+		focusReason = false;
 		suppressed = false;
 		syncBodyScrollLock();
 		announce(UI_EVENT.skillsClose, { reason: target.closest('.navbar') ? 'navigation' : 'outside' });
@@ -344,7 +415,10 @@ document.addEventListener('keydown', (event) => {
 		unlock();
 		closeAll();
 		bar?.classList.remove('reveal');
+		suppressFocusClose = true;
 		blurInsideBar();
+		suppressFocusClose = false;
+		focusReason = false;
 		suppressed = false;
 		syncBodyScrollLock();
 		announce(UI_EVENT.skillsClose, { reason: 'escape' });

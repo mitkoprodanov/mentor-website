@@ -17,7 +17,11 @@
 import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
 
 /** Why the dialog is closing, set by the code path that closes it (telemetry
- *  only). Native Escape has no click path, so it is recorded from `cancel`. */
+ *  only). The native `<dialog>` `cancel` event (Escape, or another platform
+ *  cancellation such as a back gesture) has no click path, so it is recorded
+ *  as `cancel` directly from that event — deliberately not "escape", since we
+ *  only know the browser/platform cancelled the dialog, not which physical
+ *  input triggered it. */
 let pendingCloseReason: string | undefined;
 
 function syncScrollLock(): void {
@@ -479,7 +483,7 @@ function init(): void {
 			}
 		});
 		dialog.addEventListener('cancel', () => {
-			pendingCloseReason = 'escape';
+			pendingCloseReason = 'cancel';
 		});
 
 		observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });

@@ -12,6 +12,16 @@
 // targets whose owning surface is the current one. Closing a blocking view
 // restores whatever was beneath it (skills if it is still up, else main).
 //
+// Skills visibility is conceptually `hovered || focused || locked`: the UI can
+// hold a Skills reveal open for more than one reason at once (e.g. hovering a
+// card that is also keyboard-focused), and it only actually closes once every
+// reason is gone. `SkillsLayer` tracks each reason as its own flag rather than
+// a single mode, so `skillsOpen`/`skillsClose` calls that add or remove one
+// reason don't emit a spurious open/close pair while another reason still
+// holds the reveal open — the UI announces each reason's own enter/leave
+// (`method`/`reason` says which one), and this module decides whether that
+// changes what is actually presented.
+//
 // All emission goes through the injected `emit` (the telemetry client's
 // queue). Emit failures are swallowed; state is updated before emitting.
 
@@ -58,7 +68,7 @@ export interface StateDeps {
 const TARGET_ID_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
 const TOKEN_RE = /^[a-z][a-z0-9_]{0,39}$/;
 const PEOPLE = new Set(['mitko', 'adam']);
-const METHODS = new Set(['hover', 'mouse', 'touch', 'pen', 'keyboard']);
+const METHODS = new Set(['hover', 'focus', 'mouse', 'touch', 'pen', 'keyboard']);
 
 const validId = (v: unknown): string | null =>
 	typeof v === 'string' && TARGET_ID_RE.test(v) ? v : null;
@@ -74,8 +84,12 @@ function props(o: Record<string, PropertyValue | undefined>): Record<string, Pro
 }
 
 interface SkillsLayer {
-	mode: SkillsMode;
+	/** Independent reveal reasons; the layer exists as long as any is true. */
+	hover: boolean;
+	focus: boolean;
+	locked: boolean;
 	person: string | null;
+	/** The method of whichever reason caused the *announced* open (for trigger_method). */
 	method: string | null;
 	instanceId: string | null;
 	/** skills_open has been emitted. False while the layer was raised beneath a
@@ -106,7 +120,7 @@ export class SemanticStateCoordinator {
 			surface,
 			projectId: b?.kind === 'project' ? b.projectId : null,
 			skillId: b?.kind === 'filter' ? b.skillId : null,
-			skillsMode: this.skills?.mode ?? null,
+			skillsMode: this.skills ? (this.skills.locked ? 'locked' : 'hover') : null,
 			viewInstanceId: b ? b.instanceId : this.skills ? this.skills.instanceId : null,
 			underlying: this.skills ? 'skills' : 'main',
 			navbarAvailable: surface === 'main' || surface === 'skills',
@@ -127,26 +141,41 @@ export class SemanticStateCoordinator {
 
 	skillsOpen(d: SkillsOpenDetail): void {
 		const wantLocked = d.locked === true;
+		const method = METHODS.has(d.method ?? '') ? (d.method as string) : null;
 		if (this.skills) {
 			// Already up (e.g. hovered): a click that locks it is a lock, not a second open.
-			if (wantLocked) this.skillsLock({ person: d.person });
+			if (wantLocked) {
+				this.skillsLock({ person: d.person });
+				return;
+			}
+			// Another reason joining an already-presented (or still-suspended) layer:
+			// mark it, but nothing about what is presented changes, so no re-announce.
+			if (method === 'focus') this.skills.focus = true;
+			else this.skills.hover = true;
 			return;
 		}
-		this.skills = {
-			mode: wantLocked ? 'locked' : 'hover',
+		const layer: SkillsLayer = {
+			hover: false,
+			focus: false,
+			locked: wantLocked,
 			person: person(d.person),
-			method: METHODS.has(d.method ?? '') ? (d.method as string) : null,
+			method,
 			instanceId: null,
 			announced: false,
 		};
+		if (!wantLocked) {
+			if (method === 'focus') layer.focus = true;
+			else layer.hover = true;
+		}
+		this.skills = layer;
 		if (!this.blocking) this.announceSkills();
 		this.notify();
 	}
 
 	skillsLock(d: SkillsLockDetail): void {
 		const s = this.skills;
-		if (!s || s.mode === 'locked') return;
-		s.mode = 'locked';
+		if (!s || s.locked) return;
+		s.locked = true;
 		if (s.announced) {
 			this.emit('skills_lock', {
 				view_instance_id: s.instanceId ?? undefined,
@@ -158,29 +187,53 @@ export class SemanticStateCoordinator {
 
 	skillsUnlock(d: SkillsUnlockDetail): void {
 		const s = this.skills;
-		if (!s || s.mode !== 'locked') return;
-		s.mode = 'hover';
+		if (!s || !s.locked) return;
+		s.locked = false;
 		if (s.announced) {
 			this.emit('skills_unlock', {
 				view_instance_id: s.instanceId ?? undefined,
 				properties: props({ trigger_person: person(d.person) }),
 			});
 		}
-		this.notify();
-	}
-
-	skillsClose(d: SkillsCloseDetail): void {
-		const s = this.skills;
-		if (!s) return;
+		if (s.hover || s.focus) {
+			// Hover or focus is still keeping it revealed: unlocked, not closed.
+			this.notify();
+			return;
+		}
+		// Locked was the last reveal reason: unlocking closes it too.
 		this.skills = null;
 		if (s.announced) {
 			this.emit('skills_close', {
 				view_instance_id: s.instanceId ?? undefined,
-				properties: props({
-					reason: token(d.reason),
-					locked: s.mode === 'locked',
-					trigger_person: person(d.person),
-				}),
+				properties: props({ reason: 'explicit', locked: false, trigger_person: person(d.person) }),
+			});
+		}
+		this.notify();
+	}
+
+	/** `d.reason` says which single reveal reason just went away: `hover_leave`
+	 *  and `focus_leave` clear exactly that one (the layer stays up, unannounced,
+	 *  if another reason remains). Any other reason (explicit/outside/escape/
+	 *  navigation/superseded/unknown) is a deliberate close-everything signal
+	 *  and clears all reasons regardless of which ones were still active. */
+	skillsClose(d: SkillsCloseDetail): void {
+		const s = this.skills;
+		if (!s) return;
+		const reason = token(d.reason);
+		const wasLocked = s.locked;
+		if (reason === 'hover_leave') s.hover = false;
+		else if (reason === 'focus_leave') s.focus = false;
+		else {
+			s.hover = false;
+			s.focus = false;
+			s.locked = false;
+		}
+		if (s.hover || s.focus || s.locked) return; // another reason still holds it open
+		this.skills = null;
+		if (s.announced) {
+			this.emit('skills_close', {
+				view_instance_id: s.instanceId ?? undefined,
+				properties: props({ reason, locked: wasLocked, trigger_person: person(d.person) }),
 			});
 		}
 		this.notify();
@@ -196,7 +249,7 @@ export class SemanticStateCoordinator {
 			properties: props({
 				trigger_person: s.person,
 				trigger_method: s.method,
-				locked: s.mode === 'locked',
+				locked: s.locked,
 			}),
 		});
 	}

@@ -144,7 +144,7 @@ Do not emit `person_open` or `person_close`.
 
 The two cards form one paired Skills unit. Triggering either person's Skills reveals both people's Skills.
 
-Desktop hover can reveal Skills transiently. Clicking Skills can lock the paired reveal. Touch opens/closes both cards together.
+Desktop hover or keyboard focus can each reveal Skills transiently, independently of one another; either (or both) can be true at once, and the reveal only ends once neither remains. Clicking Skills can lock the paired reveal. Touch opens/closes both cards together.
 
 While Skills is active:
 
@@ -321,19 +321,20 @@ The vocabulary may be normalized during implementation if multiple names are bet
 
 `skills_open` should include:
 - `trigger_person: mitko | adam`
-- `trigger_method: hover | mouse | touch | pen | keyboard` as actually knowable
+- `trigger_method: hover | focus | mouse | touch | pen | keyboard` as actually knowable
 - initial lock state
 
-A deliberate desktop click that changes an already-hovered presentation into persistent locked state should be represented as a lock transition rather than a second open.
+Skills visibility is conceptually `hovered || focused || locked`: hover, keyboard focus and the explicit lock are independent reveal reasons, and more than one can hold the same presentation open at once (e.g. a card that is both hovered and keyboard-focused). `skills_open` fires on the closed → open transition regardless of which reason caused it; a reason joining an already-open presentation (hover arriving while it is open from focus, or vice versa) must not emit a second open. A deliberate desktop click that changes an already-hovered/focused presentation into persistent locked state should be represented as a lock transition rather than a second open.
 
 `skills_close` should record the actual code path, such as:
 - `hover_leave`
+- `focus_leave`
 - `explicit`
 - `outside`
 - `escape`
 - `navigation`
 
-Only include `trigger_person` when a person's control actually caused the close.
+`hover_leave` and `focus_leave` each clear only their own reveal reason — Skills stays open, unannounced, while hover, focus or lock still holds it, and closes only once none remain (so it stays open while hover leaves but focus remains, while focus leaves but hover remains, or while locked regardless of hover/focus). Any other reason is a deliberate close-everything signal. Unlocking (`skills_unlock`) behaves the same way: it only actually closes Skills if neither hover nor focus is still holding it open. Only include `trigger_person` when a person's control actually caused the close.
 
 ### Skills/tags
 
@@ -737,7 +738,7 @@ Source: `src/lib/telemetry/state.ts` and `uiEvents.ts`; tests in `test/state.tes
 | `surface` | current surface |
 | `projectId` | canonical project ID while `project_modal` |
 | `skillId` | canonical skill/tag ID while `skill_filtered` |
-| `skillsMode` | `hover` / `locked` whenever a Skills layer is up (also while suspended); else null |
+| `skillsMode` | `locked` whenever the lock reveal reason is active, else `hover` (covers hover-only, focus-only, or both) whenever a Skills layer is up (also while suspended); else null |
 | `viewInstanceId` | instance ID of the current blocking surface; null on `main` |
 | `underlying` | `main` / `skills`: what the surface becomes if the current blocking view closes |
 | `navbarAvailable` | true on `main` and `skills`; false on `project_modal` and `skill_filtered` |
@@ -749,9 +750,11 @@ Source: `src/lib/telemetry/state.ts` and `uiEvents.ts`; tests in `test/state.tes
 | UI code | Announces |
 |---|---|
 | `panelToggle.client.ts` card `pointerenter` (not already revealed) | `skills-open` (hover) |
-| card `pointerleave`, pointer off both cards | `skills-close` `hover_leave` |
-| Skills button, desktop, becomes locked | `skills-open` locked (a lock if already hovered open) |
-| Skills button, desktop, unlocked again | `skills-unlock` then `skills-close` `explicit` |
+| card `pointerleave`, pointer off both cards and focus not holding it open | `skills-close` `hover_leave` |
+| `.person-bar-inner` `focusin` (not already revealed) | `skills-open` (focus) |
+| `.person-bar-inner` `focusout` past its last element (`relatedTarget` outside the bar), not locked and not hovered | `skills-close` `focus_leave` |
+| Skills button, desktop, becomes locked | `skills-open` locked (a lock if already hovered/focused open) |
+| Skills button, desktop, unlocked again | `skills-unlock`; only also collapses/`skills-close` `explicit` if neither hover nor focus still holds it open |
 | Skills button, touch | open (locked) / close `explicit` |
 | skill tag or filter pill click (desktop; auto-locks) | `skills-lock` (`cause`: `skill_click` / `filter_pill`) |
 | click outside the cards | `skills-close` `outside` (`navigation` if the click was in the navbar) |
@@ -765,15 +768,15 @@ Source: `src/lib/telemetry/state.ts` and `uiEvents.ts`; tests in `test/state.tes
 
 | Event | target | `view_instance_id` | properties |
 |---|---|---|---|
-| `skills_open` | none | new Skills instance | `trigger_person` (mitko/adam), `trigger_method` (hover/mouse/touch/pen/keyboard), `locked` |
+| `skills_open` | none | new Skills instance | `trigger_person` (mitko/adam), `trigger_method` (hover/focus/mouse/touch/pen/keyboard), `locked` |
 | `skills_lock` | none | Skills instance | optional `trigger_person`, `cause` |
-| `skills_unlock` | none | Skills instance | optional `trigger_person` |
-| `skills_close` | none | Skills instance | `reason` (hover_leave / explicit / outside / escape / navigation), `locked` (was locked), `trigger_person` only for the explicit toggle |
+| `skills_unlock` | none | Skills instance | optional `trigger_person`; also carries an immediate `skills_close` (`explicit`) if that was the last reveal reason |
+| `skills_close` | none | Skills instance | `reason` (hover_leave / focus_leave / explicit / outside / escape / navigation), `locked` (was locked), `trigger_person` only for the explicit toggle |
 | `skill_click` | `skill` : tag ID | current Skills instance if any | `trigger_person` (owner of the clicked card) |
 | `skill_filter_open` | `skill` : tag ID | new filter instance | none |
 | `skill_filter_close` | `skill` : tag ID | that filter instance | `reason` |
 | `project_open` | `project` : canonical ID | new project instance | none |
-| `project_close` | `project` : canonical ID | that project instance | `reason` (explicit / backdrop / escape) |
+| `project_close` | `project` : canonical ID | that project instance | `reason` (explicit / backdrop / cancel) |
 
 Properties whose value the code cannot determine are omitted, never guessed. `trigger_person` on Skills means who caused the transition, not whose skills were viewed (both are always shown). Ordering within one click is by queue order; `elapsed_ms` can tie.
 
@@ -785,22 +788,25 @@ Properties whose value the code cannot determine are omitted, never guessed. `tr
 - Skills is announced only when actually presented. If the UI raises the Skills class while a blocking view is up (e.g. hovering a person card in a project dialog, where CSS keeps the panel collapsed), the layer is remembered silently; if it is still up when the blocking view closes, `skills_open` is emitted then; if it went away first, no open/close pair is emitted.
 - A click that both dismisses Skills and opens a project ends the same way in either listener order: `project_modal`, then `main` on close.
 - A blocking open while another blocking view is up closes the first (reason `superseded`); unreachable in the current UI.
-- Duplicate callbacks (repeated `pointerenter`, a second outside-click with nothing open, repeated open/close) are ignored by state, so they emit nothing.
+- Duplicate callbacks (repeated `pointerenter`/`focusin`, a second outside-click with nothing open, repeated open/close) are ignored by state, so they emit nothing.
+- Skills visibility is `hovered || focused || locked`, tracked as three independent reveal reasons rather than one mode. A reason joining an already-open presentation never emits a second `skills_open`; `hover_leave`/`focus_leave` each clear only their own reason and Skills closes (emitting `skills_close`) only once none remain — so it stays open, unannounced, across e.g. hover → focus → hover leaves → focus leaves, in either order, and across locking/unlocking while hover or focus also holds it open. This keeps the announced semantic state from disagreeing with the actual UI, which reveals Skills via CSS `:focus-within` independently of the hover/lock classes (see `panelToggle.client.ts`).
 
 **Known limits / differences from the UI (reported, not redesigned).**
-- Keyboard focus alone reveals Skills through CSS `:focus-within`, with no JS transition, so it produces no `skills_open`. Only a keyboard-activated Skills *button* is seen (`trigger_method: keyboard`).
 - Touch Skills opens `locked: true` (it persists until toggled or dismissed, like a lock).
-- `escape` for a project comes from the dialog's `cancel` event, so a mobile back gesture that cancels the dialog is also `escape`.
+- Project Detail's `cancel` reason comes from the dialog's native `cancel` event, so a mobile back gesture (or any other platform cancellation) that cancels the dialog is also `cancel` — deliberately not `escape`, since only the browser/platform cancellation is actually known, not which physical input triggered it.
 - Section 11 lists close reason `outside`; the request for this step suggested `outside_click`. The documented name `outside` is used.
 - Navbar clicks while Skills is up close Skills (the navbar click is also an outside click), reason `navigation`. `nav_click` itself is not instrumented yet.
 - Clicking a tag inside the Skills panel on desktop auto-locks it (existing UI behavior not previously documented); that is the `skills_lock` with `cause: skill_click`.
+- Clicking the Skills toggle button itself can incidentally give it keyboard focus (Chromium does this on click; Firefox/Safari on macOS normally do not), which is then a genuine focus reveal reason like any other — so on Chromium, unlocking via a mouse click can leave Skills open (revealed by that residual button focus) until focus or hover actually leaves, matching what `:focus-within` shows. This is observed, not corrected, per the same "report the UI, don't drive it" rule the CSS focus behavior already gets everywhere else.
 
 **Manual browser test** (local workflow above; `npm run telemetry:events` now also prints a `view` column, the first 8 chars of `view_instance_id`):
 1. `npm run telemetry:clear`. Terminal 1: `npm run telemetry:dev`. Terminal 2: `npm run dev:telemetry`. Open <http://localhost:4321/> in a desktop browser and scroll into the Timeline so the person cards dock.
 2. Hover a card, then move away: `skills_open` (hover, `locked:false`) then `skills_close` `hover_leave`.
 3. Hover, click Skills (locks), click a skill tag, click the dimmed backdrop, click Skills again: `skills_open`, `skills_lock`, `skill_click`, `skill_filter_open`, `skill_filter_close` (`backdrop`), `skills_unlock`, `skills_close` (`explicit`). The Skills events and the click share one `view`; the filter has another.
-4. Click a timeline project and close it with the ✕; reopen it and press Escape: `project_open` / `project_close` (`explicit`, then `escape`) with the same `project:<id>` and different `view` values.
-5. Wait ~20 s (or switch tabs to force a flush), then `npm run telemetry:events -- --limit 40`. Repeat on a phone: Skills opens with `touch` and `locked:true`.
+4. Click a timeline project and close it with the ✕; reopen it and press Escape: `project_open` / `project_close` (`explicit`, then `cancel`) with the same `project:<id>` and different `view` values.
+5. Keyboard only, mouse off both cards: Tab onto a card's Skills button: `skills_open` (`focus`, `locked:false`). Tab again into a skill tag inside it (still revealed, one `view`, no new event), then Shift+Tab back out past the Skills button entirely: `skills_close` (`focus_leave`).
+6. Tab onto a card's Skills button (opens, `focus`), then also hover that same card (no 2nd `skills_open`), then move the pointer away (stays revealed — still focused, no event): only Shift+Tab out of the bar then actually closes it, `skills_close` (`focus_leave`). Reversed (hover first to open, then Tab into it, then move the pointer away first — stays revealed, still focused, no event — then Tab out last): closes on that last step instead, `skills_close` (`focus_leave`) again, since focus was what was still holding it open either way. Swap which one leaves last (Tab out first while still hovering, then move the pointer away) and the recorded reason swaps to `hover_leave` — whichever reason is still true right before the other one leaves is the one recorded on the close that actually happens.
+7. Wait ~20 s (or switch tabs to force a flush), then `npm run telemetry:events -- --limit 40`. Repeat on a phone: Skills opens with `touch` and `locked:true`.
 
 ## 18. Derived analysis (not browser events)
 

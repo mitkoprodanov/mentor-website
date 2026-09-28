@@ -105,6 +105,133 @@ test('unknown close reason is omitted, never invented', () => {
 	assert.deepEqual(last().properties, { locked: false });
 });
 
+test('focus opens Skills with trigger_method focus; hover joining does not duplicate; hover leaving alone stays open (focus remains); focus leaving then closes', () => {
+	const { c, events, types } = rig();
+	skillsOpen('mitko', 'focus', false);
+	assert.equal(c.state.surface, 'skills');
+	assert.equal(c.state.skillsMode, 'hover');
+	const [open] = events();
+	assert.deepEqual(open.properties, { trigger_person: 'mitko', trigger_method: 'focus', locked: false });
+	const instance = open.view_instance_id;
+	skillsOpen('mitko', 'hover', false); // hover joins an already-open (via focus) layer: no 2nd open
+	assert.deepEqual(types(), ['skills_open']);
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // hover leaves; focus still holds it open
+	assert.equal(c.state.surface, 'skills');
+	assert.deepEqual(types(), ['skills_open']);
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' }); // the last reason is gone
+	assert.equal(c.state.surface, 'main');
+	assert.deepEqual(types(), ['skills_open', 'skills_close']);
+	assert.equal(events()[1].view_instance_id, instance);
+	assert.deepEqual(events()[1].properties, { reason: 'focus_leave', locked: false });
+});
+
+test('hover opens Skills; focus joining does not duplicate; focus leaving alone stays open (hover remains); hover leaving then closes', () => {
+	const { c, events, types } = rig();
+	skillsOpen('adam', 'hover', false);
+	skillsOpen('adam', 'focus', false); // focus joins an already-open (via hover) layer: no 2nd open
+	assert.deepEqual(types(), ['skills_open']);
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' }); // focus leaves; hover still holds it open
+	assert.equal(c.state.surface, 'skills');
+	assert.deepEqual(types(), ['skills_open']);
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // the last reason is gone
+	assert.equal(c.state.surface, 'main');
+	assert.deepEqual(types(), ['skills_open', 'skills_close']);
+	assert.deepEqual(events()[1].properties, { reason: 'hover_leave', locked: false });
+});
+
+test('a leave signal for a reveal reason that was never active does not spuriously close', () => {
+	const { c, types } = rig();
+	skillsOpen('mitko', 'hover', false); // hover only, focus never entered
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' });
+	assert.equal(c.state.surface, 'skills'); // hover still holds it open
+	assert.deepEqual(types(), ['skills_open']);
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' });
+	assert.equal(c.state.surface, 'main');
+});
+
+test('hover + focus + lock: leaving hover or focus alone while locked keeps it open; unlocking once neither remains closes it', () => {
+	const { c, types, events } = rig();
+	skillsOpen('mitko', 'hover', false);
+	skillsOpen('mitko', 'focus', false);
+	skillsOpen('mitko', 'mouse', true); // lock, joining hover+focus rather than opening again
+	assert.equal(c.state.skillsMode, 'locked');
+	assert.deepEqual(types(), ['skills_open', 'skills_lock']);
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // locked keeps it open regardless
+	assert.equal(c.state.surface, 'skills');
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' }); // still locked
+	assert.equal(c.state.surface, 'skills');
+	assert.deepEqual(types(), ['skills_open', 'skills_lock']); // neither leave emitted anything
+	announce(UI_EVENT.skillsUnlock, {}); // neither hover nor focus remains now: unlocking closes it too
+	assert.equal(c.state.surface, 'main');
+	assert.deepEqual(types(), ['skills_open', 'skills_lock', 'skills_unlock', 'skills_close']);
+	assert.deepEqual(events()[3].properties, { reason: 'explicit', locked: false });
+});
+
+test('unlock while still hovered stays open', () => {
+	const { c, types } = rig();
+	skillsOpen('mitko', 'hover', false);
+	skillsOpen('mitko', 'mouse', true); // lock while hovered
+	announce(UI_EVENT.skillsUnlock, {});
+	assert.equal(c.state.surface, 'skills');
+	assert.equal(c.state.skillsMode, 'hover');
+	assert.deepEqual(types(), ['skills_open', 'skills_lock', 'skills_unlock']);
+});
+
+test('unlock while still focused stays open', () => {
+	const { c, types } = rig();
+	skillsOpen('adam', 'focus', false);
+	skillsOpen('adam', 'keyboard', true); // lock while focused
+	announce(UI_EVENT.skillsUnlock, {});
+	assert.equal(c.state.surface, 'skills');
+	assert.equal(c.state.skillsMode, 'hover');
+	assert.deepEqual(types(), ['skills_open', 'skills_lock', 'skills_unlock']);
+});
+
+test('unlock with neither hover nor focus remaining closes immediately', () => {
+	const { c, types, events } = rig();
+	skillsOpen('mitko', 'mouse', true); // opens directly locked: no hover/focus reason at all
+	assert.equal(c.state.skillsMode, 'locked');
+	announce(UI_EVENT.skillsUnlock, {});
+	assert.equal(c.state.surface, 'main');
+	assert.deepEqual(types(), ['skills_open', 'skills_unlock', 'skills_close']);
+	assert.deepEqual(events()[2].properties, { reason: 'explicit', locked: false });
+});
+
+test('redundant hover/focus open or leave announcements create no duplicate events', () => {
+	const { types } = rig();
+	skillsOpen('mitko', 'hover', false);
+	skillsOpen('mitko', 'hover', false); // duplicate pointerenter
+	skillsOpen('mitko', 'focus', false);
+	skillsOpen('mitko', 'focus', false); // duplicate focusin
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' });
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // duplicate: hover already false
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' });
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' }); // duplicate: already fully closed
+	assert.deepEqual(types(), ['skills_open', 'skills_close']);
+});
+
+test('view_instance_id stays the same across hover/focus/lock transitions, and changes only after a full close and reopen', () => {
+	const { c, events } = rig();
+	skillsOpen('mitko', 'hover', false);
+	const instance = c.state.viewInstanceId;
+	assert.ok(instance);
+	skillsOpen('mitko', 'focus', false); // focus joins
+	assert.equal(c.state.viewInstanceId, instance);
+	skillsOpen('mitko', 'mouse', true); // lock joins
+	assert.equal(c.state.viewInstanceId, instance);
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // hover leaves; still locked+focused
+	assert.equal(c.state.viewInstanceId, instance);
+	announce(UI_EVENT.skillsUnlock, {}); // unlocks; focus still holds it open
+	assert.equal(c.state.viewInstanceId, instance);
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' }); // the last reason is gone
+	assert.equal(c.state.viewInstanceId, null);
+	skillsOpen('mitko', 'hover', false); // a fresh reveal
+	assert.notEqual(c.state.viewInstanceId, instance);
+	const ids = events().map((e) => e.view_instance_id);
+	assert.deepEqual(ids.slice(0, -1), ids.slice(0, -1).map(() => instance));
+	assert.notEqual(ids.at(-1), instance);
+});
+
 test('touch open is locked from the start', () => {
 	const { c, events } = rig();
 	skillsOpen('mitko', 'touch', true);
@@ -313,18 +440,20 @@ test('garbage from the UI is sanitized, not forwarded', () => {
 
 test('all emitted payloads pass the Worker strict validator', () => {
 	const { queue } = rig();
-	skillsOpen('mitko', 'hover', false);
+	skillsOpen('mitko', 'focus', false);
+	skillsOpen('mitko', 'hover', false); // joins; no duplicate
 	skillsOpen('mitko', 'mouse', true);
 	announce(UI_EVENT.skillClick, { skillId: 'unity', person: 'mitko' });
 	announce(UI_EVENT.skillsLock, { cause: 'skill_click', person: 'mitko' });
 	announce(UI_EVENT.filterOpen, { skillId: 'unity' });
 	announce(UI_EVENT.filterClose, { skillId: 'unity', reason: 'card_pill' });
 	announce(UI_EVENT.skillsUnlock, { person: 'adam' });
-	announce(UI_EVENT.skillsClose, { reason: 'explicit', person: 'adam' });
+	announce(UI_EVENT.skillsClose, { reason: 'hover_leave' }); // focus still holds it open
+	announce(UI_EVENT.skillsClose, { reason: 'focus_leave' });
 	skillsOpen('adam', 'touch', true);
 	announce(UI_EVENT.skillsClose, { reason: 'navigation' });
 	announce(UI_EVENT.projectOpen, { projectId: 'mandragora' });
-	announce(UI_EVENT.projectClose, { projectId: 'mandragora', reason: 'escape' });
+	announce(UI_EVENT.projectClose, { projectId: 'mandragora', reason: 'cancel' });
 	announce(UI_EVENT.filterOpen, { skillId: 'csharp' });
 	announce(UI_EVENT.filterClose, { skillId: 'csharp', reason: 'chip' });
 	const events: TelemetryEvent[] = queue.peek(500, 1e9);

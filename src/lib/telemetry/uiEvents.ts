@@ -22,10 +22,11 @@ export const UI_EVENT = {
 } as const;
 
 export type PersonId = 'mitko' | 'adam';
-export type TriggerMethod = 'hover' | 'mouse' | 'touch' | 'pen' | 'keyboard';
+export type TriggerMethod = 'hover' | 'focus' | 'mouse' | 'touch' | 'pen' | 'keyboard';
 
 export interface SkillsOpenDetail {
 	person?: string;
+	/** hover | focus | mouse | touch | pen | keyboard */
 	method?: string;
 	locked?: boolean;
 }
@@ -37,7 +38,10 @@ export interface SkillsUnlockDetail {
 	person?: string;
 }
 export interface SkillsCloseDetail {
-	/** hover_leave | explicit | outside | escape | navigation */
+	/** hover_leave | focus_leave | explicit | outside | escape | navigation.
+	 *  `hover_leave`/`focus_leave` clear only that one reveal reason (Skills
+	 *  stays open if hover, focus, or lock still holds it); any other reason
+	 *  clears all reasons and always closes it. */
 	reason?: string;
 	person?: string;
 }
@@ -58,7 +62,9 @@ export interface ProjectOpenDetail {
 }
 export interface ProjectCloseDetail {
 	projectId?: string;
-	/** explicit | backdrop | escape (omitted when the code path is unknown) */
+	/** explicit | backdrop | cancel (native dialog `cancel` event — Escape or
+	 *  another platform cancellation such as a back gesture; omitted when the
+	 *  code path is unknown) */
 	reason?: string;
 }
 
