@@ -14,8 +14,11 @@ import { randomId } from './session.ts';
 import { bindUiEvents, SemanticStateCoordinator } from './state.ts';
 import type { SemanticState, Surface } from './state.ts';
 import type { EmitOptions } from './types.ts';
+import type { ObserveOptions } from './visibility.ts';
 
 export type { SemanticState, Surface } from './state.ts';
+export type { ObserveOptions } from './visibility.ts';
+export type { PropertyValue } from './types.ts';
 
 // Injected by astro.config.mjs (vite `define`).
 declare const __SITE_VERSION__: string;
@@ -66,8 +69,8 @@ export const telemetry = {
 	},
 	/** Registers a DOM element for Visibility Matrix accounting (`visibility_delta`).
 	 *  A silent no-op until initTelemetry() has run, or whenever telemetry is disabled. */
-	observeVisibility(el: Element, targetType: string, targetId: string): void {
-		client?.observeVisibility(el, targetType, targetId);
+	observeVisibility(el: Element, targetType: string, targetId: string, options?: ObserveOptions): void {
+		client?.observeVisibility(el, targetType, targetId, options);
 	},
 	/** Objective trigger context (e.g. hover/focus/click/touch) for the next
 	 *  appearance on `el` — call right when the caller's own UI shows it. */

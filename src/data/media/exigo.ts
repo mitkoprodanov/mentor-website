@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Armies of Exigo (see data/timeline.ts). */
 export const exigoMedia: ProjectMedia[] = [
 	{
+		id: 'exigo-two-level-system',
 		src: 'https://youtu.be/6Ovup2D5ojo',
 		kind: 'youtube',
 		person: 'adam',
@@ -12,6 +13,7 @@ export const exigoMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'balance', 'proprietary-engine'],
 	},
 	{
+	id: 'exigo-strategy-concepts',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -19,6 +21,7 @@ export const exigoMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'balance', 'proprietary-engine'],
 	},
 	{
+		id: 'exigo-multiplayer',
 		src: '/projects/exigo/multiplayer.jpg',
 		kind: 'image',
 		person: 'adam',
@@ -26,6 +29,7 @@ export const exigoMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'balance', 'proprietary-engine'],
 	},
 	{
+		id: 'exigo-editor',
 		src: '/projects/exigo/editor.png',
 		kind: 'image',
 		person: 'adam',

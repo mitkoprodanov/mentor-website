@@ -8,6 +8,7 @@ import type { SemanticState } from './state.ts';
 import { Transport } from './transport.ts';
 import type { EmitOptions } from './types.ts';
 import { VisibilityMatrixEngine } from './visibility.ts';
+import type { ObserveOptions } from './visibility.ts';
 import { ViewportTracker } from './viewport.ts';
 
 /** Periodic safety flush while the page is visible. */
@@ -19,7 +20,7 @@ export interface TelemetryClient {
 	emit(eventType: string, opts?: EmitOptions): void;
 	flush(): Promise<void>;
 	/** Registers a DOM element for Visibility Matrix accounting. See visibility.ts. */
-	observeVisibility(el: Element, targetType: string, targetId: string): void;
+	observeVisibility(el: Element, targetType: string, targetId: string, options?: ObserveOptions): void;
 	/** Objective trigger context for the next appearance on `el` (e.g. a Vision tooltip's hover/focus/click/touch). */
 	setVisibilityTriggerContext(el: Element, method: string | undefined): void;
 	/** Ends `el`'s active appearance immediately, without waiting on geometry. */
@@ -179,9 +180,9 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 				}
 			},
 			flush: () => safeFlush(false),
-			observeVisibility(el, targetType, targetId) {
+			observeVisibility(el, targetType, targetId, options) {
 				try {
-					visibility.observe(el, targetType, targetId);
+					visibility.observe(el, targetType, targetId, options);
 				} catch {
 					/* never affect the site */
 				}

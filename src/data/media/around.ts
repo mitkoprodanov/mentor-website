@@ -6,12 +6,14 @@ import type { ProjectMedia } from './types';
  */
 export const aroundMedia: ProjectMedia[] = [
 	{
+		id: 'around-trailer',
 		src: 'https://www.facebook.com/watch/?v=297734748254498',
 		kind: 'facebook-video',
 		caption: 'Around trailer',
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'prototyping', 'playtesting'],
 	},
 	{
+	id: 'around-technical-foundation',
 	src: '',
 		kind: 'text',
 		person: 'mitko',
@@ -19,6 +21,7 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ui', 'prototyping', 'unreal-engine', 'blueprint-scripting', 'unreal-gamesync', 'navigation'],
 	},
 	{
+	id: 'around-prototyping-playtesting',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -26,12 +29,14 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'ui', 'unreal-engine', 'blueprint-scripting'],
 	},
 	{
+		id: 'around-narrative-flow',
 		src: 'https://www.facebook.com/watch/?v=291274308860973',
 		kind: 'facebook-video',
 		caption: 'Around gameplay showing narrative flow supported by inventory usage',
 		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'navigation'],
 	},
 	{
+	id: 'around-visual-techniques',
 	src: '',
 		kind: 'text',
 		person: 'mitko',
@@ -39,6 +44,7 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['visuals', 'level-design', 'unreal-engine'],
 	},
 	{
+	id: 'around-narrative-design',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -46,12 +52,14 @@ export const aroundMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay'],
 	},
 	{
+		id: 'around-blurry-memories',
 		src: 'https://www.facebook.com/watch/?v=323920638727021',
 		kind: 'facebook-video',
 		caption: 'Around - Some of our memories are unclear like a blurry painting',
 		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay'],
 	},
 	{
+		id: 'around-immersive-world',
 		src: 'https://www.facebook.com/reel/651147125502357',
 		kind: 'facebook-video',
 		caption: 'An immersive hand-drawn world',

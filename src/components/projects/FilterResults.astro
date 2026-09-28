@@ -32,6 +32,10 @@ interface LoadedProject {
 		person: Person;
 		Content: Awaited<ReturnType<typeof render>>['Content'];
 		tagIds: string[];
+		/** Stable content id (docs/telemetry.md section 17.6) — the same one
+		 *  ProjectRow.astro/ApartBlock.astro use for this experience's
+		 *  `project_content` target, so it shares canonical identity here. */
+		slug: string;
 	}[];
 	peopleLabel: string;
 	tagLabels: string[];
@@ -44,7 +48,7 @@ async function loadProject(project: CatalogProject): Promise<LoadedProject> {
 			if (!entry) throw new Error(`Missing experience entry: ${ref.slug}`);
 			const { Content } = await render(entry);
 			const person = getPerson(ref.person);
-			return { person, Content, tagIds: ref.tagIds ?? [] };
+			return { person, Content, tagIds: ref.tagIds ?? [], slug: ref.slug };
 		}),
 	);
 	return {
@@ -84,6 +88,8 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 						data-fr-card
 						data-fr-side={side}
 						data-project-tags={lp.project.allTagIds.join(' ')}
+						data-visibility-target-type="filtered_project"
+						data-visibility-target-id={lp.project.key}
 						style={personId ? `--person-color: var(--${personId}-color)` : undefined}
 					>
 						<ProjectDetail
@@ -94,9 +100,20 @@ const stack: ResultCard[] = loaded.map((lp) => ({ lp, side: lp.project.side }));
 							media={lp.project.media}
 							url={lp.project.url}
 							as="h4"
+							projectId={lp.project.key}
+							owner="skill_filtered"
 						>
 							{lp.cards.map((c) => (
-								<div class="modal-exp" data-person={c.person.id} data-exp-tags={c.tagIds.join(' ')}>
+								<div
+									class="modal-exp"
+									data-person={c.person.id}
+									data-exp-tags={c.tagIds.join(' ')}
+									data-visibility-target-type="project_content"
+									data-visibility-target-id={`${lp.project.key}:${c.slug}`}
+									data-visibility-owner="skill_filtered"
+									data-visibility-content-type="experience"
+									data-visibility-person={c.person.id}
+								>
 									<c.Content />
 								</div>
 							))}

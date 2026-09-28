@@ -3,6 +3,16 @@ import type { PersonId } from '../people';
 /** A single showcase item (image, gif, video, embedded reel, or a text note) shown in a Project's detail modal. */
 export interface ProjectMedia {
 	/**
+	 * Stable content id, unique within this project's own media array (not
+	 * globally) — e.g. `'combat-map'`. Forms half of the Visibility Matrix's
+	 * canonical `project_content` identity together with the project's own
+	 * id: `<project-id>:<id>` (see docs/telemetry.md section 17.6). Kebab
+	 * case, short, and descriptive of the content itself — never a DOM id,
+	 * array index, or translated/display string, since those can change
+	 * without the underlying content changing.
+	 */
+	id: string;
+	/**
 	 * For 'image'/'gif': a path under /public (e.g. '/projects/hypha/board.jpg'),
 	 * or any absolute URL. Placeholder assets live in public/projects/<id>/ —
 	 * swap them for real screenshots or gifs without touching anything else.

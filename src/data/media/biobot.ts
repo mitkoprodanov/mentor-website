@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for the Biobot project (see data/projects.ts). */
 export const biobotMedia: ProjectMedia[] = [
 	{
+		id: 'biobot-cards',
 		src: '/projects/biobot/cards.jpg',
 		kind: 'image',
 		person: 'adam',
@@ -10,6 +11,7 @@ export const biobotMedia: ProjectMedia[] = [
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'puzzle-design', 'board-game'],
 	},
 	{
+		id: 'biobot-place',
 		src: '/projects/biobot/place.jpg',
 		kind: 'image',
 		person: 'adam',
@@ -17,6 +19,7 @@ export const biobotMedia: ProjectMedia[] = [
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'puzzle-design', 'board-game'],
 	},
 	{
+		id: 'biobot-tableau',
 		src: '/projects/biobot/tableau.jpg',
 		kind: 'image',
 		person: 'adam',

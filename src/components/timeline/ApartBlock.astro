@@ -56,6 +56,7 @@ const tracks = await Promise.all(
 									tagIds: ref.tagIds ?? [],
 									link: entry.data.link,
 									previewImage: entry.data.previewImage,
+									slug: ref.slug,
 								};
 							}),
 						);
@@ -65,6 +66,7 @@ const tracks = await Promise.all(
 							project,
 							cards,
 							modalId: `tl-${project.id}`,
+							visibilityId: project.modalId ?? project.id,
 							modalDateRange: project.dateRange ?? company.dateRange,
 							peopleLabel: cards.map((c) => c.person.name).join(' & '),
 							// Ordered by each tag's canonical index in data/tags.ts so the
@@ -211,7 +213,7 @@ const tracks = await Promise.all(
 							    ProjectRow.astro, so it needs the same instrumentation,
 							    unconditionally (not gated on project.name — see Ericsson
 							    Hungary's unnamed single-project company). */}
-							{projects.map(({ project, cards, modalId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
+							{projects.map(({ project, cards, modalId, visibilityId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
 								<div
 								class="track-row"
 								data-visibility-target-type="timeline_project"
@@ -230,7 +232,7 @@ const tracks = await Promise.all(
 							>
 									{
 										project.name && (
-											<div class="node">
+											<div class="node" data-visibility-target-type="project_intro" data-visibility-target-id={visibilityId} data-visibility-owner="main">
 												<div class="node-text">
 													<h5 class="node-label">{project.name}</h5>
 													{project.info && <p class="node-info">{project.info}</p>}
@@ -248,6 +250,7 @@ const tracks = await Promise.all(
 												link={card.link}
 												previewImage={card.previewImage}
 												interactive={Boolean(project.name)}
+												contentId={`${visibilityId}:${card.slug}`}
 											>
 												<card.Content />
 											</ExperienceCard>
@@ -279,7 +282,15 @@ const tracks = await Promise.all(
 												url={project.url}
 											>
 												{cards.map((c) => (
-													<div class="modal-exp" data-person={c.person.id}>
+													<div
+														class="modal-exp"
+														data-person={c.person.id}
+														data-visibility-target-type="project_content"
+														data-visibility-target-id={`${visibilityId}:${c.slug}`}
+														data-visibility-owner="project_modal"
+														data-visibility-content-type="experience"
+														data-visibility-person={c.person.id}
+													>
 														<c.Content />
 													</div>
 												))}

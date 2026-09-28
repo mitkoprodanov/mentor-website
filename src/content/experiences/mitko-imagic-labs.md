@@ -1,6 +1,6 @@
 ---
 person: mitko
-project: imagic-labs-project
+project: imagic
 category: system-feature
 ---
 

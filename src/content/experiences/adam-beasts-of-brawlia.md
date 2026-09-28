@@ -1,6 +1,6 @@
 ---
 person: adam
-project: beasts-of-brawlia
+project: bob
 category: content
 ---
 

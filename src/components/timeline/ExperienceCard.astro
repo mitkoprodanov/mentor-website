@@ -19,12 +19,32 @@ interface Props {
 	 * doesn't imply a "Details" page that isn't there.
 	 */
 	interactive?: boolean;
+	/**
+	 * Canonical `project_content` id (`<project-id>:<experience-slug>`) for
+	 * the Visibility Matrix (docs/telemetry.md section 17.6) — the same id
+	 * the matching `.modal-exp` inside this project's modal uses, so the two
+	 * share canonical identity even though they're different DOM instances.
+	 * Owner is always `main`: this component only ever renders on the
+	 * Timeline. Omit to skip instrumenting this card (shouldn't happen for a
+	 * real experience).
+	 */
+	contentId?: string;
 }
 
-const { personId, tagIds, color, side, link, previewImage, interactive = true } = Astro.props;
+const { personId, tagIds, color, side, link, previewImage, interactive = true, contentId } = Astro.props;
 ---
 
-<div class:list={['card', `card--${side}`, { 'card--static': !interactive }]} data-person={personId} data-tags={tagIds.join(' ')} style={`--person-color: ${color}`}>
+<div
+	class:list={['card', `card--${side}`, { 'card--static': !interactive }]}
+	data-person={personId}
+	data-tags={tagIds.join(' ')}
+	style={`--person-color: ${color}`}
+	data-visibility-target-type={contentId ? 'project_content' : undefined}
+	data-visibility-target-id={contentId}
+	data-visibility-owner="main"
+	data-visibility-content-type="experience"
+	data-visibility-person={personId}
+>
 	<div class="content">
 		<slot />
 	</div>

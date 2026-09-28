@@ -42,21 +42,58 @@ const THRESHOLDS = [
 
 type ThresholdKey = (typeof THRESHOLDS)[number]['key'];
 
-/** Which surface owns each target type's active-time accounting (docs
- *  section 6.1: "Surface ownership"). Instrumenting a targetType not listed
- *  here is a no-op — a deliberate scope guard. `vision_tooltip` is owned by
- *  `main`, same as `vision_content` itself. */
+/** Which surface owns each *fixed-owner* target type's active-time accounting
+ *  (docs section 6.1: "Surface ownership"). Instrumenting a targetType that's
+ *  neither listed here nor given an explicit owner via `ObserveOptions.owner`
+ *  is a no-op — a deliberate scope guard. `vision_tooltip` is owned by
+ *  `main`, same as `vision_content` itself. `project_intro` and
+ *  `project_content` are deliberately absent: the same canonical content
+ *  renders under different surfaces depending on where it appears (Timeline
+ *  preview vs. Project Modal vs. Skill Filtered View), so their owner is
+ *  supplied per-registration by the rendering context, which already knows
+ *  it statically — see `observe()` and docs section 17.6. */
 export const OWNER: Readonly<Record<string, Surface>> = {
 	vision_content: 'main',
 	vision_tooltip: 'main',
 	timeline_project: 'main',
 	skills_person: 'skills',
+	filtered_project: 'skill_filtered',
 };
+
+/** Surfaces that acquire their own `view_instance_id` (docs section 17.2).
+ *  An appearance on a target owned by one of these must never survive that
+ *  surface's instance changing, even before geometry reflects it (docs
+ *  section 17.3's "instance-boundary rule", generalized beyond `skills_person`
+ *  to `project_modal`/`skill_filtered`-owned targets in this pass — e.g.
+ *  `project_intro`/`project_content` rendered inside a Project Modal or
+ *  Skill Filtered View). `main` is deliberately absent: it never acquires an
+ *  instance, so main-owned targets are only ever suspended, never forced to
+ *  end, by a surface change (docs section 17.3). */
+const INSTANCED_SURFACES = new Set<Surface>(['skills', 'project_modal', 'skill_filtered']);
 
 /** Geometry thresholds requested from IntersectionObserver. 0 and 1 are
  *  included so a target that starts (or ends) fully offscreen, or reaches
  *  full coverage, still reliably delivers a callback at the edges. */
 export const OBSERVER_THRESHOLDS = [0, 0.5, 0.7, 0.85, 0.95, 1];
+
+/** Options for `observe()`. Both fields are supplied by the rendering
+ *  context, never inferred from DOM state at runtime (docs section 17.6). */
+export interface ObserveOptions {
+	/** Explicit owner for a context-dependent target type (`project_intro`,
+	 *  `project_content`) — the same canonical content can render under
+	 *  `main`, `project_modal`, or `skill_filtered` depending on where this
+	 *  particular DOM instance sits, and the caller already knows which one
+	 *  statically at render time. Ignored (the fixed `OWNER` entry wins) for
+	 *  a target type that isn't context-dependent; a target type with
+	 *  neither an `OWNER` entry nor an explicit `owner` here is ignored. */
+	owner?: Surface;
+	/** Static per-target metadata repeated on every `visibility_delta` of
+	 *  every appearance of this target — e.g. `content_type`/`person` for a
+	 *  `project_content` unit. Distinct from the per-appearance
+	 *  `triggerMethod` (`setTriggerContext`): this is a fixed fact about the
+	 *  target itself, set once at registration. */
+	properties?: Record<string, PropertyValue>;
+}
 
 export interface VisibilityEmitOptions {
 	target_type: string;
@@ -136,6 +173,11 @@ interface Target {
 	 *  consumed (and cleared) by the next `startAppearance`. */
 	pendingTriggerMethod: string | null;
 
+	/** Static metadata from `ObserveOptions.properties` (e.g. `content_type`,
+	 *  `person`) — fixed for the target's lifetime, merged into every drained
+	 *  delta alongside `triggerMethod` (docs section 17.6). */
+	staticProperties: Record<string, PropertyValue> | undefined;
+
 	/** Monotonic time through which `cumulative` has already been accounted. */
 	lastBoundary: number;
 	graceTimer: unknown;
@@ -167,13 +209,14 @@ export class VisibilityMatrixEngine {
 		deps.subscribe((state) => this.onStateChange(state));
 	}
 
-	/** Starts tracking `el` as `targetType`/`targetId`. Owner is derived from
-	 *  `targetType` (docs section 6.1); an unrecognized targetType is ignored
-	 *  — a deliberate scope guard for this increment's three target types.
-	 *  Registering the same element twice is a no-op. */
-	observe(el: Element, targetType: string, targetId: string): void {
+	/** Starts tracking `el` as `targetType`/`targetId`. Owner is `options.owner`
+	 *  when given, else looked up from `targetType` in the fixed `OWNER` map
+	 *  (docs section 6.1); a target type that resolves to neither is ignored
+	 *  — a deliberate scope guard. Registering the same element twice is a
+	 *  no-op. */
+	observe(el: Element, targetType: string, targetId: string, options?: ObserveOptions): void {
 		if (this.targets.has(el)) return;
-		const owner = OWNER[targetType];
+		const owner = options?.owner ?? OWNER[targetType];
 		if (!owner) return;
 		const target: Target = {
 			targetType,
@@ -189,6 +232,7 @@ export class VisibilityMatrixEngine {
 			sent: zeroCounters(),
 			triggerMethod: null,
 			pendingTriggerMethod: null,
+			staticProperties: options?.properties,
 			lastBoundary: this.deps.clock.now(),
 			graceTimer: null,
 		};
@@ -282,15 +326,18 @@ export class VisibilityMatrixEngine {
 		// Account elapsed time under the OLD state/eligibility first.
 		for (const target of this.targets.values()) this.account(target, now);
 
-		// Instance-boundary rule: a skills_person appearance never survives its
-		// owning Skills instance ending, even if geometry hasn't yet dipped
-		// below 50% (e.g. a blocking view opening on top collapses the panel
-		// via CSS, but the forced end here doesn't wait for that transition).
-		// Main-owned targets have no instance and are unaffected.
-		const newSkillsInstance = state.surface === 'skills' ? state.viewInstanceId : null;
-		if (newSkillsInstance !== (this.currentState.surface === 'skills' ? this.currentState.viewInstanceId : null)) {
+		// Instance-boundary rule (generalized beyond skills_person this pass —
+		// docs section 17.6): an appearance on any instanced-owner target
+		// never survives its owning surface's instance changing, even if
+		// geometry hasn't yet dipped below 50% (e.g. a blocking view opening
+		// on top collapses the panel via CSS, but the forced end here
+		// doesn't wait for that transition). Main-owned targets have no
+		// instance and are unaffected — they're only ever suspended.
+		const newInstance = INSTANCED_SURFACES.has(state.surface) ? state.viewInstanceId : null;
+		const oldInstance = INSTANCED_SURFACES.has(this.currentState.surface) ? this.currentState.viewInstanceId : null;
+		if (newInstance !== oldInstance) {
 			for (const target of this.targets.values()) {
-				if (target.owner === 'skills' && target.appearanceId && target.appearanceInstanceId !== newSkillsInstance) {
+				if (INSTANCED_SURFACES.has(target.owner) && target.appearanceId && target.appearanceInstanceId !== newInstance) {
 					this.endAppearance(target);
 				}
 			}
@@ -350,7 +397,8 @@ export class VisibilityMatrixEngine {
 		const id = this.deps.newId();
 		if (!id) return; // no CSPRNG: this encounter goes untracked, like the rest of telemetry
 		target.appearanceId = id;
-		target.appearanceInstanceId = target.owner === 'skills' && this.currentState.surface === 'skills' ? this.currentState.viewInstanceId : null;
+		target.appearanceInstanceId =
+			INSTANCED_SURFACES.has(target.owner) && this.currentState.surface === target.owner ? this.currentState.viewInstanceId : null;
 		// Eligibility-gated: onRatio (the only caller) applies the max-ratio
 		// bump itself, right after this returns, using the same isEligible()
 		// check it would use for any other ratio observation.
@@ -396,6 +444,13 @@ export class VisibilityMatrixEngine {
 		const d85 = target.cumulative.v85 - target.sent.v85;
 		const d95 = target.cumulative.v95 - target.sent.v95;
 		target.sent = { ...target.cumulative };
+		// Static per-target facts (content_type/person, etc.) and the
+		// per-appearance trigger method are independent sources, merged here
+		// so callers of either mechanism never have to know about the other.
+		const properties =
+			target.staticProperties || target.triggerMethod
+				? { ...target.staticProperties, ...(target.triggerMethod ? { trigger_method: target.triggerMethod } : {}) }
+				: undefined;
 		this.deps.emit('visibility_delta', {
 			target_type: target.targetType,
 			target_id: target.targetId,
@@ -406,7 +461,7 @@ export class VisibilityMatrixEngine {
 			v85_ms: Math.round(d85),
 			v95_ms: Math.round(d95),
 			max_visibility_ratio: target.appearanceMaxRatio,
-			properties: target.triggerMethod ? { trigger_method: target.triggerMethod } : undefined,
+			properties,
 		});
 	}
 }

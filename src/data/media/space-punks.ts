@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Space Punks / Flying Wild Hog (see data/timeline.ts). */
 export const spacePunksMedia: ProjectMedia[] = [
 	{
+		id: 'space-punks-reveal-trailer',
 		src: 'https://www.youtube.com/watch?v=3a6yQj7KrHc',
 		kind: 'youtube',
 		person: 'mitko',
@@ -10,6 +11,7 @@ export const spacePunksMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-gas', 'unreal-eqs', 'eos'],  
 	},
 	{
+		id: 'space-punks-eqs-gas',
 		src: '',
 		kind: 'text',
 		person: 'mitko',
@@ -17,6 +19,7 @@ export const spacePunksMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ability', 'unreal-engine', 'unreal-eqs', 'unreal-gas'],  
 	},
 	{
+		id: 'space-punks-worlds-trailer',
 		src: 'https://www.youtube.com/watch?v=pDfjsUC0koE',
 		kind: 'youtube',
 		start: 35,

@@ -31,10 +31,68 @@ interface Props {
 	as?: 'h3' | 'h4';
 	/** Optional partner/IP logo shown above the title in the header. */
 	logo?: { src: string; detailWidth?: number };
+	/**
+	 * Canonical project id (the catalog key — `project.modalId ?? project.id`,
+	 * matching `timeline_project`/`project_open`/`project_close`). Drives the
+	 * Visibility Matrix's `project_intro` (this header) and `project_content`
+	 * (each gallery item) targets — see docs/telemetry.md section 17.6.
+	 * Omitting it (a caller with no telemetry identity) simply skips
+	 * instrumenting this render, rather than inventing an id.
+	 */
+	projectId?: string;
+	/**
+	 * Which semantic surface owns THIS rendering of the shared intro/content —
+	 * `project_modal` from ProjectModal.astro, `skill_filtered` from
+	 * FilterResults.astro. `project_intro`/`project_content` are
+	 * context-dependent targets (the same canonical content also renders
+	 * under `main` on the Timeline, outside this component), so the caller
+	 * supplies the owner it already knows statically rather than it being
+	 * inferred here.
+	 */
+	owner?: 'project_modal' | 'skill_filtered';
 }
 
-const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3', logo } = Astro.props;
+const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3', logo, projectId, owner } = Astro.props;
 const Title = as;
+
+/** `data-visibility-*` attributes for the shared project intro/header — see
+ *  the `projectId`/`owner` props above. Spread onto `.project-modal__head`. */
+function introVisibilityAttrs() {
+	if (!projectId) return {};
+	return {
+		'data-visibility-target-type': 'project_intro',
+		'data-visibility-target-id': projectId,
+		'data-visibility-owner': owner,
+	};
+}
+
+/** `data-visibility-*` attributes for one gallery item — a `project_content`
+ *  unit (docs section 17.6). Skipped for a media item with no stable `id`
+ *  rather than inventing one at runtime; `content_type` is the media's own
+ *  `kind` (the taxonomy's actual discriminant), and `person` is the item's
+ *  own attribution, `'both'` for shared media (no `person` set).
+ *
+ *  Canonical id: every real, project-owned media item's own `id` already
+ *  carries its project's prefix (e.g. `heroes6-combat-map` — see
+ *  data/media/*.ts), so it's used as the target_id directly, with no
+ *  redundant re-prefixing (`heroes6:heroes6-combat-map` would just repeat
+ *  the same identity twice). The one exception is the shared
+ *  `PLACEHOLDER_MEDIA` fallback (data/media/placeholder.ts), whose ids
+ *  (`placeholder-image`/`placeholder-gif`) are deliberately generic because
+ *  the same array is reused as-is across several different projects with no
+ *  media of their own — those still get project-prefixed here so two
+ *  different projects' placeholders never collide under the same id. */
+function mediaVisibilityAttrs(m: ProjectMedia) {
+	if (!projectId || !m.id) return {};
+	const contentId = m.id.startsWith(`${projectId}-`) ? m.id : `${projectId}-${m.id}`;
+	return {
+		'data-visibility-target-type': 'project_content',
+		'data-visibility-target-id': contentId,
+		'data-visibility-owner': owner,
+		'data-visibility-content-type': m.kind,
+		'data-visibility-person': m.person ?? 'both',
+	};
+}
 
 /** Compact, human-friendly label for a project's external link — the host
  *  (with a leading `www.` stripped) plus the *tail* of the path (its last
@@ -144,7 +202,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 
 ---
 
-<header class="project-modal__head">
+<header class="project-modal__head" {...introVisibilityAttrs()}>
 	<div class="project-modal__title-row">
 		<Title id={titleId} class="project-modal__title">{title}</Title>
 		{logo && (
@@ -190,7 +248,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		<section class="project-modal__gallery" aria-label="Showcase gallery" data-gallery>
 			{media.map((m: ProjectMedia) =>
 				m.kind === 'youtube' ? (
-					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame shot-frame--youtube">
 							<div
 								class="shot-youtube"
@@ -206,7 +264,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 						</figcaption>
 					</figure>
 				) : isFacebookEmbed(m.kind) ? (
-					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame shot-frame--video">
 							<iframe
 								class="shot-video"
@@ -224,7 +282,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 						</figcaption>
 					</figure>
 				) : m.kind === 'linkedin-post' ? (
-					<figure class={shotClasses(m, 'shot--linkedin')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m, 'shot--linkedin')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame shot-frame--linkedin">
 							{/* Fallback beneath the iframe — visible when a shields/tracker
 							    blocker (Brave, uBlock, etc.) prevents the LinkedIn embed
@@ -250,7 +308,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 						</figcaption>
 					</figure>
 				) : m.kind === 'video' ? (
-					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame shot-frame--native-video">
 							{/* No forced aspect-ratio on this frame — the browser sizes
 							    the <video> at 100% width and its intrinsic aspect
@@ -264,7 +322,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 						</figcaption>
 					</figure>
 				) : m.kind === 'image-row' ? (
-					<figure class={shotClasses(m, 'shot--image-row')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m, 'shot--image-row')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame shot-frame--image-row" data-image-row>
 							{(m.images ?? []).map((imgSrc: string) => (
 								<img src={asset(imgSrc)} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
@@ -275,13 +333,13 @@ function personStyle(m: ProjectMedia): string | undefined {
 						</figcaption>
 					</figure>
 				) : m.kind === 'text' ? (
-					<figure class={shotClasses(m, 'shot--text')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m, 'shot--text')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-text">
 							<p class="shot-text__body">{m.caption}</p>
 						</div>
 					</figure>
 				) : (
-					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)}>
+					<figure class={shotClasses(m)} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
 						<div class="shot-frame">
 							<img src={asset(m.src)} alt={m.alt ?? m.caption} loading="lazy" decoding="async" />
 							{m.kind === 'gif' && <span class="shot-badge">GIF</span>}

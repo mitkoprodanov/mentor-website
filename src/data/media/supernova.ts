@@ -3,12 +3,14 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Supernova (see data/timeline.ts). */
 export const supernovaMedia: ProjectMedia[] = [
 	{
+	id: 'supernova-crowd-simulation',
 	src: '',
 		kind: 'text',
 		caption: 'Together, we designed and built dynamic crowd simulation and navigation systems for heterogeneous unit archetypes, combining pathfinding with flocking-based local movement and reactive commander avoidance to enable coordinated, fluid crowds at low computational cost.',
 		tagIds: ['gameplay', 'systems-design', 'navigation', 'ai', 'devtools', 'proprietary-engine'],
 	},
 	{
+		id: 'supernova-army-movement',
 		src: 'https://www.youtube.com/watch?v=agAYZj01BJc',
 		kind: 'youtube',
 		start: 54,
@@ -17,12 +19,14 @@ export const supernovaMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'systems-design', 'navigation', 'ai', 'devtools', 'proprietary-engine'],
 	},
 	{
+	id: 'supernova-commanders',
 	src: '',
 		kind: 'text',
 		caption: "We designed and implemented several commanders from initial concept through to polished, shipped content, with complete ability kits and distinctive behaviours and visuals. Brought the designer and artist vision to life through iterative refinement by playtesting and feedback.",
 		tagIds: ['gameplay', 'ability', 'devtools', 'proprietary-engine'],
 	},
 	{
+		id: 'supernova-bro-commander',
 		src: 'https://www.youtube.com/watch?v=MStfmBkkXMo',
 		kind: 'youtube',
 		start: 43,
@@ -31,6 +35,7 @@ export const supernovaMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'systems-design', 'ability', 'devtools', 'proprietary-engine'],
 	},
 	{
+		id: 'supernova-ability-architecture',
 		src: '',
 		kind: 'text',
 		person: 'mitko',
@@ -38,6 +43,7 @@ export const supernovaMedia: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ability', 'devtools', 'proprietary-engine'],
 	},
 	{
+		id: 'supernova-status-effect',
 		src: 'https://www.youtube.com/watch?v=MStfmBkkXMo',
 		kind: 'youtube',
 		start: 85,
@@ -46,6 +52,7 @@ export const supernovaMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ability', 'gameplay', 'devtools', 'proprietary-engine'],
 	},
 	{
+	id: 'supernova-tech-tree',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -53,6 +60,7 @@ export const supernovaMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ui', 'progression', 'metagame', 'devtools', 'proprietary-engine'],
 	},
 	{
+		id: 'supernova-metagame-progression',
 		src: 'https://www.youtube.com/watch?v=agAYZj01BJc',
 		kind: 'youtube',
 		start: 549,

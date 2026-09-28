@@ -1,6 +1,6 @@
 ---
 person: adam
-project: warhammer-mark-of-chaos
+project: warhammer
 category: content
 ---
 

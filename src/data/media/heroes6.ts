@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Might & Magic: Heroes VI (see data/timeline.ts). */
 export const heroes6Media: ProjectMedia[] = [
 	{
+		id: 'heroes6-tutorial',
 		src: 'https://www.youtube.com/watch?v=ipXY3c3wDZk',
 		start: 841,
 		end: 1012,
@@ -11,12 +12,14 @@ export const heroes6Media: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ai', 'narrative-design', 'systems-design', 'ip-critical-design', 'proprietary-engine', 'devtools', 'level-design', 'balance'],
 	},
 	{
+		id: 'heroes6-boss-abilities',
 		src: '',
 		kind: 'text',
 		caption: "We created and refined boss abilities and behaviours to deliver distinctive challenges shaped by each encounter’s narrative context.",
 		tagIds: ['gameplay', 'ai', 'encounter', 'systems-design', 'ip-critical-design', 'ability', 'narrative-design', 'balance'],
 	},
 	{
+		id: 'heroes6-azkaal-boss',
 		src: 'https://www.youtube.com/watch?v=EnHEfd9MFr0',
 		kind: 'youtube',
 		start: 64,
@@ -25,12 +28,14 @@ export const heroes6Media: ProjectMedia[] = [
 		tagIds: ['gameplay', 'ai', 'encounter', 'systems-design', 'ip-critical-design', 'ability', 'narrative-design', 'balance'],
 	},
 	{
+		id: 'heroes6-ability-tree',
 		src: '/projects/heroes6/abilitytree.jpg',
 		kind: 'image',
 		caption: 'Hero ability tree.',
 		tagIds: ['progression', 'ability', 'systems-design', 'ip-critical-design', 'ui'],
 	},
 	{
+		id: 'heroes6-combat-map',
 		src: '/projects/heroes6/combatmap.jpg',
 		kind: 'image',
 		caption: 'The Bridge combat map',

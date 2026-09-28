@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for the Imagic Labs image-gallery product (see data/timeline.ts). */
 export const imagicLabsMedia: ProjectMedia[] = [
 	{
+		id: 'imagic-app-screens',
 		src: '',
 		kind: 'image-row',
 		images: [

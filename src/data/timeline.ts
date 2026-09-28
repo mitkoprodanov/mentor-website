@@ -308,7 +308,7 @@ export const timeline: TimelineEntry[] = [
 						experiences: [{ person: 'adam', slug: 'adam-exigo', tagIds: ['level-design', 'balance', 'proprietary-engine', 'devtools'] }],
 					},
 					{
-						id: 'warhammer-mark-of-chaos',
+						id: 'warhammer',
 						order: 2006,
 						name: 'Warhammer: Mark of Chaos & Battle March',
 						url: 'https://store.steampowered.com/app/4280940/Warhammer_Mark_of_Chaos__Gold_Edition_Classic/',
@@ -420,7 +420,7 @@ export const timeline: TimelineEntry[] = [
 					],
 				},
 				{
-					id: 'beasts-of-brawlia',
+					id: 'bob',
 					order: 2020,
 					name: 'Beasts of Brawlia',
 					url: 'https://www.facebook.com/bobthebrawler',
@@ -464,7 +464,7 @@ export const timeline: TimelineEntry[] = [
 				underMentor: true,
 				projects: [
 					{
-						id: 'imagic-labs-project',
+						id: 'imagic',
 						order: 2025,
 						name: 'Imagic App',
 						url: 'https://www.imagicapp.com/',
@@ -487,7 +487,7 @@ export const timeline: TimelineEntry[] = [
 				underMentor: true,
 				projects: [
 					{
-						id: 'kreator-project',
+						id: 'hod',
 						order: 2025.5,
 						name: 'Heart of Darkness',
 						info: 'Hardcore first-person shooter with ultra-high realism, PvP and PvE',

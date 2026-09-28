@@ -757,3 +757,212 @@ test('vision_tooltip visibility_delta (with trigger_method properties) passes th
 		assert.equal(res.ok, true, res.ok ? '' : res.detail);
 	}
 });
+
+// ---- Telemetry Pass 1: project_intro / project_content / filtered_project
+// (docs section 17.6) — project content visibility across Timeline, Project
+// Modal and Skill Filtered View. ------------------------------------------
+
+test('no properties field is invented for a fixed-owner target with no options.properties (unchanged from before this pass)', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'timeline_project', 'p1');
+	r.setRatio(el, 0.9);
+	r.advance(500);
+	r.engine.materialize();
+	assert.equal(r.emitted[0].properties, undefined);
+});
+
+test('filtered_project: fixed owner (skill_filtered) from the OWNER map, no options needed — same pattern as timeline_project', () => {
+	const r = rig(FILTERED('filter-1'));
+	const el = fakeEl();
+	r.engine.observe(el, 'filtered_project', 'heroes6');
+	r.setRatio(el, 0.9);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 1);
+	assert.equal(r.emitted[0].target_type, 'filtered_project');
+	assert.equal(r.emitted[0].target_id, 'heroes6');
+	assert.equal(r.emitted[0].view_instance_id, 'filter-1');
+});
+
+test('filtered_project: closing the filter force-ends its appearance immediately at the instance boundary (skill_filtered is instanced, unlike main)', () => {
+	const r = rig(FILTERED('filter-1'));
+	const el = fakeEl();
+	r.engine.observe(el, 'filtered_project', 'heroes6');
+	r.setRatio(el, 0.9);
+	r.advance(500);
+	r.setState(MAIN);
+	assert.equal(r.emitted.length, 1);
+	assert.equal(r.emitted[0].v50_ms, 500);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 1); // nothing more: surface isn't skill_filtered anymore
+});
+
+test('project_intro / project_content: a context-dependent target type registered WITHOUT an explicit owner is ignored — the existing scope guard, now also covering the two new context-dependent types', () => {
+	const r = rig();
+	const introEl = fakeEl();
+	r.engine.observe(introEl, 'project_intro', 'heroes6'); // no options.owner, and no fixed OWNER entry either
+	assert.equal(r.observed.has(introEl), false);
+	const contentEl = fakeEl();
+	r.engine.observe(contentEl, 'project_content', 'heroes6:mitko-heroes6');
+	assert.equal(r.observed.has(contentEl), false);
+});
+
+test('project_intro: owner supplied by the rendering context (main, for the Timeline preview) works exactly like a fixed-owner target', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_intro', 'heroes6', { owner: 'main' });
+	r.setRatio(el, 0.8);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 1);
+	assert.equal(r.emitted[0].target_type, 'project_intro');
+	assert.equal(r.emitted[0].target_id, 'heroes6');
+});
+
+test('project_content inside Project Modal (owner: project_modal): the instance-boundary rule, generalized this pass beyond skills_person, force-ends the appearance the instant the modal closes — no waiting on geometry', () => {
+	const r = rig(PROJECT('proj-1'));
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6:mitko-heroes6', {
+		owner: 'project_modal',
+		properties: { content_type: 'experience', person: 'mitko' },
+	});
+	r.setRatio(el, 0.9);
+	r.advance(1000);
+	r.setState(MAIN); // modal closes
+	assert.equal(r.emitted.length, 1); // ended right on the transition
+	assert.equal(r.emitted[0].v50_ms, 1000);
+	assert.equal(r.emitted[0].view_instance_id, 'proj-1');
+	assert.deepEqual(r.emitted[0].properties, { content_type: 'experience', person: 'mitko' });
+
+	r.advance(2000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 1); // surface isn't project_modal anymore: nothing more
+});
+
+test('project_content inside Skill Filtered View (owner: skill_filtered): same generalized instance-boundary forced end', () => {
+	const r = rig(FILTERED('filter-1'));
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6:adam-heroes6', {
+		owner: 'skill_filtered',
+		properties: { content_type: 'experience', person: 'adam' },
+	});
+	r.setRatio(el, 0.7);
+	r.advance(500);
+	r.setState(PROJECT('proj-2')); // superseded by a Project Detail open — different instanced surface
+	assert.equal(r.emitted.length, 1);
+	assert.equal(r.emitted[0].v50_ms, 500);
+	assert.equal(r.emitted[0].view_instance_id, 'filter-1');
+});
+
+test('project_content: static properties (content_type/person) are repeated on every delta of the appearance, not just the first', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6:mitko-heroes6', {
+		owner: 'main',
+		properties: { content_type: 'image', person: 'mitko' },
+	});
+	r.setRatio(el, 0.9);
+	r.advance(500);
+	r.engine.materialize();
+	assert.deepEqual(r.emitted[0].properties, { content_type: 'image', person: 'mitko' });
+	r.advance(500);
+	r.engine.materialize();
+	assert.deepEqual(r.emitted[1].properties, { content_type: 'image', person: 'mitko' });
+});
+
+test('project_content: a shared media item carries person: "both" as ordinary metadata — ownership is NOT encoded into the canonical content id itself', () => {
+	// Media ids are pre-baked with their own project prefix and used as-is,
+	// no colon-joining (see ProjectDetail.astro's mediaVisibilityAttrs) —
+	// unlike an experience id, which is still joined at render time (colon).
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-combat-map', {
+		owner: 'main',
+		properties: { content_type: 'image', person: 'both' },
+	});
+	r.setRatio(el, 0.9);
+	r.advance(200);
+	r.engine.materialize();
+	assert.equal(r.emitted[0].target_id, 'heroes6-combat-map');
+	assert.deepEqual(r.emitted[0].properties, { content_type: 'image', person: 'both' });
+});
+
+test('cross-context canonical identity: the same project_intro target_id has two independent DOM instances under different owners (Timeline vs. Project Modal) — same id, different appearances, each eligible only under its own surface', () => {
+	const r = rig();
+	const timelineEl = fakeEl();
+	const modalEl = fakeEl();
+	r.engine.observe(timelineEl, 'project_intro', 'heroes6', { owner: 'main' });
+	// The modal's own copy starts at ratio 0 — a real <dialog> without [open]
+	// is not rendered, exactly like `.side-panel-stack`'s CSS collapse for
+	// skills_person (docs section 17.3), so this mirrors how it actually
+	// becomes visible only once the surface it belongs to is current.
+	r.engine.observe(modalEl, 'project_intro', 'heroes6', { owner: 'project_modal' });
+	r.setRatio(timelineEl, 0.9);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 1);
+	assert.equal(r.emitted[0].target_id, 'heroes6');
+	const timelineAppearance = r.emitted[0].appearance_id;
+
+	r.setState(PROJECT('proj-1')); // dialog opens: main suspended, project_modal now current
+	r.setRatio(modalEl, 0.9); // the modal's own copy becomes visible now that it's open
+	r.advance(500);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 2);
+	const forModal = r.emitted[1];
+	assert.equal(forModal.target_id, 'heroes6'); // same canonical id as the Timeline instance
+	assert.notEqual(forModal.appearance_id, timelineAppearance); // independent DOM instance, own appearance
+	assert.equal(forModal.view_instance_id, 'proj-1');
+	assert.equal(forModal.v50_ms, 500);
+
+	r.advance(500); // the Timeline copy stays suspended throughout: no new time for it
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 3);
+	assert.equal(r.emitted[2].target_id, 'heroes6');
+	assert.equal(r.emitted[2].appearance_id, forModal.appearance_id); // still the modal's own appearance
+});
+
+test('project_content visibility_delta (with content_type/person properties) passes the real Worker validator', () => {
+	let clockT = 1000;
+	const clk = { now: () => clockT, iso: () => '2026-09-28T10:05:00.000Z' };
+	const queue = new EventQueue(clk, clk.now());
+	const session = buildSessionContext(
+		{
+			search: '', referrer: '', innerWidth: 1200, innerHeight: 800, screenWidth: 1920, screenHeight: 1080,
+			maxTouchPoints: 0, hasTouchStart: false, matchMedia: () => ({ matches: false }),
+		},
+		'sess-id-0200', clk.iso(),
+	);
+	let onRatio: ((ratio: number) => void) | undefined;
+	const el = fakeEl();
+	const engine = new VisibilityMatrixEngine({
+		clock: clk,
+		setTimer: () => 0,
+		clearTimer: () => {},
+		newId: randomId,
+		emit: (type, opts) => queue.emit(type, opts),
+		getState: () => MAIN,
+		subscribe: () => () => {},
+		observeElement: (_el, cb) => {
+			onRatio = cb;
+			return () => {};
+		},
+	});
+	engine.observe(el, 'project_content', 'heroes6:mitko-heroes6', {
+		owner: 'main',
+		properties: { content_type: 'experience', person: 'mitko' },
+	});
+	onRatio!(0.95);
+	clockT += 500;
+	engine.materialize();
+	const ev = queue.peek(10, 1e6)[0];
+	assert.equal(ev.target_type, 'project_content');
+	assert.equal(ev.target_id, 'heroes6:mitko-heroes6');
+	assert.deepEqual(ev.properties, { content_type: 'experience', person: 'mitko' });
+	for (const followUp of [false, true]) {
+		const res = validateBatch(JSON.parse(JSON.stringify(buildBatch(session, followUp, [ev]))));
+		assert.equal(res.ok, true, res.ok ? '' : res.detail);
+	}
+});

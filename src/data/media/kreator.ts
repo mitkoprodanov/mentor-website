@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for the Kreator Studios original-IP prototype (see data/timeline.ts). */
 export const kreatorMedia: ProjectMedia[] = [
 	{
+		id: 'hod-photogrammetry',
 		src: 'https://www.linkedin.com/feed/update/urn:li:activity:7331711027287404545/',
 		kind: 'linkedin-post',
 		person: 'mitko',

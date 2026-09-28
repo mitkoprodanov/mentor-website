@@ -9,11 +9,13 @@ import type { ProjectMedia } from './types';
  */
 export const PLACEHOLDER_MEDIA: ProjectMedia[] = [
 	{
+		id: 'placeholder-image',
 		src: '/projects/_placeholder/image.jpg',
 		kind: 'image',
 		caption: 'Placeholder image — add a screenshot and caption in the data.',
 	},
 	{
+		id: 'placeholder-gif',
 		src: '/projects/_placeholder/motion.gif',
 		kind: 'gif',
 		caption: 'Placeholder gif — add a short clip and caption in the data.',

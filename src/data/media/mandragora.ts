@@ -7,6 +7,7 @@ import type { ProjectMedia } from './types';
  */
 export const mandragoraMedia: ProjectMedia[] = [
 	{
+	id: 'mandragora-boss-behaviors',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -14,6 +15,7 @@ export const mandragoraMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ux-design', 'unreal-engine', 'encounter', 'ability'],
 	},
 	{
+		id: 'mandragora-necromancer-boss',
 		src: 'https://www.youtube.com/watch?v=TuVsA-hP_qg',
 		kind: 'youtube',
 		start: 140,
@@ -23,6 +25,7 @@ export const mandragoraMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ux-design', 'unreal-engine', 'encounter', 'ability'],
 	},
 	{
+	id: 'mandragora-kbm-controls',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -30,6 +33,7 @@ export const mandragoraMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting'],
 	},
 	{
+		id: 'mandragora-crafting-caravan',
 		src: 'https://www.youtube.com/watch?v=SbRSK-2cyc0',
 		kind: 'youtube',
 		start: 16,
@@ -39,6 +43,7 @@ export const mandragoraMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting'],
 	},
 	{
+	id: 'mandragora-talent-trees',
 	src: '',
 		kind: 'text',
 		person: 'adam',
@@ -46,6 +51,7 @@ export const mandragoraMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'ui', 'ux-design', 'unreal-engine', 'blueprint-scripting', 'progression', 'ability'],
 	},
 	{
+		id: 'mandragora-skilltree',
 		src: '/projects/mandragora/skilltree.jpg',
 		kind: 'image',
 		person: 'adam',

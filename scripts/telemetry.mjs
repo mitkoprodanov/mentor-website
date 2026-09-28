@@ -117,6 +117,84 @@ function portOpen(port, host = '127.0.0.1', timeoutMs = 700) {
 	});
 }
 
+/** PIDs of local processes currently LISTENING on `port` (loopback/all
+ *  interfaces), via the OS's own connection table — never anything remote. */
+function listeningPids(port) {
+	const pids = new Set();
+	try {
+		if (process.platform === 'win32') {
+			const r = spawnSync('netstat', ['-ano'], { encoding: 'utf8' });
+			for (const line of (r.stdout ?? '').split(/\r?\n/)) {
+				const parts = line.trim().split(/\s+/);
+				// Columns: Proto, Local Address, Foreign Address, State, PID.
+				if (parts.length < 5 || parts[0] !== 'TCP' || parts[3] !== 'LISTENING') continue;
+				if (Number(parts[1].split(':').pop()) === port) pids.add(parts[4]);
+			}
+		} else {
+			const r = spawnSync('lsof', ['-ti', `tcp:${port}`], { encoding: 'utf8' });
+			for (const pid of (r.stdout ?? '').split(/\s+/)) if (pid) pids.add(pid);
+		}
+	} catch {
+		/* best-effort — an empty set just means "couldn't tell", handled by the caller's re-check */
+	}
+	return pids;
+}
+
+/**
+ * PIDs of local processes whose own command line contains `needle` — used to
+ * find the actual SUPERVISOR process (wrangler's `cli.js`), not just
+ * whatever child it currently has bound to the port. Wrangler's local dev
+ * mode restarts its `workerd` child automatically if it's killed, so killing
+ * only the port's current occupant just gets replayed; killing the
+ * supervisor (with its whole descendant tree) is what actually stops it.
+ * Windows: PowerShell `Get-CimInstance`. Elsewhere: `pgrep -f`.
+ */
+function cmdLinePids(needle) {
+	try {
+		if (process.platform === 'win32') {
+			const escaped = needle.replace(/'/g, "''");
+			const r = spawnSync(
+				'powershell.exe',
+				[
+					'-NoProfile',
+					'-Command',
+					`Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${escaped}*' } | Select-Object -ExpandProperty ProcessId`,
+				],
+				{ encoding: 'utf8' },
+			);
+			return (r.stdout ?? '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+		}
+		const r = spawnSync('pgrep', ['-f', needle], { encoding: 'utf8' });
+		return (r.stdout ?? '').split(/\s+/).filter(Boolean);
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * Best-effort: stops whatever LOCAL process is currently listening on `port`,
+ * so a fresh start can force-restart instead of dying with "port already in
+ * use" — the same idea as Astro's own `--force` (see cmdAstroDev). Pass
+ * `matchCmd` (e.g. the Worker's own `wrangler.jsonc` path) to also find and
+ * kill the owning supervisor process by its command line, which is what
+ * actually stops a dev server (like wrangler's `workerd`) that respawns its
+ * own child on the port — killing just the current port occupant would
+ * otherwise be replayed. Re-scans and retries a few times since the exact
+ * PID holding the socket can change between kill and re-check.
+ */
+async function killPort(port, { matchCmd } = {}) {
+	for (let attempt = 0; attempt < 5 && (await portOpen(port)); attempt++) {
+		const pids = new Set(listeningPids(port));
+		if (matchCmd) for (const pid of cmdLinePids(matchCmd)) pids.add(pid);
+		if (pids.size === 0) break;
+		for (const pid of pids) {
+			if (process.platform === 'win32') spawnSync('taskkill', ['/PID', pid, '/F', '/T'], { encoding: 'utf8' });
+			else spawnSync('kill', ['-9', pid], { encoding: 'utf8' });
+		}
+		await new Promise((r) => setTimeout(r, 300));
+	}
+}
+
 // ------------------------------------------------------------ local D1 access
 
 /**
@@ -303,7 +381,11 @@ async function cmdWorkerDev() {
 		/* reported below */
 	}
 	if (!ready) die('Local telemetry DB is not initialized. Run once: npm run telemetry:db:init');
-	if (await portOpen(WORKER_PORT)) die(`Port ${WORKER_PORT} is already in use (Worker already running?).`);
+	if (await portOpen(WORKER_PORT)) {
+		out(`${tag.info} Port ${WORKER_PORT} is already in use — force-restarting (stopping the existing Worker first).`);
+		await killPort(WORKER_PORT, { matchCmd: WRANGLER_CONFIG });
+		if (await portOpen(WORKER_PORT)) die(`Port ${WORKER_PORT} is still in use after attempting to stop it. Free it manually and retry.`);
+	}
 	out(`Starting LOCAL telemetry Worker on ${WORKER_ORIGIN} (all interfaces, local D1 only).`);
 	// --ip 0.0.0.0 so a phone on the same network can reach the Worker.
 	runForeground(WRANGLER_JS, ['dev', '--local', '--ip', '0.0.0.0', '--port', String(WORKER_PORT), '--config', WRANGLER_CONFIG], {

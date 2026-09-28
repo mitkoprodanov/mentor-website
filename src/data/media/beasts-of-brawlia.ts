@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Beasts of Brawlia (see data/timeline.ts). */
 export const beastsOfBrawliaMedia: ProjectMedia[] = [
 	{
+		id: 'bob-pitch-to-playable',
 		src: '',
 		kind: 'text',
 		person: 'adam',
@@ -10,6 +11,7 @@ export const beastsOfBrawliaMedia: ProjectMedia[] = [
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ability', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting', 'balance'],
 	},
 	{
+		id: 'bob-gameplay',
 		src: 'https://www.facebook.com/watch/?v=938966559787679',
 		kind: 'facebook-video',
 		person: 'adam',

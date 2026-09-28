@@ -56,7 +56,20 @@ const titleId = `project-modal-title-${modalId}`;
 	</button>
 
 	<div class="project-modal__panel">
-		<ProjectDetail title={title} subtitle={subtitle} dateRange={dateRange} people={people} tags={tags} media={media} url={url} urlLabel={urlLabel} titleId={titleId} logo={logo}>
+		<ProjectDetail
+			title={title}
+			subtitle={subtitle}
+			dateRange={dateRange}
+			people={people}
+			tags={tags}
+			media={media}
+			url={url}
+			urlLabel={urlLabel}
+			titleId={titleId}
+			logo={logo}
+			projectId={projectId}
+			owner="project_modal"
+		>
 			<slot />
 		</ProjectDetail>
 	</div>

@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for the Hypha project (see data/projects.ts). */
 export const hyphaMedia: ProjectMedia[] = [
 	{
+		id: 'hypha-mechanics',
 		src: '',
 		kind: 'text',
 		person: 'mitko',
@@ -10,6 +11,7 @@ export const hyphaMedia: ProjectMedia[] = [
 		tagIds: ['board-game-design', 'gameplay', 'board-game', 'prototyping', 'playtesting'],
 	},
 	{
+		id: 'hypha-board',
 		src: '/projects/hypha/board.jpg',
 		kind: 'image',
 		person: 'adam',
@@ -17,6 +19,7 @@ export const hyphaMedia: ProjectMedia[] = [
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'board-game'],
 	},
 	{
+		id: 'hypha-hyphae-tiles',
 		src: '/projects/hypha/hypha.jpg',
 		kind: 'image',
 		person: 'adam',
@@ -24,6 +27,7 @@ export const hyphaMedia: ProjectMedia[] = [
 		tagIds: ['board-game-design', 'prototyping', 'playtesting', 'balance', 'ux-design', 'board-game'],
 	},
 	{
+		id: 'hypha-endgame',
 		src: '/projects/hypha/endgame.jpg',
 		kind: 'image',
 		person: 'adam',

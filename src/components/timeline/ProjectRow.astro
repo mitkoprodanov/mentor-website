@@ -31,6 +31,7 @@ async function loadCards(refs: ProjectDef['experiences']) {
 				tagIds: ref.tagIds ?? [],
 				link: entry.data.link,
 				previewImage: entry.data.previewImage,
+				slug: ref.slug,
 			};
 		}),
 	);
@@ -113,7 +114,7 @@ const visibilityId = project.modalId ?? project.id;
 	}
 	{
 		project.name && (project.info || !project.hideTitle) && (
-			<div class="node">
+			<div class="node" data-visibility-target-type="project_intro" data-visibility-target-id={visibilityId} data-visibility-owner="main">
 				<div class="node-text">
 					{!project.hideTitle && (
 						<div class="node-title-row">
@@ -152,6 +153,7 @@ const visibilityId = project.modalId ?? project.id;
 					link={singleCard.link}
 					previewImage={singleCard.previewImage}
 					interactive={Boolean(project.name)}
+					contentId={`${visibilityId}:${singleCard.slug}`}
 				>
 					<singleCard.Content />
 				</ExperienceCard>
@@ -166,6 +168,7 @@ const visibilityId = project.modalId ?? project.id;
 							link={leftCard.link}
 							previewImage={leftCard.previewImage}
 							interactive={Boolean(project.name)}
+							contentId={`${visibilityId}:${leftCard.slug}`}
 						>
 							<leftCard.Content />
 						</ExperienceCard>
@@ -179,6 +182,7 @@ const visibilityId = project.modalId ?? project.id;
 							link={rightCard.link}
 							previewImage={rightCard.previewImage}
 							interactive={Boolean(project.name)}
+							contentId={`${visibilityId}:${rightCard.slug}`}
 						>
 							<rightCard.Content />
 						</ExperienceCard>
@@ -216,7 +220,15 @@ const visibilityId = project.modalId ?? project.id;
 				logo={project.logo}
 			>
 				{modalCards.map((c) => (
-					<div class="modal-exp" data-person={c.person.id}>
+					<div
+						class="modal-exp"
+						data-person={c.person.id}
+						data-visibility-target-type="project_content"
+						data-visibility-target-id={`${visibilityId}:${c.slug}`}
+						data-visibility-owner="project_modal"
+						data-visibility-content-type="experience"
+						data-visibility-person={c.person.id}
+					>
 						<c.Content />
 					</div>
 				))}

@@ -3,6 +3,7 @@ import type { ProjectMedia } from './types';
 /** Showcase gallery for Warhammer: Mark of Chaos & Battle March (see data/timeline.ts). */
 export const warhammerMarkOfChaosMedia: ProjectMedia[] = [
 	{
+		id: 'warhammer-devtools',
 		src: '',
 		kind: 'text',
 		person: 'adam',
@@ -10,13 +11,15 @@ export const warhammerMarkOfChaosMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'devtools', 'proprietary-engine', 'ip-critical-design'],
 	},
 	{
-		src: '/projects/warhammer-mark-of-chaos/warhammer.jpg',
+		id: 'warhammer-orc-formations',
+		src: '/projects/warhammer/warhammer.jpg',
 		kind: 'image',
 		person: 'adam',
 		caption: 'Orc units and their formations.',
 		tagIds: ['level-design', 'devtools', 'proprietary-engine', 'ip-critical-design'],
 	},
 	{
+		id: 'warhammer-siege-systems',
 		src: '',
 		kind: 'text',
 		person: 'adam',
@@ -24,6 +27,7 @@ export const warhammerMarkOfChaosMedia: ProjectMedia[] = [
 		tagIds: ['level-design', 'devtools', 'proprietary-engine', 'ip-critical-design', 'systems-design', 'ai', 'navigation'],
 	},
 	{
+		id: 'warhammer-skaven-siege',
 		src: 'https://www.youtube.com/watch?v=udUVQXUsK9w',
 		kind: 'youtube',
 		person: 'adam',
