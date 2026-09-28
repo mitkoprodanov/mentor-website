@@ -25,6 +25,13 @@ export interface TelemetryClient {
 	setVisibilityTriggerContext(el: Element, method: string | undefined): void;
 	/** Ends `el`'s active appearance immediately, without waiting on geometry. */
 	endVisibilityAppearance(el: Element): void;
+	/** Marks whether `el`'s playable embed/asset is genuinely live right now
+	 *  (docs section 17.7) — e.g. a blanked Facebook iframe, a YouTube player
+	 *  not yet ready, a GIF not yet loaded. */
+	setVisibilityPlayableSuspended(el: Element, suspended: boolean): void;
+	/** Records real, observed playback state for `el` (docs section 17.7) —
+	 *  never inferred from visibility/iframe existence/autoplay. */
+	setVisibilityPlaying(el: Element, playing: boolean): void;
 }
 
 /** Read-only semantic state access this client needs — exactly what `semanticState` (index.ts) exposes. */
@@ -197,6 +204,20 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 			endVisibilityAppearance(el) {
 				try {
 					visibility.endAppearanceNow(el);
+				} catch {
+					/* never affect the site */
+				}
+			},
+			setVisibilityPlayableSuspended(el, suspended) {
+				try {
+					visibility.setPlayableSuspended(el, suspended);
+				} catch {
+					/* never affect the site */
+				}
+			},
+			setVisibilityPlaying(el, playing) {
+				try {
+					visibility.setPlaying(el, playing);
 				} catch {
 					/* never affect the site */
 				}

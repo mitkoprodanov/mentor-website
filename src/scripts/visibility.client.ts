@@ -21,6 +21,24 @@
  * the rendering context already knows, forwarded as-is into
  * `ObserveOptions.properties`.
  *
+ * `data-visibility-playable-kind` (docs section 17.7) marks a `project_content`
+ * item as playable media, driving `playable_v*`/`playing_v*` accounting. Two
+ * playable kinds start life not-yet-live and this file marks that explicitly
+ * at registration, before any geometry ever crosses 50% — mirroring exactly
+ * what `projectModal.client.ts` does to the real DOM at the same moment
+ * (blanking every Facebook iframe / not yet having constructed a YouTube
+ * player):
+ *   - `facebook`: opaque provider, only ever unsuspended by a real
+ *     `activateFacebook()` call (projectModal.client.ts).
+ *   - `youtube`: only ever unsuspended once the IFrame API player actually
+ *     fires `onReady` (projectModal.client.ts).
+ *   - `gif`: not a provider, just an `<img>` that may not have finished
+ *     loading yet — unsuspended here directly once it has (`img.complete`,
+ *     or its own `load` event), no projectModal.client.ts involvement needed.
+ *   - `native-video`: no separate "not yet live" state is tracked (docs
+ *     section 17.7's documented limitation) — playable is ordinary
+ *     Visibility Matrix eligibility only.
+ *
  * Vision tooltips additionally need two things geometry alone can't give the
  * engine (docs section 17.4): objective trigger context, and an immediate
  * appearance end the moment a tooltip is forced hidden rather than waiting on
@@ -32,11 +50,17 @@
  */
 
 import { telemetry } from '../lib/telemetry';
-import type { ObserveOptions, PropertyValue, Surface } from '../lib/telemetry';
+import type { ObserveOptions, PlayableKind, PropertyValue, Surface } from '../lib/telemetry';
 import { UI_EVENT } from '../lib/telemetry/uiEvents.ts';
 import type { VisionTooltipHideDetail, VisionTooltipShowDetail } from '../lib/telemetry/uiEvents.ts';
 
 const VALID_OWNERS = new Set<Surface>(['main', 'skills', 'project_modal', 'skill_filtered']);
+const VALID_PLAYABLE_KINDS = new Set<PlayableKind>(['native-video', 'youtube', 'facebook', 'gif']);
+/** Playable kinds that start suspended until a real activation (docs section
+ *  17.7) — `projectModal.client.ts` unsuspends `facebook`/`youtube`; `gif` is
+ *  unsuspended right here from the image's own `load` state. `native-video`
+ *  is deliberately absent (no "not yet live" state tracked for it). */
+const STARTS_SUSPENDED = new Set<PlayableKind>(['facebook', 'youtube', 'gif']);
 
 /** Builds `ObserveOptions` from a target's own data attributes — an explicit
  *  owner override for a context-dependent target type, plus any static
@@ -50,8 +74,25 @@ function observeOptions(el: HTMLElement): ObserveOptions | undefined {
 	const properties: Record<string, PropertyValue> = {};
 	if (el.dataset.visibilityContentType) properties.content_type = el.dataset.visibilityContentType;
 	if (el.dataset.visibilityPerson) properties.person = el.dataset.visibilityPerson;
-	if (!owner && Object.keys(properties).length === 0) return undefined;
-	return { owner, properties: Object.keys(properties).length ? properties : undefined };
+	const rawPlayableKind = el.dataset.visibilityPlayableKind;
+	const playableKind = rawPlayableKind && VALID_PLAYABLE_KINDS.has(rawPlayableKind as PlayableKind) ? (rawPlayableKind as PlayableKind) : undefined;
+	if (!owner && !playableKind && Object.keys(properties).length === 0) return undefined;
+	return { owner, playableKind, properties: Object.keys(properties).length ? properties : undefined };
+}
+
+/** GIF-only initial suspension (docs section 17.7): suspended until the
+ *  `<img>` has actually loaded, since an unloaded image isn't presenting any
+ *  animated pixels yet regardless of how visible its container is. Uses
+ *  whichever `<img>` sits inside this `project_content` figure — always
+ *  exactly one for a `gif` item (see ProjectDetail.astro's default/`gif` shot
+ *  branch). A no-op if the figure has no `<img>` (shouldn't happen for a real
+ *  `gif` item, but never throws either way). */
+function wireGifLoadGate(el: HTMLElement): void {
+	const img = el.querySelector('img');
+	if (!img) return;
+	if (img.complete) return; // already loaded (e.g. cached): stays unsuspended
+	telemetry.setVisibilityPlayableSuspended(el, true);
+	img.addEventListener('load', () => telemetry.setVisibilityPlayableSuspended(el, false), { once: true });
 }
 
 function init(): void {
@@ -59,7 +100,13 @@ function init(): void {
 		const targetType = el.dataset.visibilityTargetType;
 		const targetId = el.dataset.visibilityTargetId;
 		if (!targetType || !targetId) return;
-		telemetry.observeVisibility(el, targetType, targetId, observeOptions(el));
+		const options = observeOptions(el);
+		telemetry.observeVisibility(el, targetType, targetId, options);
+		if (options?.playableKind === 'gif') {
+			wireGifLoadGate(el);
+		} else if (options?.playableKind && STARTS_SUSPENDED.has(options.playableKind)) {
+			telemetry.setVisibilityPlayableSuspended(el, true);
+		}
 	});
 
 	const tooltipEl = (tooltipId: string | undefined): HTMLElement | null =>

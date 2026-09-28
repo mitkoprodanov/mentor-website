@@ -39,7 +39,14 @@ const event = (over: Record<string, unknown> = {}) => ({
   v85_ms: 3100,
   v95_ms: 1000,
   max_visibility_ratio: 0.97,
-  playing_ms: 4000,
+  playable_v50_ms: 5000,
+  playable_v70_ms: 4200,
+  playable_v85_ms: 3100,
+  playable_v95_ms: 1000,
+  playing_v50_ms: 4000,
+  playing_v70_ms: 3000,
+  playing_v85_ms: 2000,
+  playing_v95_ms: 500,
   properties: { pointer_type: 'mouse', count: 3, locked: false },
   ...over,
 });
@@ -272,7 +279,29 @@ test('validation: long free-form context is truncated, not rejected', () => {
 
 test('validation: events', () => {
   good({ session: session(), events: [event()] });
-  good({ session: session(), events: [event({ event_type: 'nav_click', target_type: undefined, target_id: undefined, v50_ms: undefined, v70_ms: undefined, v85_ms: undefined, v95_ms: undefined, max_visibility_ratio: undefined, playing_ms: undefined })] });
+  good({
+    session: session(),
+    events: [
+      event({
+        event_type: 'nav_click',
+        target_type: undefined,
+        target_id: undefined,
+        v50_ms: undefined,
+        v70_ms: undefined,
+        v85_ms: undefined,
+        v95_ms: undefined,
+        max_visibility_ratio: undefined,
+        playable_v50_ms: undefined,
+        playable_v70_ms: undefined,
+        playable_v85_ms: undefined,
+        playable_v95_ms: undefined,
+        playing_v50_ms: undefined,
+        playing_v70_ms: undefined,
+        playing_v85_ms: undefined,
+        playing_v95_ms: undefined,
+      }),
+    ],
+  });
   bad({ session: session(), events: [event({ event_type: 'drop_table' })] });
   bad({ session: session(), events: [event({ elapsed_ms: -1 })] });
   bad({ session: session(), events: [event({ elapsed_ms: 1.5 })] });
@@ -280,6 +309,11 @@ test('validation: events', () => {
   bad({ session: session(), events: [event({ v50_ms: -1 })] });
   bad({ session: session(), events: [event({ v50_ms: LIMITS.maxDeltaMs + 1, v70_ms: 0, v85_ms: 0, v95_ms: 0 })] });
   bad({ session: session(), events: [event({ v70_ms: 6000 })] }); // exceeds v50
+  bad({ session: session(), events: [event({ playable_v70_ms: 6000 })] }); // exceeds playable_v50 (5000)
+  bad({ session: session(), events: [event({ playing_v70_ms: 5000 })] }); // exceeds playing_v50 (4000)
+  good({ session: session(), events: [event({ playable_v50_ms: 100, playable_v70_ms: 100, playable_v85_ms: 100, playable_v95_ms: 100 })] });
+  bad({ session: session(), events: [event({ event_type: 'nav_click', playable_v50_ms: 5 })] }); // only allowed on visibility_delta
+  bad({ session: session(), events: [event({ event_type: 'nav_click', playing_v50_ms: 5 })] });
   bad({ session: session(), events: [event({ max_visibility_ratio: 1.01 })] });
   bad({ session: session(), events: [event({ max_visibility_ratio: -0.1 })] });
   bad({ session: session(), events: [event({ max_visibility_ratio: 'high' })] });

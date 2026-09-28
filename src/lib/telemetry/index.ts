@@ -17,7 +17,7 @@ import type { EmitOptions } from './types.ts';
 import type { ObserveOptions } from './visibility.ts';
 
 export type { SemanticState, Surface } from './state.ts';
-export type { ObserveOptions } from './visibility.ts';
+export type { ObserveOptions, PlayableKind } from './visibility.ts';
 export type { PropertyValue } from './types.ts';
 
 // Injected by astro.config.mjs (vite `define`).
@@ -81,6 +81,19 @@ export const telemetry = {
 	 *  target whose own UI knows precisely when it stopped being presented. */
 	endVisibilityAppearance(el: Element): void {
 		client?.endVisibilityAppearance(el);
+	},
+	/** Marks whether `el`'s playable embed/asset is genuinely live right now
+	 *  (docs section 17.7) — e.g. a blanked Facebook iframe, a YouTube player
+	 *  not yet ready, a GIF not yet loaded. A silent no-op until initTelemetry()
+	 *  has run, or whenever telemetry is disabled. */
+	setVisibilityPlayableSuspended(el: Element, suspended: boolean): void {
+		client?.setVisibilityPlayableSuspended(el, suspended);
+	},
+	/** Records real, observed playback state for `el` (docs section 17.7) —
+	 *  call only from an actual provider/media event, never inferred from
+	 *  visibility, iframe existence, or an autoplay request. */
+	setVisibilityPlaying(el: Element, playing: boolean): void {
+		client?.setVisibilityPlaying(el, playing);
 	},
 };
 

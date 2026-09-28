@@ -65,7 +65,7 @@ function rig(initial: SemanticState = MAIN) {
 		},
 		clearTimer: (h) => void timers.delete(h as number),
 		newId: () => `appear_${++idCounter}`,
-		emit: (_type, opts) => emitted.push(opts),
+		emit: (type, opts) => emitted.push({ type, ...opts }),
 		getState: () => state,
 		subscribe: (fn) => {
 			listeners.push(fn);
@@ -86,6 +86,10 @@ function rig(initial: SemanticState = MAIN) {
 	return {
 		engine,
 		emitted,
+		/** `emitted` filtered to `visibility_delta` only — convenient when a
+		 *  test also expects interleaved `video_start` events (docs section 17.7). */
+		deltas: () => emitted.filter((e) => e.type === 'visibility_delta'),
+		videoStarts: () => emitted.filter((e) => e.type === 'video_start'),
 		advance,
 		observed,
 		setRatio: (el: Element, ratio: number) => ratioCallbacks.get(el)!(ratio),
@@ -964,5 +968,393 @@ test('project_content visibility_delta (with content_type/person properties) pas
 	for (const followUp of [false, true]) {
 		const res = validateBatch(JSON.parse(JSON.stringify(buildBatch(session, followUp, [ev]))));
 		assert.equal(res.ok, true, res.ok ? '' : res.detail);
+	}
+});
+
+// ---- Telemetry Pass 2: playable/playing (docs section 9, 17.7) -------------
+// Three parallel families sharing one accounting loop: general v* (Pass 1,
+// unaffected — see the tests above), playable_v* (any `playableKind`
+// target), and playing_v* (only `native-video`/`youtube`, the kinds with
+// real observable playback state).
+
+test('playable_v* begins only once the target reaches >=50% visible, exactly like v* (native-video, not yet playing)', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.49);
+	r.advance(2000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 0); // never reached 50%: no appearance, nothing to measure at all
+
+	r.setRatio(el, 0.6);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1);
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 1000);
+	assert.equal(d.playable_v50_ms, 1000);
+	assert.equal(d.playing_v50_ms, 0); // an observable kind, but playingActive was never set true
+});
+
+test('playable_v* nests exactly like v*; playing_v* is entirely absent (not sent as zero) for a kind with no observable playback state (gif)', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'placeholder-gif', { owner: 'main', playableKind: 'gif' });
+	r.setRatio(el, 0.5);
+	r.advance(2000);
+	r.setRatio(el, 0.9); // now also >=70/>=85, still <95
+	r.advance(2000);
+	r.engine.materialize();
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 4000);
+	assert.equal(d.v70_ms, 2000);
+	assert.equal(d.v85_ms, 2000);
+	assert.equal(d.v95_ms, 0);
+	assert.equal(d.playable_v50_ms, 4000);
+	assert.equal(d.playable_v70_ms, 2000);
+	assert.equal(d.playable_v85_ms, 2000);
+	assert.equal(d.playable_v95_ms, 0);
+	assert.equal(d.playing_v50_ms, undefined);
+	assert.equal(d.playing_v70_ms, undefined);
+	assert.equal(d.playing_v85_ms, undefined);
+	assert.equal(d.playing_v95_ms, undefined);
+});
+
+test('facebook (opaque provider): playableSuspended blocks playable_v* while general v* keeps accumulating; playing_v* is never sent at all', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'around-clip', { owner: 'main', playableKind: 'facebook' });
+	r.engine.setPlayableSuspended(el, true); // the iframe is blanked, as at page load (initFacebook)
+	r.setRatio(el, 0.9);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1);
+	const d1 = r.deltas()[0];
+	assert.equal(d1.v50_ms, 1000); // general visibility is unaffected by playable suspension
+	assert.equal(d1.playable_v50_ms, 0); // suspended: no playable time
+	assert.equal(d1.playing_v50_ms, undefined); // facebook never gets playing fields at all
+
+	r.engine.setPlayableSuspended(el, false); // real src restored (activateFacebook)
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 2);
+	const d2 = r.deltas()[1];
+	assert.equal(d2.v50_ms, 1000);
+	assert.equal(d2.playable_v50_ms, 1000); // now live
+	assert.equal(d2.playing_v50_ms, undefined);
+	assert.equal(r.videoStarts().length, 0); // never, for an opaque provider
+});
+
+test('gif: playableSuspended until the image has loaded, then playable_v* accumulates; playing_v* is never sent', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'placeholder-gif', { owner: 'main', playableKind: 'gif' });
+	r.engine.setPlayableSuspended(el, true); // not yet loaded
+	r.setRatio(el, 0.9);
+	r.advance(500);
+	r.engine.setPlayableSuspended(el, false); // the <img> 'load' event fires
+	r.advance(500);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1);
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 1000); // general visibility unaffected
+	assert.equal(d.playable_v50_ms, 500); // only the post-load half
+	assert.equal(d.playing_v50_ms, undefined);
+});
+
+test('native-video: visible but not yet playing accumulates playable_v* but not playing_v*, and emits no video_start', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.advance(1000); // visible, but the browser hasn't fired 'playing' yet
+	r.engine.materialize();
+	const d = r.deltas()[0];
+	assert.equal(d.playable_v50_ms, 1000);
+	assert.equal(d.playing_v50_ms, 0);
+	assert.equal(r.videoStarts().length, 0);
+});
+
+test('native-video: playing_v* begins only once real playback is observed, video_start fires exactly once per appearance, and pause/resume within the same appearance never re-fires it', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.advance(500); // playable but not playing yet
+	r.engine.setPlaying(el, true); // the video's real 'playing' event
+	assert.equal(r.videoStarts().length, 1); // fires immediately, not waiting for materialize
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1);
+	const d = r.deltas()[0];
+	assert.equal(d.playable_v50_ms, 1500); // visible the whole 1500ms
+	assert.equal(d.playing_v50_ms, 1000); // only the 1000ms actually playing
+	assert.equal(r.videoStarts()[0].appearance_id, d.appearance_id);
+	assert.equal(r.videoStarts()[0].target_id, 'heroes6-clip');
+
+	// Pausing then resuming within the SAME appearance is a resume, not a new start.
+	r.engine.setPlaying(el, false); // 'pause'
+	r.advance(500);
+	r.engine.setPlaying(el, true); // 'playing' again
+	r.advance(500);
+	r.engine.materialize();
+	assert.equal(r.videoStarts().length, 1); // still exactly one — no second video_start on resume
+	const d2 = r.deltas()[1];
+	assert.equal(d2.playing_v50_ms, 500); // only the resumed span; the paused 500ms contributed zero
+	assert.equal(d2.playable_v50_ms, 1000); // playable keeps accumulating through the pause (still visible)
+});
+
+test('native-video: playing while below 50% visible contributes zero playing_v* — there is no appearance to attach it to at all', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.engine.setPlaying(el, true); // e.g. autoplay fired before scroll brought it into view
+	r.setRatio(el, 0.3); // never reaches 50%
+	r.advance(2000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 0);
+	assert.equal(r.videoStarts().length, 0);
+});
+
+test('native-video: ended stops playing_v* accumulation, same as pause', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'exigo-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.engine.setPlaying(el, true);
+	r.advance(1000);
+	r.engine.setPlaying(el, false); // the video's 'ended' event, handled identically to 'pause'
+	r.advance(1000); // still visible, but playback has ended
+	r.engine.materialize();
+	const d = r.deltas()[0];
+	assert.equal(d.playable_v50_ms, 2000); // stays visible/playable
+	assert.equal(d.playing_v50_ms, 1000); // only the pre-ended span
+});
+
+test('youtube: playable_v*/playing_v* nest correctly across the not-ready-yet window, and video_start carries the same static properties as visibility_delta', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-teaser', {
+		owner: 'main',
+		playableKind: 'youtube',
+		properties: { content_type: 'youtube', person: 'both' },
+	});
+	r.engine.setPlayableSuspended(el, true); // player not yet constructed (IFrame API still loading)
+	r.setRatio(el, 0.95);
+	r.advance(300); // visible while the API is still loading
+	r.engine.setPlayableSuspended(el, false); // onReady fires
+	r.engine.setPlaying(el, true); // onStateChange: PLAYING
+	r.advance(2000);
+	r.engine.materialize();
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 2300);
+	assert.equal(d.v95_ms, 2300);
+	assert.equal(d.playable_v50_ms, 2000); // only after onReady unsuspended it
+	assert.equal(d.playable_v95_ms, 2000);
+	assert.equal(d.playing_v50_ms, 2000);
+	assert.equal(d.playing_v95_ms, 2000);
+	assert.deepEqual(r.videoStarts()[0].properties, { content_type: 'youtube', person: 'both' });
+});
+
+test('video_start never invents an autoplay/user-started distinction — only static properties (if any) are attached, nothing about the trigger is guessed', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.engine.setPlaying(el, true);
+	assert.equal(r.videoStarts().length, 1);
+	assert.equal(r.videoStarts()[0].properties, undefined); // no staticProperties supplied, none invented
+});
+
+test('setPlaying is a no-op for facebook/gif (no observable playback state): playing_v* and video_start never happen for these kinds even if told to', () => {
+	const r = rig();
+	const fbEl = fakeEl();
+	const gifEl = fakeEl();
+	r.engine.observe(fbEl, 'project_content', 'around-clip', { owner: 'main', playableKind: 'facebook' });
+	r.engine.observe(gifEl, 'project_content', 'placeholder-gif', { owner: 'main', playableKind: 'gif' });
+	r.engine.setPlaying(fbEl, true);
+	r.engine.setPlaying(gifEl, true);
+	r.setRatio(fbEl, 0.9);
+	r.setRatio(gifEl, 0.9);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.videoStarts().length, 0);
+	for (const d of r.deltas()) assert.equal(d.playing_v50_ms, undefined);
+});
+
+test('document hidden contributes zero playable_v*/playing_v*, same as v*, and both resume correctly together', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.engine.setPlaying(el, true);
+	r.advance(1000);
+	r.engine.pause(); // document goes hidden
+	r.advance(5000);
+	r.engine.materialize();
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 1000);
+	assert.equal(d.playable_v50_ms, 1000);
+	assert.equal(d.playing_v50_ms, 1000); // the hidden 5s contributed zero to all three families
+
+	r.engine.resume();
+	r.advance(500);
+	r.engine.materialize();
+	const d2 = r.deltas()[1];
+	assert.equal(d2.v50_ms, 500);
+	assert.equal(d2.playable_v50_ms, 500);
+	assert.equal(d2.playing_v50_ms, 500);
+});
+
+test('semantic suspension (Skills over main) contributes zero playable_v*/playing_v*, same as v*, resumes correctly, and stays the same appearance throughout', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.8);
+	r.engine.setPlaying(el, true);
+	r.advance(1000);
+	r.setState(SKILLS('skills-1')); // main suspended
+	const d = r.deltas()[0]; // drained right at the transition
+	assert.equal(d.v50_ms, 1000);
+	assert.equal(d.playable_v50_ms, 1000);
+	assert.equal(d.playing_v50_ms, 1000);
+
+	r.advance(3000); // still "playing" per playingActive, but suspended: must contribute zero
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1); // nothing new drained
+
+	r.setState(MAIN); // resumes
+	r.advance(500);
+	r.engine.materialize();
+	const d2 = r.deltas()[1];
+	assert.equal(d2.v50_ms, 500);
+	assert.equal(d2.playable_v50_ms, 500);
+	assert.equal(d2.playing_v50_ms, 500);
+	assert.equal(d2.appearance_id, d.appearance_id); // main never acquires an instance: same appearance throughout
+});
+
+test('project_content inside Project Modal: closing the modal force-ends the appearance and stops playable_v*/playing_v* immediately, the same instance-boundary rule as v*', () => {
+	const r = rig(PROJECT('proj-1'));
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'project_modal', playableKind: 'native-video' });
+	r.setRatio(el, 0.9);
+	r.engine.setPlaying(el, true);
+	r.advance(1000);
+	r.setState(MAIN); // modal closes
+	const d = r.deltas()[0];
+	assert.equal(d.v50_ms, 1000);
+	assert.equal(d.playable_v50_ms, 1000);
+	assert.equal(d.playing_v50_ms, 1000);
+
+	r.advance(2000); // fictitious continued "playback" after close must not leak
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1); // nothing more: surface isn't project_modal anymore
+});
+
+test('no zero-delta spam: toggling playableSuspended/playing while below 50% visible emits nothing at all', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.3); // never visible enough to start an appearance
+	r.engine.setPlayableSuspended(el, true);
+	r.engine.setPlayableSuspended(el, false);
+	r.engine.setPlaying(el, true);
+	r.advance(2000);
+	r.engine.materialize();
+	assert.equal(r.emitted.length, 0);
+});
+
+test('materialize() sends only newly accumulated playable_v*/playing_v* each time, never the cumulative total', () => {
+	const r = rig();
+	const el = fakeEl();
+	r.engine.observe(el, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.setRatio(el, 0.95);
+	r.engine.setPlaying(el, true);
+	r.advance(8000);
+	r.engine.materialize();
+	const d1 = r.deltas()[0];
+	assert.equal(d1.playable_v50_ms, 8000);
+	assert.equal(d1.playing_v50_ms, 8000);
+	r.advance(5000);
+	r.engine.materialize();
+	const d2 = r.deltas()[1];
+	assert.equal(d2.playable_v50_ms, 5000); // NOT 13000
+	assert.equal(d2.playing_v50_ms, 5000);
+});
+
+test('cross-context canonical identity: playable_v*/playing_v* accounting is independent per DOM instance even though target_id is shared (Timeline vs. Project Modal)', () => {
+	const r = rig();
+	const timelineEl = fakeEl();
+	const modalEl = fakeEl();
+	r.engine.observe(timelineEl, 'project_content', 'heroes6-clip', { owner: 'main', playableKind: 'native-video' });
+	r.engine.observe(modalEl, 'project_content', 'heroes6-clip', { owner: 'project_modal', playableKind: 'native-video' });
+	r.engine.setPlaying(timelineEl, true);
+	r.setRatio(timelineEl, 0.9);
+	r.advance(1000);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 1);
+	const timelineDelta = r.deltas()[0];
+	assert.equal(timelineDelta.target_id, 'heroes6-clip');
+	assert.equal(timelineDelta.playing_v50_ms, 1000);
+
+	r.setState(PROJECT('proj-1'));
+	r.engine.setPlaying(modalEl, true);
+	r.setRatio(modalEl, 0.9);
+	r.advance(500);
+	r.engine.materialize();
+	assert.equal(r.deltas().length, 2);
+	const modalDelta = r.deltas()[1];
+	assert.equal(modalDelta.target_id, 'heroes6-clip'); // same canonical id
+	assert.equal(modalDelta.playing_v50_ms, 500);
+	assert.notEqual(modalDelta.appearance_id, timelineDelta.appearance_id); // independent DOM instance, own appearance
+});
+
+test('a project_content visibility_delta with playable_v*/playing_v* fields, and its video_start, both pass the real Worker validator', () => {
+	let clockT = 1000;
+	const clk = { now: () => clockT, iso: () => '2026-09-29T10:00:00.000Z' };
+	const queue = new EventQueue(clk, clk.now());
+	const session = buildSessionContext(
+		{
+			search: '', referrer: '', innerWidth: 1200, innerHeight: 800, screenWidth: 1920, screenHeight: 1080,
+			maxTouchPoints: 0, hasTouchStart: false, matchMedia: () => ({ matches: false }),
+		},
+		'sess-id-0300', clk.iso(),
+	);
+	let onRatio: ((ratio: number) => void) | undefined;
+	const el = fakeEl();
+	const engine = new VisibilityMatrixEngine({
+		clock: clk,
+		setTimer: () => 0,
+		clearTimer: () => {},
+		newId: randomId,
+		emit: (type, opts) => queue.emit(type, opts),
+		getState: () => MAIN,
+		subscribe: () => () => {},
+		observeElement: (_el, cb) => {
+			onRatio = cb;
+			return () => {};
+		},
+	});
+	engine.observe(el, 'project_content', 'heroes6-clip', {
+		owner: 'main',
+		playableKind: 'native-video',
+		properties: { content_type: 'video', person: 'mitko' },
+	});
+	onRatio!(0.9);
+	engine.setPlaying(el, true); // fires video_start synchronously
+	clockT += 750;
+	engine.materialize();
+	const events = queue.peek(10, 1e6);
+	assert.equal(events.length, 2); // video_start + visibility_delta, in that order
+	assert.equal(events[0].event_type, 'video_start');
+	assert.equal(events[1].event_type, 'visibility_delta');
+	assert.deepEqual(events[0].properties, { content_type: 'video', person: 'mitko' });
+	assert.equal(events[1].playable_v50_ms, 750);
+	assert.equal(events[1].playing_v50_ms, 750);
+	for (const ev of events) {
+		for (const followUp of [false, true]) {
+			const res = validateBatch(JSON.parse(JSON.stringify(buildBatch(session, followUp, [ev]))));
+			assert.equal(res.ok, true, res.ok ? '' : res.detail);
+		}
 	}
 });

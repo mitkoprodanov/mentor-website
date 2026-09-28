@@ -22,9 +22,10 @@ const SESSION_SQL = `INSERT OR IGNORE INTO sessions (
 const EVENT_SQL = `INSERT OR IGNORE INTO events (
   session_id, event_id, occurred_at, elapsed_ms, event_type, target_type, target_id,
   appearance_id, view_instance_id, v50_ms, v70_ms, v85_ms, v95_ms, max_visibility_ratio,
-  playing_ms, playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms,
+  playable_v50_ms, playable_v70_ms, playable_v85_ms, playable_v95_ms,
+  playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms,
   properties, telemetry_version
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
 function allowedOrigins(env: Env): Set<string> {
   const set = new Set([PRODUCTION_ORIGIN]);
@@ -117,8 +118,10 @@ function eventStatement(db: D1Database, sessionId: string, e: EventRow) {
   return db.prepare(EVENT_SQL).bind(
     sessionId, e.event_id, e.occurred_at, e.elapsed_ms, e.event_type, e.target_type,
     e.target_id, e.appearance_id, e.view_instance_id, e.v50_ms, e.v70_ms, e.v85_ms,
-    e.v95_ms, e.max_visibility_ratio, e.playing_ms, e.playing_v50_ms, e.playing_v70_ms,
-    e.playing_v85_ms, e.playing_v95_ms, e.properties, TELEMETRY_VERSION,
+    e.v95_ms, e.max_visibility_ratio,
+    e.playable_v50_ms, e.playable_v70_ms, e.playable_v85_ms, e.playable_v95_ms,
+    e.playing_v50_ms, e.playing_v70_ms, e.playing_v85_ms, e.playing_v95_ms,
+    e.properties, TELEMETRY_VERSION,
   );
 }
 

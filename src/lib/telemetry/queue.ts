@@ -75,6 +75,14 @@ export class EventQueue {
 		if (opts.v85_ms !== undefined) ev.v85_ms = opts.v85_ms;
 		if (opts.v95_ms !== undefined) ev.v95_ms = opts.v95_ms;
 		if (opts.max_visibility_ratio !== undefined) ev.max_visibility_ratio = opts.max_visibility_ratio;
+		if (opts.playable_v50_ms !== undefined) ev.playable_v50_ms = opts.playable_v50_ms;
+		if (opts.playable_v70_ms !== undefined) ev.playable_v70_ms = opts.playable_v70_ms;
+		if (opts.playable_v85_ms !== undefined) ev.playable_v85_ms = opts.playable_v85_ms;
+		if (opts.playable_v95_ms !== undefined) ev.playable_v95_ms = opts.playable_v95_ms;
+		if (opts.playing_v50_ms !== undefined) ev.playing_v50_ms = opts.playing_v50_ms;
+		if (opts.playing_v70_ms !== undefined) ev.playing_v70_ms = opts.playing_v70_ms;
+		if (opts.playing_v85_ms !== undefined) ev.playing_v85_ms = opts.playing_v85_ms;
+		if (opts.playing_v95_ms !== undefined) ev.playing_v95_ms = opts.playing_v95_ms;
 		if (opts.properties) ev.properties = opts.properties;
 		this.items.push(ev);
 		return ev;

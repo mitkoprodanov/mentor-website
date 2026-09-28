@@ -26,12 +26,65 @@
 //
 // No direct `fetch`, no retry/backoff: `deps.emit` routes into the existing
 // queue exactly like any other telemetry event.
+//
+// ---- Telemetry Pass 2: playable/playing (docs section 9, 17.7) ------------
+//
+// Three parallel, nested measurement families share this one accounting loop
+// (account() below) rather than a second engine:
+//
+//   - v50-v95            (Pass 1) any tracked target: exposed at the threshold.
+//   - playable_v50-v95   a *playable-media* target (`playableKind` set at
+//                        observe() time — see PlayableKind), exposed at the
+//                        threshold AND not `playableSuspended` (an opaque
+//                        provider's embed deliberately not live right now,
+//                        e.g. a blanked Facebook iframe, or a not-yet-ready
+//                        YouTube/GIF asset). Does not assert playback.
+//   - playing_v50-v95    only for a target whose real playback state is
+//                        observable (native `<video>` events, the YouTube
+//                        IFrame API) — playable AND `playingActive` (set by
+//                        the DOM layer from real provider events, never
+//                        inferred from visibility/iframe existence/autoplay).
+//
+// Each family is a strict subset of the one above it at every instant (same
+// ratio/eligibility gate, progressively narrower extra conditions), so
+// playing_vX <= playable_vX <= vX holds by construction, not by a separate
+// check. `playableSuspended`/`playingActive` are dynamic external state,
+// toggled by setPlayableSuspended()/setPlaying() — both account() first (so
+// time already accrued under the OLD state is never lost or misattributed)
+// exactly like onRatio/onStateChange/pause/resume do for their own state.
+// They are NOT reset by startAppearance/endAppearance (same reasoning as
+// `ratio`: they reflect real external state, independent of appearance
+// identity); only the per-appearance `videoStartEmitted` guard resets.
 
 import type { SemanticState, Surface } from './state.ts';
 import type { PropertyValue } from './types.ts';
 
 /** A dip below 50% shorter than this does not end the appearance (docs section 7). */
 export const GRACE_MS = 300;
+
+/**
+ * Which kind of playable media a `project_content` target is, if any —
+ * supplied explicitly by the rendering context via `ObserveOptions.playableKind`
+ * (docs section 17.7), never inferred from `content_type` inside the engine.
+ * Drives both which targets accumulate `playable_v*` at all, and which of
+ * those additionally have real observable playback state for `playing_v*`:
+ *
+ *   - `native-video`: a self-hosted `<video>` — real `play`/`pause`/`ended`
+ *     events, so both playable_v* and playing_v*.
+ *   - `youtube`: the YouTube IFrame Player API — real `onStateChange`, so
+ *     both playable_v* and playing_v*. `playableSuspended` gates the window
+ *     before the API/player is actually ready (see projectModal.client.ts).
+ *   - `facebook`: the Facebook video/reel plugin iframe — no JS API, opaque.
+ *     playable_v* only, gated by `playableSuspended` (blanked src = not
+ *     live). Never playing_v*, never `video_start`.
+ *   - `gif`: an animated `<img>` — no play/pause API at all. playable_v*
+ *     only (gated by `playableSuspended` until the image has loaded), never
+ *     playing_v*.
+ */
+export type PlayableKind = 'native-video' | 'youtube' | 'facebook' | 'gif';
+
+/** Playable kinds with real, reliably observable playback state (docs section 17.7). */
+const PLAYING_OBSERVABLE = new Set<PlayableKind>(['native-video', 'youtube']);
 
 const THRESHOLDS = [
 	{ key: 'v50', ratio: 0.5 },
@@ -93,6 +146,14 @@ export interface ObserveOptions {
 	 *  `triggerMethod` (`setTriggerContext`): this is a fixed fact about the
 	 *  target itself, set once at registration. */
 	properties?: Record<string, PropertyValue>;
+	/** Marks this target as playable media of the given kind (docs section
+	 *  17.7) — drives `playable_v*`/`playing_v*` accounting. Fixed for the
+	 *  target's lifetime, supplied by the rendering context from the media
+	 *  item's own `kind` (never inferred from `content_type` inside the
+	 *  engine). Omit for non-playable content (`image`, `text`,
+	 *  `linkedin-post`, `image-row`, `experience`, and every non-`project_content`
+	 *  target type). */
+	playableKind?: PlayableKind;
 }
 
 export interface VisibilityEmitOptions {
@@ -105,7 +166,33 @@ export interface VisibilityEmitOptions {
 	v85_ms: number;
 	v95_ms: number;
 	max_visibility_ratio: number;
+	/** Present only for a `playableKind` target (docs section 17.7) — omitted
+	 *  entirely for ordinary (non-playable) content, not sent as zero. */
+	playable_v50_ms?: number;
+	playable_v70_ms?: number;
+	playable_v85_ms?: number;
+	playable_v95_ms?: number;
+	/** Present only for a target whose real playback state is observable
+	 *  (`native-video`/`youtube` — docs section 17.7); omitted for
+	 *  `facebook`/`gif` and every non-playable target. */
+	playing_v50_ms?: number;
+	playing_v70_ms?: number;
+	playing_v85_ms?: number;
+	playing_v95_ms?: number;
 	/** e.g. `trigger_method` for a `vision_tooltip` appearance (section 17.3/17.4). */
+	properties?: Record<string, PropertyValue>;
+}
+
+/** A real, observed playback start (docs section 17.7) — emitted at most once
+ *  per appearance, only for a `native-video`/`youtube` target, only once
+ *  playing_v50 time would actually start accruing (playing AND >=50% AND
+ *  otherwise eligible). Never inferred from visibility/autoplay/iframe
+ *  creation. */
+export interface VideoStartEmitOptions {
+	target_type: string;
+	target_id: string;
+	appearance_id: string;
+	view_instance_id?: string;
 	properties?: Record<string, PropertyValue>;
 }
 
@@ -118,6 +205,8 @@ export interface VisibilityDeps {
 	newId(): string | null;
 	/** Routes a `visibility_delta` into the existing queue. Never calls fetch. */
 	emit(eventType: 'visibility_delta', opts: VisibilityEmitOptions): void;
+	/** Routes a `video_start` into the existing queue (docs section 17.7). */
+	emit(eventType: 'video_start', opts: VideoStartEmitOptions): void;
 	/** Current semantic state; read once at construction. */
 	getState(): SemanticState;
 	/** Notified after a semantic transition; snapshot is the state AFTER the transition. */
@@ -181,6 +270,28 @@ interface Target {
 	/** Monotonic time through which `cumulative` has already been accounted. */
 	lastBoundary: number;
 	graceTimer: unknown;
+
+	/** Fixed for the target's lifetime (docs section 17.7); null for ordinary
+	 *  (non-playable) content — see `ObserveOptions.playableKind`. */
+	playableKind: PlayableKind | null;
+	/** Dynamic external state, toggled by `setPlayableSuspended()` — an opaque
+	 *  provider's embed deliberately not live right now (blanked Facebook
+	 *  iframe) or an asset not yet ready (YouTube player not yet constructed,
+	 *  GIF image not yet loaded). Not reset by appearance start/end — see the
+	 *  file header. Meaningless (always treated as suspended by `account()`,
+	 *  since it's gated on `playableKind !== null` first) when `playableKind`
+	 *  is null. */
+	playableSuspended: boolean;
+	/** Dynamic external state, toggled by `setPlaying()` from real provider
+	 *  playback events — never inferred. Not reset by appearance start/end. */
+	playingActive: boolean;
+	/** Per-appearance guard: at most one `video_start` per appearance. Reset
+	 *  by startAppearance/endAppearance (unlike playableSuspended/playingActive). */
+	videoStartEmitted: boolean;
+	playableCumulative: Counters;
+	playableSent: Counters;
+	playingCumulative: Counters;
+	playingSent: Counters;
 }
 
 /** Real IntersectionObserver-backed geometry source (the default `observeElement`). */
@@ -235,6 +346,14 @@ export class VisibilityMatrixEngine {
 			staticProperties: options?.properties,
 			lastBoundary: this.deps.clock.now(),
 			graceTimer: null,
+			playableKind: options?.playableKind ?? null,
+			playableSuspended: false,
+			playingActive: false,
+			videoStartEmitted: false,
+			playableCumulative: zeroCounters(),
+			playableSent: zeroCounters(),
+			playingCumulative: zeroCounters(),
+			playingSent: zeroCounters(),
 		};
 		this.targets.set(el, target);
 		const observeElement = this.deps.observeElement ?? defaultObserveElement;
@@ -250,6 +369,39 @@ export class VisibilityMatrixEngine {
 		const target = this.targets.get(el);
 		if (!target) return;
 		target.pendingTriggerMethod = method ?? null;
+	}
+
+	/**
+	 * Marks whether `el`'s playable embed/asset is genuinely live right now
+	 * (docs section 17.7) — e.g. a Facebook iframe's src is the real URL
+	 * (not blanked), a YouTube player has fired `onReady`, a GIF `<img>` has
+	 * loaded. Accounts elapsed time under the OLD suspended state first, so a
+	 * toggle never loses or misattributes time across the boundary. A no-op
+	 * for an unregistered element or a target with no `playableKind`.
+	 */
+	setPlayableSuspended(el: Element, suspended: boolean): void {
+		const target = this.targets.get(el);
+		if (!target || !target.playableKind || target.playableSuspended === suspended) return;
+		this.account(target, this.deps.clock.now());
+		target.playableSuspended = suspended;
+		if (!suspended) this.maybeStartVideo(target);
+	}
+
+	/**
+	 * Records real, observed playback state (docs section 17.7) — e.g. a
+	 * native `<video>`'s `playing`/`pause`/`ended` events, the YouTube IFrame
+	 * API's `onStateChange`. Never call this from visibility/iframe-existence/
+	 * autoplay-request inference. Accounts elapsed time under the OLD playing
+	 * state first. A no-op for an unregistered element or a target whose kind
+	 * has no observable playback state (`facebook`/`gif`/null).
+	 */
+	setPlaying(el: Element, playing: boolean): void {
+		const target = this.targets.get(el);
+		if (!target || !target.playableKind || !PLAYING_OBSERVABLE.has(target.playableKind)) return;
+		if (target.playingActive === playing) return;
+		this.account(target, this.deps.clock.now());
+		target.playingActive = playing;
+		if (playing) this.maybeStartVideo(target);
 	}
 
 	/**
@@ -347,6 +499,12 @@ export class VisibilityMatrixEngine {
 		this.currentState = state;
 
 		if (surfaceChanged) {
+			// A target already mid-playback (playingActive) can become newly
+			// eligible purely from a surface change (no geometry callback) — e.g.
+			// restoring the surface a still-playing video's target belongs to.
+			// Checked before draining so a resulting video_start lands in the
+			// same flush as the transition (docs section 17.7).
+			for (const target of this.targets.values()) this.maybeStartVideo(target);
 			// Persists the just-suspended surface's measurements (opening a
 			// blocking surface) or the just-closed blocking surface's
 			// measurements (closing one) — the same drain either direction.
@@ -367,6 +525,7 @@ export class VisibilityMatrixEngine {
 			// suspended/hidden/disconnected geometry must never raise it (docs
 			// section "max_visibility_ratio eligibility").
 			if (this.isEligible(target)) target.appearanceMaxRatio = Math.max(target.appearanceMaxRatio, ratio);
+			this.maybeStartVideo(target);
 		} else if (target.appearanceId && target.graceTimer === null) {
 			target.graceTimer = this.deps.setTimer(() => this.onGraceExpired(target), GRACE_MS);
 		}
@@ -407,6 +566,11 @@ export class VisibilityMatrixEngine {
 		target.sent = zeroCounters();
 		target.triggerMethod = target.pendingTriggerMethod;
 		target.pendingTriggerMethod = null;
+		target.videoStartEmitted = false;
+		target.playableCumulative = zeroCounters();
+		target.playableSent = zeroCounters();
+		target.playingCumulative = zeroCounters();
+		target.playingSent = zeroCounters();
 	}
 
 	private endAppearance(target: Target): void {
@@ -418,24 +582,72 @@ export class VisibilityMatrixEngine {
 		target.cumulative = zeroCounters();
 		target.sent = zeroCounters();
 		target.triggerMethod = null;
+		target.videoStartEmitted = false;
+		target.playableCumulative = zeroCounters();
+		target.playableSent = zeroCounters();
+		target.playingCumulative = zeroCounters();
+		target.playingSent = zeroCounters();
 	}
 
 	/** Adds elapsed time since `target.lastBoundary` to whichever nested
 	 *  counters are eligible right now, then moves the boundary to `now`.
 	 *  Ratio/eligibility are treated as constant across the elapsed span,
-	 *  which holds because every place they can change calls this first. */
+	 *  which holds because every place they can change calls this first.
+	 *
+	 *  The playable and playing families (docs section 17.7) are strict
+	 *  subsets of the general v50-v95 family, accumulated in the SAME
+	 *  per-threshold loop rather than a second pass: playable additionally
+	 *  requires a playableKind that isn't currently suspended; playing
+	 *  additionally requires real observed playback. Because each is a
+	 *  narrowing of the one before it at every instant, playing time never
+	 *  exceeds playable time, which never exceeds general time, by
+	 *  construction. */
 	private account(target: Target, now: number): void {
 		const elapsed = now - target.lastBoundary;
 		target.lastBoundary = now;
 		if (elapsed <= 0 || !target.appearanceId) return;
 		if (!this.isEligible(target)) return;
+		const playable = target.playableKind !== null && !target.playableSuspended;
+		const playing = playable && target.playingActive && PLAYING_OBSERVABLE.has(target.playableKind as PlayableKind);
 		for (const { key, ratio } of THRESHOLDS) {
-			if (target.ratio >= ratio) target.cumulative[key as ThresholdKey] += elapsed;
+			if (target.ratio < ratio) continue;
+			const k = key as ThresholdKey;
+			target.cumulative[k] += elapsed;
+			if (playable) {
+				target.playableCumulative[k] += elapsed;
+				if (playing) target.playingCumulative[k] += elapsed;
+			}
 		}
 	}
 
+	/**
+	 * Emits `video_start` (docs section 17.7) the first time — per appearance
+	 * — playing_v50 time would actually start accruing: real playback active,
+	 * not suspended, >=50% visible, and otherwise eligible. Never fires for
+	 * `facebook`/`gif` (not in PLAYING_OBSERVABLE) or without an active
+	 * appearance. A no-op if already emitted for this appearance.
+	 */
+	private maybeStartVideo(target: Target): void {
+		if (!target.appearanceId || target.videoStartEmitted) return;
+		if (!target.playableKind || !PLAYING_OBSERVABLE.has(target.playableKind)) return;
+		if (!target.playingActive || target.playableSuspended) return;
+		if (target.ratio < 0.5 || !this.isEligible(target)) return;
+		target.videoStartEmitted = true;
+		this.deps.emit('video_start', {
+			target_type: target.targetType,
+			target_id: target.targetId,
+			appearance_id: target.appearanceId,
+			view_instance_id: target.appearanceInstanceId ?? undefined,
+			properties: target.staticProperties ? { ...target.staticProperties } : undefined,
+		});
+	}
+
 	/** Emits one `visibility_delta` for whatever has accumulated since the
-	 *  last drain, if anything meaningful has (no zero-time noise). */
+	 *  last drain, if anything meaningful has (no zero-time noise). Nested
+	 *  v50-v95 always ship; the playable and playing threshold fields ship
+	 *  only for a target that participates in that family at all (docs
+	 *  section 17.7) — omitted entirely, never sent as an explicit zero, for
+	 *  a target that doesn't. */
 	private drain(target: Target): void {
 		if (!target.appearanceId) return;
 		const d50 = target.cumulative.v50 - target.sent.v50;
@@ -444,6 +656,30 @@ export class VisibilityMatrixEngine {
 		const d85 = target.cumulative.v85 - target.sent.v85;
 		const d95 = target.cumulative.v95 - target.sent.v95;
 		target.sent = { ...target.cumulative };
+
+		const hasPlayable = target.playableKind !== null;
+		const hasPlaying = hasPlayable && PLAYING_OBSERVABLE.has(target.playableKind as PlayableKind);
+		let playableFields: Pick<VisibilityEmitOptions, 'playable_v50_ms' | 'playable_v70_ms' | 'playable_v85_ms' | 'playable_v95_ms'> = {};
+		if (hasPlayable) {
+			playableFields = {
+				playable_v50_ms: Math.round(target.playableCumulative.v50 - target.playableSent.v50),
+				playable_v70_ms: Math.round(target.playableCumulative.v70 - target.playableSent.v70),
+				playable_v85_ms: Math.round(target.playableCumulative.v85 - target.playableSent.v85),
+				playable_v95_ms: Math.round(target.playableCumulative.v95 - target.playableSent.v95),
+			};
+			target.playableSent = { ...target.playableCumulative };
+		}
+		let playingFields: Pick<VisibilityEmitOptions, 'playing_v50_ms' | 'playing_v70_ms' | 'playing_v85_ms' | 'playing_v95_ms'> = {};
+		if (hasPlaying) {
+			playingFields = {
+				playing_v50_ms: Math.round(target.playingCumulative.v50 - target.playingSent.v50),
+				playing_v70_ms: Math.round(target.playingCumulative.v70 - target.playingSent.v70),
+				playing_v85_ms: Math.round(target.playingCumulative.v85 - target.playingSent.v85),
+				playing_v95_ms: Math.round(target.playingCumulative.v95 - target.playingSent.v95),
+			};
+			target.playingSent = { ...target.playingCumulative };
+		}
+
 		// Static per-target facts (content_type/person, etc.) and the
 		// per-appearance trigger method are independent sources, merged here
 		// so callers of either mechanism never have to know about the other.
@@ -461,6 +697,8 @@ export class VisibilityMatrixEngine {
 			v85_ms: Math.round(d85),
 			v95_ms: Math.round(d95),
 			max_visibility_ratio: target.appearanceMaxRatio,
+			...playableFields,
+			...playingFields,
 			properties,
 		});
 	}

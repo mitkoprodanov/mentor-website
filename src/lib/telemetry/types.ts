@@ -49,6 +49,16 @@ export interface TelemetryEvent {
 	v85_ms?: number;
 	v95_ms?: number;
 	max_visibility_ratio?: number;
+	/** Playable-media exposure; present only for a `playableKind` target (docs section 17.7). */
+	playable_v50_ms?: number;
+	playable_v70_ms?: number;
+	playable_v85_ms?: number;
+	playable_v95_ms?: number;
+	/** Known actual playback; present only for a target with observable playback state (docs section 17.7). */
+	playing_v50_ms?: number;
+	playing_v70_ms?: number;
+	playing_v85_ms?: number;
+	playing_v95_ms?: number;
 	properties?: Record<string, PropertyValue>;
 }
 
@@ -69,5 +79,13 @@ export interface EmitOptions {
 	v85_ms?: number;
 	v95_ms?: number;
 	max_visibility_ratio?: number;
+	playable_v50_ms?: number;
+	playable_v70_ms?: number;
+	playable_v85_ms?: number;
+	playable_v95_ms?: number;
+	playing_v50_ms?: number;
+	playing_v70_ms?: number;
+	playing_v85_ms?: number;
+	playing_v95_ms?: number;
 	properties?: Record<string, PropertyValue>;
 }

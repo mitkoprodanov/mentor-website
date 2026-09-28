@@ -77,7 +77,10 @@ export interface EventRow {
   v85_ms: number | null;
   v95_ms: number | null;
   max_visibility_ratio: number | null;
-  playing_ms: number | null;
+  playable_v50_ms: number | null;
+  playable_v70_ms: number | null;
+  playable_v85_ms: number | null;
+  playable_v95_ms: number | null;
   playing_v50_ms: number | null;
   playing_v70_ms: number | null;
   playing_v85_ms: number | null;
@@ -233,13 +236,15 @@ const EVENT_KEYS = [
   'event_id', 'occurred_at', 'elapsed_ms', 'event_type',
   'target_type', 'target_id', 'appearance_id', 'view_instance_id',
   'v50_ms', 'v70_ms', 'v85_ms', 'v95_ms', 'max_visibility_ratio',
-  'playing_ms', 'playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms',
+  'playable_v50_ms', 'playable_v70_ms', 'playable_v85_ms', 'playable_v95_ms',
+  'playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms',
   'properties',
 ] as const;
 
 const MEASUREMENT_KEYS = [
   'v50_ms', 'v70_ms', 'v85_ms', 'v95_ms', 'max_visibility_ratio',
-  'playing_ms', 'playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms',
+  'playable_v50_ms', 'playable_v70_ms', 'playable_v85_ms', 'playable_v95_ms',
+  'playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms',
 ] as const;
 
 /** Nested thresholds: each present value must not exceed the previous present one. */
@@ -306,15 +311,23 @@ function parseEvent(raw: unknown, path: string): EventRow {
   const v70_ms = intField(raw, 'v70_ms', d, path, false);
   const v85_ms = intField(raw, 'v85_ms', d, path, false);
   const v95_ms = intField(raw, 'v95_ms', d, path, false);
-  const playing_ms = intField(raw, 'playing_ms', d, path, false);
+  const playable_v50_ms = intField(raw, 'playable_v50_ms', d, path, false);
+  const playable_v70_ms = intField(raw, 'playable_v70_ms', d, path, false);
+  const playable_v85_ms = intField(raw, 'playable_v85_ms', d, path, false);
+  const playable_v95_ms = intField(raw, 'playable_v95_ms', d, path, false);
   const playing_v50_ms = intField(raw, 'playing_v50_ms', d, path, false);
   const playing_v70_ms = intField(raw, 'playing_v70_ms', d, path, false);
   const playing_v85_ms = intField(raw, 'playing_v85_ms', d, path, false);
   const playing_v95_ms = intField(raw, 'playing_v95_ms', d, path, false);
   checkNested([v50_ms, v70_ms, v85_ms, v95_ms], ['v50_ms', 'v70_ms', 'v85_ms', 'v95_ms'], path);
   checkNested(
-    [playing_ms, playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms],
-    ['playing_ms', 'playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms'],
+    [playable_v50_ms, playable_v70_ms, playable_v85_ms, playable_v95_ms],
+    ['playable_v50_ms', 'playable_v70_ms', 'playable_v85_ms', 'playable_v95_ms'],
+    path,
+  );
+  checkNested(
+    [playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms],
+    ['playing_v50_ms', 'playing_v70_ms', 'playing_v85_ms', 'playing_v95_ms'],
     path,
   );
 
@@ -337,7 +350,8 @@ function parseEvent(raw: unknown, path: string): EventRow {
     appearance_id: idField(raw, 'appearance_id', path, false),
     view_instance_id: idField(raw, 'view_instance_id', path, false),
     v50_ms, v70_ms, v85_ms, v95_ms, max_visibility_ratio,
-    playing_ms, playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms,
+    playable_v50_ms, playable_v70_ms, playable_v85_ms, playable_v95_ms,
+    playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms,
     properties: parseProperties(raw.properties, `${path}.properties`),
   };
 }

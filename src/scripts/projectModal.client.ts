@@ -14,7 +14,21 @@
  * which the click/keyboard paths alone wouldn't all cover.
  */
 
+import { telemetry } from '../lib/telemetry';
 import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
+
+/**
+ * The `project_content` figure a playable media element sits inside (docs
+ * section 17.7) — the element `visibility.client.ts` actually registered
+ * with the engine, so every `telemetry.setVisibilityPlaying`/
+ * `setVisibilityPlayableSuspended` call in this file targets it, not the
+ * inner iframe/video/mount. Returns null for media that isn't instrumented
+ * (no `projectId` was passed into ProjectDetail.astro) — every call site
+ * already guards on this before touching telemetry.
+ */
+function playableFigure(el: Element): HTMLElement | null {
+	return el.closest<HTMLElement>('[data-visibility-target-type="project_content"]');
+}
 
 /** Why the dialog is closing, set by the code path that closes it (telemetry
  *  only). The native `<dialog>` `cancel` event (Escape, or another platform
@@ -115,6 +129,27 @@ function initVideos(): void {
 	});
 }
 
+/**
+ * Native `<video>` playback telemetry (docs section 17.7): real `playing`/
+ * `pause`/`ended` events are the only source of `playing_v*`/`video_start` —
+ * never inferred from the `autoplay` attribute, the scroll-driven
+ * pause/resume below (pauseFrameMedia/resumeFrameMedia), or visibility. Those
+ * functions call the video's own `.pause()`/`.play()`, which fire these same
+ * real events, so both the visitor's own controls and the scroll-visibility
+ * feature are captured identically through one listener set. `playing`
+ * (not `play`) is used as the "started" signal — it fires once frames are
+ * actually rendering, which is what "known actual playback" means here.
+ */
+function initNativeVideoPlayback(): void {
+	document.querySelectorAll<HTMLVideoElement>('.shot-video-native').forEach((video) => {
+		const figure = playableFigure(video);
+		if (!figure) return;
+		video.addEventListener('playing', () => telemetry.setVisibilityPlaying(figure, true));
+		video.addEventListener('pause', () => telemetry.setVisibilityPlaying(figure, false));
+		video.addEventListener('ended', () => telemetry.setVisibilityPlaying(figure, false));
+	});
+}
+
 /* ---- YouTube embeds -------------------------------------------------------
  * A `.shot-youtube` mount (data-yt-id / optional data-start / data-end) becomes
  * a YouTube IFrame Player API player the first time its modal opens — the API
@@ -196,11 +231,27 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 			host: 'https://www.youtube-nocookie.com',
 			playerVars: { start, autoplay: 1, mute: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
 			events: {
+				// `onReady` is the real, observable moment the IFrame API player
+				// actually exists and can play — before this, `mount` was just a
+				// placeholder div, not a live embed (docs section 17.7). Unsuspends
+				// the shared engine target so playable_v* can start accounting.
 				onReady: (e: any) => {
 					e.target.seekTo(start, true);
 					e.target.playVideo();
+					const figure = playableFigure(frame);
+					if (figure) telemetry.setVisibilityPlayableSuspended(figure, false);
 				},
+				// `onStateChange` is the YouTube IFrame API's real playback-state
+				// signal (docs section 17.7) — the same event this loop logic
+				// already relies on, so playing_v*/video_start ride on genuinely
+				// observed state, never inferred from autoplay or the iframe's
+				// existence.
 				onStateChange: (e: any) => {
+					const figure = playableFigure(frame);
+					if (figure) {
+						if (e.data === YT.PlayerState.PLAYING) telemetry.setVisibilityPlaying(figure, true);
+						else if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) telemetry.setVisibilityPlaying(figure, false);
+					}
 					// Loop the [start, end] segment: while playing, poll the time and
 					// jump back to `start` once `end` is passed. (Also catches a video
 					// that ends naturally before `end`.)
@@ -268,6 +319,12 @@ function initFacebook(): void {
 function stopFacebook(scope: HTMLElement): void {
 	scope.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
 		iframe.src = 'about:blank';
+		// Blanked = not live (docs section 17.7) — playable_v* stops accounting.
+		// Also covered by the instance-boundary force-end when this is a real
+		// modal/filter close, but explicit here too since a blanked iframe is
+		// never playable regardless of the reason it got blanked.
+		const figure = playableFigure(iframe);
+		if (figure) telemetry.setVisibilityPlayableSuspended(figure, true);
 	});
 }
 
@@ -276,6 +333,11 @@ function activateFacebook(scope: HTMLElement): void {
 		const iframe = frame.querySelector<HTMLIFrameElement>('.shot-video');
 		if (!iframe?.dataset.fbBase) return;
 		iframe.src = iframe.dataset.fbBase;
+		// The real src is live now (docs section 17.7) — this is the only
+		// signal Facebook's opaque plugin iframe gives us; playing_v* is never
+		// derived from it (no JS/postMessage API — see initFacebook above).
+		const figure = playableFigure(frame);
+		if (figure) telemetry.setVisibilityPlayableSuspended(figure, false);
 	});
 }
 
@@ -404,6 +466,7 @@ function init(): void {
 	initVideos();
 	initImageRows();
 	initFacebook();
+	initNativeVideoPlayback();
 	initVisibilityPause();
 
 	document.addEventListener('click', (event) => {
