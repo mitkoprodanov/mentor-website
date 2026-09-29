@@ -643,7 +643,11 @@ const adam = getPerson('adam');
 
 	.collapse-row > * {
 		min-height: 0;
-		overflow: hidden;
+		/* `clip` + a clip margin (rather than `hidden`) still cuts content at
+		   the shrinking edge, but lets the buttons' hover glow spill ~28px
+		   past the row's top/bottom instead of being sliced flat. */
+		overflow: clip;
+		overflow-clip-margin: 28px;
 	}
 
 	/* Brighter, glowing silhouette when the card is hovered. */
