@@ -16,7 +16,7 @@ const { label, linked = false, tagId } = Astro.props;
 			{label}
 		</button>
 	) : (
-		<span class="tag">{label}</span>
+		<span class="tag" data-tag-id={tagId}>{label}</span>
 	)
 }
 

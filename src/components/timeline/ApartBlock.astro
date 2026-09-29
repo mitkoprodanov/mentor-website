@@ -1,7 +1,9 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
-import { getTag, sortTagIdsByIndex } from '../../data/tags';
+import { sortTagIdsByIndex } from '../../data/tags';
+import { resolveLogo } from '../../data/logos';
+import CompanyLogo from '../common/CompanyLogo.astro';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import { parseDateRange, isOngoing } from './dateRange';
@@ -72,7 +74,7 @@ const tracks = await Promise.all(
 							// Ordered by each tag's canonical index in data/tags.ts so the
 							// pill row always reads in that order regardless of which
 							// experience contributed the tag.
-							modalTagLabels: sortTagIdsByIndex([...new Set(cards.flatMap((c) => c.tagIds))]).map((id) => getTag(id).label),
+							modalTagIds: sortTagIdsByIndex([...new Set(cards.flatMap((c) => c.tagIds))]),
 							modalMedia: project.media ?? PLACEHOLDER_MEDIA,
 						};
 					}),
@@ -203,7 +205,10 @@ const tracks = await Promise.all(
 						    — see showEnd above. */}
 						<div class={`track-header track-header--${track.side}`}>
 							{showEnd && <span class="track-year">{end}</span>}
-							<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+							<div class="track-title-row">
+								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
+								{resolveLogo(company) && <CompanyLogo logo={resolveLogo(company)!} />}
+							</div>
 						</div>
 						<div class="track-projects">
 							{/* Visibility Matrix (docs/telemetry.md sections 6/8/17.3): this
@@ -213,7 +218,7 @@ const tracks = await Promise.all(
 							    ProjectRow.astro, so it needs the same instrumentation,
 							    unconditionally (not gated on project.name — see Ericsson
 							    Hungary's unnamed single-project company). */}
-							{projects.map(({ project, cards, modalId, visibilityId, modalDateRange, peopleLabel, modalTagLabels, modalMedia }) => (
+							{projects.map(({ project, cards, modalId, visibilityId, modalDateRange, peopleLabel, modalTagIds, modalMedia }) => (
 								<div
 								class="track-row"
 								data-visibility-target-type="timeline_project"
@@ -277,7 +282,7 @@ const tracks = await Promise.all(
 												dateRange={modalDateRange}
 												people={cards.length > 1 ? peopleLabel : undefined}
 												personIds={cards.map((c) => c.person.id)}
-												tags={modalTagLabels}
+												tagIds={modalTagIds}
 												media={modalMedia}
 												url={project.url}
 											>
@@ -518,6 +523,18 @@ const tracks = await Promise.all(
 	}
 
 	.track-footer--right {
+		justify-content: flex-end;
+	}
+
+	/* Name + optional logo on one line; the logo sits to the right of the name. */
+	.track-title-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.track-header--right .track-title-row {
 		justify-content: flex-end;
 	}
 

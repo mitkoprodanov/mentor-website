@@ -1,6 +1,7 @@
 ---
 import type { ProjectMedia } from '../../data/projects';
 import { asset } from '../../utils/asset';
+import { getTag } from '../../data/tags';
 
 /**
  * The inner detail of a Project — head, meta, tag pills, a body slot, and the
@@ -21,8 +22,10 @@ interface Props {
 	dateRange?: string;
 	/** Who worked on it, e.g. "Mitko & Ádám". */
 	people?: string;
-	/** Tag labels rendered as pills. */
-	tags?: string[];
+	/** Canonical WorkTag ids rendered as pills (labels come from data/tags.ts).
+	 *  Each pill carries its id as `data-tag-id` — stable telemetry identity for
+	 *  the (noninteractive) pill, never the displayed label. */
+	tagIds?: string[];
 	media?: ProjectMedia[];
 	url?: string;
 	urlLabel?: string;
@@ -30,7 +33,7 @@ interface Props {
 	/** Heading level for the title — h3 in a modal, h4 when nested in the results view. */
 	as?: 'h3' | 'h4';
 	/** Optional partner/IP logo shown above the title in the header. */
-	logo?: { src: string; detailWidth?: number };
+	logo?: { id: string; src: string; detailWidth?: number };
 	/**
 	 * Canonical project id (the catalog key — `project.modalId ?? project.id`,
 	 * matching `timeline_project`/`project_open`/`project_close`). Drives the
@@ -52,7 +55,7 @@ interface Props {
 	owner?: 'project_modal' | 'skill_filtered';
 }
 
-const { title, subtitle, dateRange, people, tags = [], media = [], url, urlLabel, titleId, as = 'h3', logo, projectId, owner } = Astro.props;
+const { title, subtitle, dateRange, people, tagIds = [], media = [], url, urlLabel, titleId, as = 'h3', logo, projectId, owner } = Astro.props;
 const Title = as;
 
 /** `data-visibility-*` attributes for the shared project intro/header — see
@@ -229,6 +232,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		{logo && (
 			<img
 				class="project-modal__logo"
+				data-partner-logo={logo.id}
 				src={logo.src}
 				alt=""
 				aria-hidden="true"
@@ -259,10 +263,10 @@ function personStyle(m: ProjectMedia): string | undefined {
 }
 
 {
-	tags.length > 0 && (
+	tagIds.length > 0 && (
 		<ul class="project-modal__tags">
-			{tags.map((label: string) => (
-				<li class="tag">{label}</li>
+			{tagIds.map((id: string) => (
+				<li class="tag" data-tag-id={id}>{getTag(id).label}</li>
 			))}
 		</ul>
 	)

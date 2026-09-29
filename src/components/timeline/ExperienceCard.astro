@@ -37,6 +37,7 @@ const { personId, tagIds, color, side, link, previewImage, interactive = true, c
 <div
 	class:list={['card', `card--${side}`, { 'card--static': !interactive }]}
 	data-person={personId}
+	data-static-card={interactive ? undefined : "true"}
 	data-tags={tagIds.join(' ')}
 	style={`--person-color: ${color}`}
 	data-visibility-target-type={contentId ? 'project_content' : undefined}

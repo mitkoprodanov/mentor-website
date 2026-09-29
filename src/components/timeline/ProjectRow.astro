@@ -1,8 +1,9 @@
 ---
 import { getEntry, render } from 'astro:content';
 import { getPerson, COLUMN } from '../../data/people';
-import { getTag, sortTagIdsByIndex } from '../../data/tags';
+import { sortTagIdsByIndex } from '../../data/tags';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
+import { resolveLogo } from '../../data/logos';
 import type { ProjectDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
 import ProjectModal from '../projects/ProjectModal.astro';
@@ -18,6 +19,8 @@ interface Props {
 }
 
 const { project, emphasized = false, dateRange, index = 0 } = Astro.props;
+// Explicit logo reference → registry definition (data/logos.ts); none → no logo.
+const logo = resolveLogo(project);
 
 async function loadCards(refs: ProjectDef['experiences']) {
 	return Promise.all(
@@ -65,7 +68,7 @@ const peopleLabel = modalCards.map((c) => c.person.name).join(' & ');
 // Union of the modal's experience tags, ordered by each tag's canonical index
 // in data/tags.ts (via sortTagIdsByIndex) so the pill row always reads in the
 // same order regardless of which experience contributed the tag.
-const modalTagLabels = sortTagIdsByIndex([...new Set(modalCards.flatMap((c) => c.tagIds))]).map((id) => getTag(id).label);
+const modalTagIds = sortTagIdsByIndex([...new Set(modalCards.flatMap((c) => c.tagIds))]);
 const modalMedia = project.media ?? PLACEHOLDER_MEDIA;
 
 // Visibility Matrix (docs/telemetry.md sections 6/8/17.3): every ProjectDef
@@ -119,13 +122,14 @@ const visibilityId = project.modalId ?? project.id;
 					{!project.hideTitle && (
 						<div class="node-title-row">
 							<h5 class="node-label">{project.name}</h5>
-							{project.logo && (
+							{logo && (
 								<img
 									class="node-logo"
-									src={project.logo.src}
+									data-partner-logo={logo.id}
+									src={logo.src}
 									alt=""
 									aria-hidden="true"
-									style={`width: ${project.logo.previewWidth ?? 80}px;`}
+									style={`width: ${logo.previewWidth ?? 80}px;`}
 								/>
 							)}
 						</div>
@@ -214,10 +218,10 @@ const visibilityId = project.modalId ?? project.id;
 				dateRange={modalDateRange}
 				people={modalCards.length > 1 ? peopleLabel : undefined}
 				personIds={modalCards.map((c) => c.person.id)}
-				tags={modalTagLabels}
+				tagIds={modalTagIds}
 				media={modalMedia}
 				url={project.url}
-				logo={project.logo}
+				logo={logo}
 			>
 				{modalCards.map((c) => (
 					<div

@@ -52,45 +52,61 @@ import { asset } from '../../utils/asset';
 
 <script>
 	import { telemetry } from '../../lib/telemetry';
-	import { buildContactEmailCopy, buildContactEmailOpen, buildLinkedinClick } from '../../lib/telemetry/explicitEvents.ts';
+	import {
+		buildActionFailed,
+		buildContactEmailCopy,
+		buildContactEmailOpen,
+		buildLinkedinClick,
+		onLinkActivation,
+	} from '../../lib/telemetry/explicitEvents.ts';
+	import { copyWithFeedback } from '../../lib/telemetry/actionFlows.ts';
 	import { STUDIO_CONTACT } from '../../data/contact';
+
+	const COPY_LABEL = 'Copy email address to clipboard';
 
 	document.querySelectorAll<HTMLButtonElement>('.email-copy-btn').forEach(btn => {
 		btn.addEventListener('click', () => {
 			const email = btn.dataset.email;
 			if (!email) return;
 
+			// The copied checkmark is success-only: markCopied() runs solely from the
+			// FINAL copy outcome (docs section 17.9), so the UI and telemetry can never
+			// contradict each other. A failure gets its own brief, non-celebratory state.
 			const markCopied = () => {
+				btn.classList.remove('is-copy-failed');
 				btn.classList.add('is-copied');
 				btn.setAttribute('aria-label', 'Email address copied');
 				setTimeout(() => {
 					btn.classList.remove('is-copied');
-					btn.setAttribute('aria-label', 'Copy email address to clipboard');
+					btn.setAttribute('aria-label', COPY_LABEL);
 				}, 1500);
 			};
-			// contact_email_copy fires only once the copy is actually confirmed to
-			// have worked — never merely on click (docs/telemetry.md section 5). The
-			// checkmark/UI behavior itself is unchanged: markCopied() still runs on
-			// every path below exactly as before.
-			const emitCopied = () => {
-				const opts = buildContactEmailCopy(STUDIO_CONTACT.id);
-				if (opts) telemetry.emit('contact_email_copy', opts);
+			const markFailed = () => {
+				btn.classList.remove('is-copied');
+				btn.classList.add('is-copy-failed');
+				btn.setAttribute('aria-label', 'Could not copy — select the address to copy it manually');
+				setTimeout(() => {
+					btn.classList.remove('is-copy-failed');
+					btn.setAttribute('aria-label', COPY_LABEL);
+				}, 1500);
 			};
 
-			if (navigator.clipboard?.writeText) {
-				navigator.clipboard.writeText(email).then(() => {
-					markCopied();
-					emitCopied();
-				}).catch(() => {
-					const ok = legacyCopy(email);
-					markCopied();
-					if (ok) emitCopied();
-				});
-			} else {
-				const ok = legacyCopy(email);
-				markCopied();
-				if (ok) emitCopied();
-			}
+			void copyWithFeedback(
+				email,
+				{ clipboard: navigator.clipboard, legacyCopy },
+				{
+					onSuccess: () => {
+						markCopied();
+						const opts = buildContactEmailCopy(STUDIO_CONTACT.id);
+						if (opts) telemetry.emit('contact_email_copy', opts);
+					},
+					onFailure: (reason) => {
+						markFailed();
+						const opts = buildActionFailed('contact_email_copy', reason, 'company', STUDIO_CONTACT.id);
+						if (opts) telemetry.emit('action_failed', opts);
+					},
+				},
+			);
 		});
 	});
 
@@ -111,9 +127,11 @@ import { asset } from '../../utils/asset';
 		return ok;
 	}
 
+	// Left click, keyboard activation and middle-click (auxclick) each count as one
+	// activation of the link; see explicitEvents.ts onLinkActivation.
 	document.querySelectorAll<HTMLAnchorElement>('.email-mailto-link').forEach(link => {
-		link.addEventListener('click', (event) => {
-			const opts = buildContactEmailOpen(STUDIO_CONTACT.id, (event as PointerEvent).pointerType);
+		onLinkActivation(link, (event) => {
+			const opts = buildContactEmailOpen(STUDIO_CONTACT.id, event.pointerType);
 			if (opts) telemetry.emit('contact_email_open', opts);
 			// mailto: hands off to the OS mail client, not a page navigation — no
 			// flush() call here (compare the real outbound navigations below).
@@ -121,8 +139,8 @@ import { asset } from '../../utils/asset';
 	});
 
 	document.querySelectorAll<HTMLAnchorElement>('.company-linkedin-link').forEach(link => {
-		link.addEventListener('click', (event) => {
-			const opts = buildLinkedinClick('company', STUDIO_CONTACT.id, (event as PointerEvent).pointerType);
+		onLinkActivation(link, (event) => {
+			const opts = buildLinkedinClick('company', STUDIO_CONTACT.id, event.pointerType);
 			if (opts) {
 				telemetry.emit('linkedin_click', opts);
 				void telemetry.flush(); // before external navigation, where practical (docs section 14)
@@ -360,6 +378,23 @@ import { asset } from '../../utils/asset';
 	.company-card :global(.email-copy-btn:focus-visible) {
 		outline: 2px solid var(--mentor);
 		outline-offset: -2px;
+	}
+
+	/* Copy failed: a brief, muted shake — never the success checkmark. */
+	.company-card :global(.email-copy-btn.is-copy-failed) {
+		animation: email-copy-failed 0.4s ease-in-out;
+	}
+
+	@keyframes email-copy-failed {
+		0%, 100% { transform: translateX(0); }
+		25% { transform: translateX(-2px); }
+		75% { transform: translateX(2px); }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.company-card :global(.email-copy-btn.is-copy-failed) {
+			animation: none;
+		}
 	}
 
 	/* Vertical separator between copy button and mailto link */

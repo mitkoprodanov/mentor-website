@@ -338,3 +338,30 @@ test('validation: properties', () => {
   const r = validateBatch({ session: session(), events: [event({ properties: { a: 'x', b: 2, c: true, d: null } })] });
   assert.ok(r.ok && r.value.events[0].properties === '{"a":"x","b":2,"c":true,"d":null}');
 });
+
+test('Pass 4 vocabulary: click_burst / action_failed / noninteractive_click / context_menu are accepted; repeated_noninteractive_click is retired', () => {
+  const ev = (event_type: string, over: Record<string, unknown> = {}) => ({
+    event_id: `evt_${event_type}`.slice(0, 20).padEnd(12, '0'),
+    occurred_at: '2026-09-25T10:00:12.345Z',
+    elapsed_ms: 1000,
+    event_type,
+    ...over,
+  });
+  const batch = (events: unknown[]) => ({ session: session(), events });
+  good(batch([ev('noninteractive_click', { target_type: 'skill', target_id: 'gameplay', properties: { element: 'tag_pill', project_id: 'heroes6' } })]));
+  good(batch([ev('context_menu', { target_type: 'company', target_id: 'mentor-game-studio', properties: { element: 'company_email' } })]));
+  good(batch([ev('action_failed', { target_type: 'company', target_id: 'mentor-game-studio', properties: { action: 'contact_email_copy', reason: 'clipboard_denied' } })]));
+  good(
+    batch([
+      ev('click_burst', {
+        view_instance_id: 'view_0000001',
+        properties: {
+          start_elapsed_ms: 900, duration_ms: 400, click_count: 3, region: 'timeline', distinct_targets: 0,
+          unresolved_clicks: 3, target_class: 'noninteractive', center_x_ratio: 0.47, center_y_ratio: 0.33, spread_px: 12, pointer_type: 'mouse',
+        },
+      }),
+    ]),
+  );
+  bad(batch([ev('repeated_noninteractive_click', { properties: { click_count: 3 } })]));
+  bad(batch([ev('click_burst', { properties: { center_x_ratio: Number.POSITIVE_INFINITY } })]));
+});

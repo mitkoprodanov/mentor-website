@@ -1,0 +1,47 @@
+---
+import type { LogoDef } from '../../data/logos';
+
+/**
+ * A company's logo, shown beside the company name in its box header
+ * (CompanyBlock.astro / ApartBlock.astro). Purely presentational and
+ * noninteractive: the logo's registry definition (data/logos.ts) says whether
+ * its artwork needs a light or black backing plate on the dark site.
+ * `data-partner-logo` carries the canonical logo id (telemetry identity).
+ */
+interface Props {
+	logo: LogoDef;
+}
+
+const { logo } = Astro.props;
+---
+
+<span class:list={['company-logo', logo.plate && `company-logo--${logo.plate}`]}>
+	<img src={logo.src} alt="" aria-hidden="true" data-partner-logo={logo.id} style={`height: ${logo.headerHeight ?? 26}px;`} />
+</span>
+
+<style>
+	.company-logo {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+		border-radius: 0;
+		overflow: hidden;
+		line-height: 0;
+	}
+
+	.company-logo img {
+		display: block;
+		width: auto;
+		max-width: 100%;
+	}
+
+	.company-logo--light {
+		background: #f3eee4;
+		padding: 4px 9px;
+	}
+
+	.company-logo--black {
+		background: #000;
+		padding: 3px 8px;
+	}
+</style>

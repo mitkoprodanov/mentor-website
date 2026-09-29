@@ -1,4 +1,5 @@
 import type { PersonId } from './people';
+import type { LogoId } from './logos';
 import type { ProjectMedia } from './projects';
 import { exigoMedia } from './media/exigo';
 import { warhammerMarkOfChaosMedia } from './media/warhammer-mark-of-chaos';
@@ -207,19 +208,13 @@ export interface ProjectDef {
 	 */
 	hideTitle?: boolean;
 	/**
-	 * Optional partner / publisher / IP-owner logo shown in two places:
-	 *   - the preview node card (above the project title, small)
-	 *   - the detail modal header (above the title, larger)
-	 * Both sizes have sensible defaults and can be overridden per-project.
+	 * Optional explicit reference to a partner / publisher / IP-owner logo in the
+	 * logo registry (data/logos.ts) — the image and its display sizes are defined
+	 * there once and shared by every project/company that references it. Shown in
+	 * two places: the preview node card (above the title, small) and the detail
+	 * modal header (above the title, larger). No logoId → no logo, unchanged.
 	 */
-	logo?: {
-		/** Path under /public (e.g. '/logos/riot/riot-games-lockup-red.png'). */
-		src: string;
-		/** Width in CSS pixels for the preview node badge. Default: 80. */
-		previewWidth?: number;
-		/** Width in CSS pixels for the modal-header display. Default: 130. */
-		detailWidth?: number;
-	};
+	logoId?: LogoId;
 }
 
 export interface CompanyDef {
@@ -229,6 +224,12 @@ export interface CompanyDef {
 	projects: ProjectDef[];
 	/** Working under the Mentor Game Studio banner during this stint — rendered with the brighter accent. */
 	underMentor?: boolean;
+	/**
+	 * Optional explicit reference to a logo in the logo registry (data/logos.ts).
+	 * Projects never inherit this implicitly. Shown beside the company name in the
+	 * company box header (CompanyBlock.astro / ApartBlock.astro) via CompanyLogo.astro.
+	 */
+	logoId?: LogoId;
 	/**
 	 * Stretches this company's box down until its bottom edge reaches the
 	 * vertical midpoint of the named company box on the *other* track of
@@ -295,6 +296,7 @@ export const timeline: TimelineEntry[] = [
 		adam: [
 			{
 				id: 'bhe-early',
+				logoId: 'black-hole',
 				name: 'Black Hole Entertainment',
 				dateRange: '2004 – 2009',
 				projects: [
@@ -324,6 +326,7 @@ export const timeline: TimelineEntry[] = [
 		kind: 'together',
 		company: {
 			id: 'black-hole-entertainment',
+			logoId: 'black-hole',
 			name: 'Black Hole Entertainment',
 			dateRange: '2009 – 2012',
 			projects: [
@@ -346,6 +349,7 @@ export const timeline: TimelineEntry[] = [
 		kind: 'together',
 		company: {
 			id: 'primal-game-studio',
+			logoId: 'primal',
 			name: 'Primal Game Studio',
 			dateRange: '2012 – 2021',
 			projects: [
@@ -371,11 +375,7 @@ export const timeline: TimelineEntry[] = [
 					name: 'League of Legends Universe',
 					url: 'https://universe.leagueoflegends.com/',
 					info: 'Primal Game Studio partnered with Riot Games on the co-development of an unannounced project',
-					logo: {
-						src: '/logos/riot/riot-games-lockup-red.png',
-						previewWidth: 80,
-						detailWidth: 130,
-					},
+					logoId: 'riot-games',
 					media: lolUniverseMedia,
 					experiences: [
 						{
@@ -436,6 +436,7 @@ export const timeline: TimelineEntry[] = [
 		mitko: [
 			{
 				id: 'flying-wild-hog',
+				logoId: 'flying-wild-hog',
 				name: 'Flying Wild Hog',
 				dateRange: '2021 – 2023',
 				underMentor: true,
@@ -506,6 +507,7 @@ export const timeline: TimelineEntry[] = [
 		adam: [
 			{
 				id: 'primal-continued',
+				logoId: 'primal',
 				name: 'Primal Game Studio',
 				/* Starts the year after mandragora-early (above, inside the
 				   shared 2012 – 2021 box) rather than repeating 2021, since

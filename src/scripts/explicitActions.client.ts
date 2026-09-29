@@ -25,7 +25,7 @@
  */
 
 import { telemetry } from '../lib/telemetry';
-import { buildCvDownload, buildExternalLinkClick, buildLinkedinClick } from '../lib/telemetry/explicitEvents.ts';
+import { buildCvDownload, buildExternalLinkClick, buildLinkedinClick, onLinkActivation } from '../lib/telemetry/explicitEvents.ts';
 
 /** Which person a control belongs to — same `.side-panel[data-person]`
  *  ancestor convention panelToggle.client.ts's `personOf()` already uses. */
@@ -34,15 +34,15 @@ function personOf(el: Element | null): string | undefined {
 }
 
 document.querySelectorAll<HTMLAnchorElement>('.cv-download').forEach((link) => {
-	link.addEventListener('click', (event) => {
-		const opts = buildCvDownload(personOf(link), (event as PointerEvent).pointerType);
+	onLinkActivation(link, (event) => {
+		const opts = buildCvDownload(personOf(link), event.pointerType);
 		if (opts) telemetry.emit('cv_download', opts);
 	});
 });
 
 document.querySelectorAll<HTMLAnchorElement>('.side-panel-linkedin .linkedin-pill').forEach((link) => {
-	link.addEventListener('click', (event) => {
-		const opts = buildLinkedinClick('person', personOf(link), (event as PointerEvent).pointerType);
+	onLinkActivation(link, (event) => {
+		const opts = buildLinkedinClick('person', personOf(link), event.pointerType);
 		if (opts) {
 			telemetry.emit('linkedin_click', opts);
 			void telemetry.flush(); // before external navigation, where practical (docs section 14)
@@ -51,11 +51,11 @@ document.querySelectorAll<HTMLAnchorElement>('.side-panel-linkedin .linkedin-pil
 });
 
 document.querySelectorAll<HTMLAnchorElement>('[data-external-link-type]').forEach((link) => {
-	link.addEventListener('click', (event) => {
+	onLinkActivation(link, (event) => {
 		const opts = buildExternalLinkClick(
 			link.dataset.externalLinkType,
 			link.dataset.projectId,
-			(event as PointerEvent).pointerType,
+			event.pointerType,
 		);
 		if (opts) {
 			telemetry.emit('external_link_click', opts);

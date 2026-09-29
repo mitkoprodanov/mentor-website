@@ -2,6 +2,7 @@
 // Every entry point swallows errors: telemetry must never affect the site.
 
 import type { TelemetryConfig } from './config.ts';
+import { startInteractionCapture } from './interactions.ts';
 import { browserClock, EventQueue } from './queue.ts';
 import { browserSessionEnv, buildSessionContext, randomId } from './session.ts';
 import type { SemanticState } from './state.ts';
@@ -115,6 +116,23 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 			}
 		});
 
+		// Pass 4 (docs section 17.9): one shared capture-phase pointer/contextmenu
+		// listener set. Ordinary activations stay in memory; only allowlisted
+		// noninteractive clicks, meaningful context menus and CONFIRMED bursts are queued.
+		const interactions = startInteractionCapture({
+			target: window,
+			emit: (type, opts) => queue.emit(type, opts),
+			getState: () => {
+				const s = semantic.get();
+				return { surface: s.surface, viewInstanceId: s.viewInstanceId };
+			},
+			// event.timeStamp and performance.now() share the same time origin.
+			toElapsed: (t) => Math.max(0, Math.round(t - origin)),
+			setTimer: (fn, ms) => setTimeout(fn, ms),
+			clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+			viewport: () => ({ width: window.innerWidth, height: window.innerHeight }),
+		});
+
 		safeFlush = (lifecycle: boolean): Promise<void> => {
 			// Integration point (docs section "Flush integration"): account
 			// visibility through now and materialize unsent deltas into the queue
@@ -128,6 +146,15 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 				/* never affect the site */
 			}
 			if (lifecycle) {
+				// Order on hide/pagehide: (1) visibility accounted above, (2) finalise an
+				// already-CONFIRMED click burst now (an unconfirmed candidate is dropped,
+				// never promoted), (3) everything is queued, (4) the transport flush
+				// below sends it. Idempotent, so hidden + pagehide never double-emit.
+				try {
+					interactions.finalizeConfirmed();
+				} catch {
+					/* never affect the site */
+				}
 				// Finalize any pending resize so it is queued before the flush.
 				try {
 					viewport.finalize();

@@ -38,7 +38,8 @@ export const EVENT_TYPES = new Set([
   'video_start',
   'context_menu',
   'noninteractive_click',
-  'repeated_noninteractive_click',
+  'click_burst',
+  'action_failed',
   'visibility_delta',
 ]);
 

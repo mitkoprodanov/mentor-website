@@ -16,6 +16,8 @@
 
 import { telemetry } from '../lib/telemetry';
 import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
+import { attemptOpenProject } from '../lib/telemetry/actionFlows.ts';
+import { buildActionFailed } from '../lib/telemetry/explicitEvents.ts';
 
 /**
  * The `project_content` figure a playable media element sits inside (docs
@@ -477,8 +479,14 @@ function init(): void {
 			const id = opener.getAttribute('data-project-open');
 			if (!id) return;
 			const dialog = document.querySelector<HTMLDialogElement>(`dialog[data-project-modal="${id}"]`);
-			if (dialog && !dialog.open) {
-				dialog.showModal();
+			// action_failed only when OUR code objectively cannot open the expected
+			// dialog (missing, or showModal() throws). An already-open dialog is fine.
+			const result = attemptOpenProject(dialog);
+			if (!result.ok) {
+				// Canonical id from the enclosing Timeline row — never the tl-* modal id.
+				const row = opener.closest<HTMLElement>('[data-visibility-target-type="timeline_project"]');
+				const failed = buildActionFailed('project_open', result.reason, 'project', row?.dataset.visibilityTargetId);
+				if (failed) telemetry.emit('action_failed', failed);
 			}
 			return;
 		}

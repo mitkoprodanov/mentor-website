@@ -12,6 +12,43 @@ Not a ticketing system: keep entries short, update status inline, delete when do
 
 ## Open
 
+### Rotate overlay: storage failure can trap "Continue anyway"
+- **Type:** Bug
+- **Status:** Open
+- `rotateOverlay.client.ts` calls `sessionStorage.setItem(...)` in the "Continue anyway"
+  click handler *before* `hide()`. If storage is blocked/unavailable (private mode, blocked
+  site data) it throws, `hide()` never runs, and the portrait-phone overlay cannot be
+  dismissed. `show()`/init read `sessionStorage` unguarded too. Fix on its own: wrap every
+  storage access in try/catch and always hide. Once fixed, a failed dismissal could map
+  cleanly onto `action_failed` (`action: rotate_overlay_dismiss`, `reason: storage_blocked`)
+  — not done in Pass 4, which deliberately did not touch this flow.
+- **Area:** src/scripts/rotateOverlay.client.ts
+
+### Design `media_load_failed` for provider/content delivery failures
+- **Type:** Improvement / future telemetry
+- **Status:** Open
+- Passive content/provider delivery failures are deliberately **not** `action_failed`
+  (which is only for deliberate user actions our own code knows failed). Design a separate
+  event that distinguishes them. Known cases: `loadYouTubeApi()` has no error path — a
+  blocked `iframe_api` script (Brave/uBlock) leaves the promise pending forever and the
+  YouTube frames as empty placeholders; YouTube IFrame API `onError` codes (2, 5, 100,
+  101, 150); automatic native-video resume `play()` rejections (autoplay policy); the
+  LinkedIn embed being blocked (currently only a CSS fallback, no JS signal). The
+  loadYouTubeApi hang is also worth fixing on its own (`script.onerror` → reject).
+- **Area:** src/scripts/projectModal.client.ts, telemetry
+
+### Real-device verification for Pass 4
+- **Type:** Research
+- **Status:** Open
+- Not verifiable in the desktop Browser pane: (1) iOS Safari tap behavior — pointer events
+  should fire for taps on plain text where delegated `click` may not; (2) `contextmenu` on
+  iOS long-press (expected: native callout, no page event) and Android long-press
+  (expected: fires); (3) `PointerEvent.pointerType` on `contextmenu` in Firefox/Safari;
+  (4) real middle-click on the CV link and `mailto:` (the pane cannot produce trusted
+  middle-click input; `auxclick` was verified with dispatched events only); (5) touch
+  burst radius (60 px) feel on a phone; (6) native `<video controls>` click retargeting.
+- **Area:** telemetry (Pass 4)
+
 ### Remove or justify dead `PersonContactCard.astro`
 - **Type:** Cleanup
 - **Status:** Open
@@ -22,32 +59,25 @@ Not a ticketing system: keep entries short, update status inline, delete when do
   dead UI code. Not performed as part of that pass.
 - **Area:** src/components/personal/PersonContactCard.astro
 
-### Research native context-menu / copy-link observability
-- **Type:** Research/Idea
+### Stale Timeline title "toggle" leftovers
+- **Type:** Cleanup
 - **Status:** Open
-- Native browser "Copy Link Address" success is not observable by the page. Research
-  whether any useful, privacy-light signal around context-menu use on meaningful links is
-  worth recording. `contextmenu` can at most prove the context menu was opened on a
-  semantic target; it must NOT be interpreted as a successful copy. Overlaps with the
-  planned UX/confusion telemetry pass (`context_menu`, `noninteractive_click`,
-  `repeated_noninteractive_click` — docs/telemetry.md section 12) — evaluate there rather
-  than implementing now.
-- **Area:** telemetry (UX-confusion signals pass)
+- The Timeline section title pill still carries the `title-toggle` class/CSS (including a
+  hover "reel" animation and a comment saying "click me to swap") from a removed
+  direction toggle; the pill is inert (`cursor: default`) but styled like a button. Either
+  drop the leftovers or decide it should be interactive. Telemetry now records taps on it
+  as `noninteractive_click` (`section_title`), which may inform that decision. Also
+  `.node-hint` CSS in ProjectRow has no markup.
+- **Area:** src/components/timeline/Timeline.astro, ProjectRow.astro
 
-### Research outbound handoff measurement limits
-- **Type:** Research
+### Skill Filtered View renders no tag pills
+- **Type:** Improvement / Audit
 - **Status:** Open
-- We can observe activation of `mailto:` and external links (`contact_email_open`,
-  `linkedin_click`, `external_link_click`) but not what happens after control leaves the
-  site. Confirm whether there are any lightweight, privacy-compatible browser signals
-  worth using to improve handoff measurement without external provider integrations,
-  cookies, fingerprinting, or speculative inference. Preserve the rule that
-  `contact_email_open` means mailto activation only, never email composition/send.
-  Preserve the rule that LinkedIn/outbound clicks mean navigation activation only, never
-  successful contact/action on the destination. If there is no reliable additional
-  signal, document that conclusion here and close this item rather than inventing
-  telemetry.
-- **Area:** telemetry (contact/outbound events)
+- `FilterResults.astro` does not pass tags to `ProjectDetail`, so tag pills exist only in
+  Project Detail modals. Pass 4 wired `tag_pill` for both (the identity plumbing is in
+  `ProjectDetail`), but the filtered view currently has none. Decide whether filtered
+  cards should show them.
+- **Area:** src/components/projects/FilterResults.astro
 
 ### Audit image/GIF reserved layout space
 - **Type:** Improvement/Audit
@@ -58,3 +88,24 @@ Not a ticketing system: keep entries short, update status inline, delete when do
   optionally improve the pre-load visual state. Separate from telemetry — the Visibility
   Matrix should continue measuring actual geometry. Not implemented yet.
 - **Area:** image/GIF rendering components (timeline media?)
+
+## Done
+
+### Research outbound handoff measurement limits
+- **Type:** Research
+- **Status:** Done (Telemetry Pass 4)
+- **Conclusion:** No reliable privacy-light browser signal proves what happens after a
+  `mailto:` or external-navigation activation. Visibility/focus/page-lifecycle changes are
+  confounded (background tabs, popup blockers, tab switching, `noopener`, no handler
+  configured) and insufficient. Activation telemetry remains the reliable boundary
+  (`contact_email_open` = mailto activation only; LinkedIn/outbound = navigation
+  activation only). The concrete, actionable improvement — the middle-click (`auxclick`)
+  undercount — was fixed in Pass 4. See docs/telemetry.md 17.9.
+
+### Research native context-menu / copy-link observability
+- **Type:** Research/Idea
+- **Status:** Done (Telemetry Pass 4)
+- **Conclusion:** `contextmenu` proves only that the menu was invoked; the chosen command
+  and native "Copy Link Address" success are not observable, and must never be equated
+  with a copy. Implemented as `context_menu` on meaningful semantic targets only. See
+  docs/telemetry.md 17.9.

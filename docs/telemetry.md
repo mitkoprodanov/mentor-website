@@ -327,7 +327,10 @@ Current V1 vocabulary:
 - `video_start`
 - `context_menu`
 - `noninteractive_click`
-- `repeated_noninteractive_click`
+- `click_burst`
+- `action_failed`
+
+`repeated_noninteractive_click` was retired in Pass 4 (section 17.9): it is no longer in the vocabulary or the Worker allowlist. Historical rows, if any, are untouched and no migration was needed.
 
 ### Measurement
 - `visibility_delta`
@@ -402,19 +405,15 @@ Do not turn normal scrolling among About/Timeline/Contact into separate applicat
 
 ## 12. UX-confusion signals
 
-Do not globally record arbitrary clicks.
+Implemented in Telemetry Pass 4 — full behavior in section 17.9.
 
-A dead/noninteractive click is recorded only on explicitly classified semantic targets that plausibly look interactive.
+- **Ordinary clicks are never sent.** There is no global click logging.
+- `noninteractive_click` — one allowlisted noninteractive semantic element was activated. Means only that; never confusion.
+- `click_burst` — a confirmed burst of >= 3 pointer activations close in time and space, anywhere on the page, whether or not the targets are interactive. Objective facts only.
+- `context_menu` — the browser context menu was invoked over a meaningful semantic target. Never a copy/open/save.
+- `action_failed` — one of our own deliberate user actions objectively failed.
 
-Repeated heuristic:
-- same semantic target;
-- at least 3 clicks/taps;
-- within approximately 2 seconds;
-- no relevant state change.
-
-Prefer one aggregated `repeated_noninteractive_click` containing target/count/interval rather than noisy raw click spam.
-
-"Rage click" may be an analysis label, not the raw schema term.
+"Rage click", "confused", "frustrated" and "intent" are analysis labels only, never raw schema terms. The earlier same-target `repeated_noninteractive_click` heuristic was replaced by `click_burst` (which has no same-target requirement).
 
 ## 13. Session context
 
@@ -1177,6 +1176,116 @@ The third example is the exact "Skills exploration → `nav_click` from Skills, 
 
 **Explicitly not built this pass** (per the task's own exclusions): context-menu telemetry, dead/noninteractive-click and repeated-click heuristics, any generic global click listener, session-end inference, derived intent, `max_attainable_ratio`, dashboards/analysis queries, and no change to playable-media/provider behavior beyond this pass's own scope.
 
+### 17.9 Implemented UX interaction signals (Telemetry Pass 4)
+
+**Goal.** Add objective interaction signals without global click logging: `noninteractive_click`, `click_burst`, `context_menu`, `action_failed`; fix the middle-click (`auxclick`) undercount; retire `repeated_noninteractive_click`. Raw telemetry records what the browser/UI did; "rage click", "confusion", "frustration" and "intent" are derived later, never emitted.
+
+| File | Responsibility |
+|------|----------------|
+| `pointerGesture.ts` | `ActivationFilter`: turns `pointerdown`/`pointerup` into an "activation" (pure) |
+| `clickBurst.ts` | `BurstDetector`: in-memory burst state machine (pure; injected timers/emit) |
+| `interactionResolver.ts` | Semantic identity, region, interactive classification, allowlists (duck-typed `ElementLike`, no DOM needed) |
+| `interactions.ts` | The one shared capture-phase listener set + payload builders; wired from `client.ts` |
+| `actionFlows.ts` | Pure copy / project-open flows that decide success vs failure once |
+| `explicitEvents.ts` | Also: `buildActionFailed`, `isLinkActivation`, `onLinkActivation` (auxclick) |
+
+#### Activation detection (input to bursts and `noninteractive_click`)
+
+`pointerdown` + `pointerup`, **not `click`**, observed on `window` in the **capture phase** with `{capture: true, passive: true}`; nothing calls `preventDefault`/`stopPropagation`. Capture matters because `vision.client.ts` calls `stopPropagation()` on Vision part clicks, which a bubble listener would never see. Pointer events (unlike `click` on plain text under delegated listeners in iOS Safari — **verify on a real iPhone**) are dispatched for every tap. An activation is one **trusted, primary** press/release (`isTrusted`, `isPrimary`, `button === 0`; Ctrl+click on a mouse is excluded as a macOS context-menu gesture) whose down→up travel is **<= 10 CSS px** (the audited threshold; not adjusted). `pointercancel` (scroll takeover, long-press) drops the press. Keyboard-generated clicks, synthetic events, secondary/middle buttons, drags, text-selection drags and scrolls therefore never count.
+
+#### `click_burst`
+
+Ordinary activations stay in a small in-memory candidate and are **never sent**. Constants live in `BURST` (`clickBurst.ts`):
+
+| Rule | Value |
+|---|---|
+| Confirmed | >= 3 qualifying activations |
+| Gap | consecutive activations <= 1000 ms apart (3 clicks can span ~2 s) |
+| Spatial (**detection**) | every activation within a radius of the **first** activation (anchored — no drift chaining): **40 CSS px** for `pointerType` other than touch, **60 CSS px** for `touch`; pointer information comes from the event itself, nothing is inferred; `clientX/Y` are CSS px so high-DPI needs no adjustment |
+| Termination | 1000 ms idle; an activation outside the radius (it terminates the burst and seeds a new candidate); hard caps of 10 s or 30 activations; lifecycle finalisation |
+| Merge / cooldown | Bursts are never merged; no cooldown needed because each burst is emitted once, at finalisation |
+| Per-session cap | `MAX_PER_SESSION = 25` emitted bursts |
+
+**Triple-click text-selection suppression.** A burst that is exactly 3 activations, with every activation within <= 8 px of the first, lasting <= 600 ms, and where **every** activation landed on noninteractive, non-affordance content where text selection is plausible (not an image/video, not a control, not an allowlisted affordance) is dropped. It is deliberately narrow: 4+ activations, slower, wider, or any control/affordance hit are not suppressed. This suppresses only the obvious native triple-click-selection false positive; tests pin both sides.
+
+**Event.** Emitted at burst END/finalisation with the ordinary `elapsed_ms` (the end time) — the emitter is not modified. Columns: `target_type`/`target_id` only when every semantically-resolved activation resolves to the same target; `view_instance_id` from the state at the burst's first activation (the capture-phase `pointerup` runs before UI click handlers, so this is the surface the burst began in). Properties:
+
+| Property | Meaning |
+|---|---|
+| `start_elapsed_ms`, `duration_ms`, `click_count` | timing and count (start of the burst on the session timeline; correlate with other events by chronology) |
+| `region` | closed enum, taken from the burst's first activation: `navbar`, `about`, `timeline`, `contact`, `person_bar`, `project_modal`, `skill_filtered`, `rotate_overlay`, `other` |
+| `distinct_targets` | number of distinct resolved semantic targets (0 = none resolved) |
+| `unresolved_clicks` | activations with no semantic identity |
+| `target_class` | `interactive`, `noninteractive` or `mixed` |
+| `center_x_ratio`, `center_y_ratio` | the arithmetic **centroid** of all the burst's activations, in viewport CSS px, as viewport ratios quantised to 2 decimals |
+| `spread_px` | the maximum Euclidean distance from that **centroid** to any activation in the burst, rounded |
+| `pointer_type` | only a real `mouse`/`touch`/`pen` value from the first activation |
+
+**Detection vs. reporting are deliberately separate.** *Detection* (which activations belong to a burst) is anchored to the FIRST activation with the 40/60 px radius above and is unaffected by reporting. *Reporting* summarises the finished burst by its centroid and `spread_px`, so `(center_x_ratio, center_y_ratio)` plus `spread_px` describe a circle that contains every recorded activation. This is a spatial summary only — not evidence of which element the visitor meant to hit (use the semantic fields for that). Not used: distance from the first activation, bounding-box width, pairwise maximum, medoid. The earlier `x_ratio`/`y_ratio` names (a mean, with `spread_px` measured from the first click) are retired; historical local rows need no migration, and these are ordinary flat scalar properties so no schema or Worker change was required.
+
+No existing action-event names are copied into the burst. Correlation is by chronology (`start_elapsed_ms`, the row's `elapsed_ms`, `view_instance_id`). A burst on a real control legitimately coexists with its own explicit/state events. Never stored: text, HTML, selectors, class lists, URLs, input values.
+
+**Lifecycle finalisation (never lose a confirmed burst on exit).** A burst is confirmed at its third activation; it does not need its idle timer to survive exit. `client.ts`'s `safeFlush(lifecycle=true)` — the single existing path used by both `visibilitychange`→hidden and `pagehide` — now runs, in order: (1) `visibility.materialize()` (visibility already paused/accounted by the hidden handler), (2) `interactions.finalizeConfirmed()` (emits an already-confirmed burst with the count so far, clears its timer; **an unconfirmed 1–2 activation candidate is dropped, never promoted**), (3) viewport finalisation, (4) `transport.flush({lifecycle: true})` — the existing `keepalive` fetch. No new unload transport and no synchronous networking. `finalizeConfirmed()` is idempotent, so hidden + pagehide, or a late idle timer, never double-emit; periodic and state-boundary flushes (`lifecycle=false`) never finalise a burst. Browser/process termination can never be absolutely guaranteed. A regression test asserts that ordering in `client.ts`. Individual `noninteractive_click`/`context_menu` events are queued immediately and ride the ordinary flush independently.
+
+**Cross-origin iframe limitation (accepted).** Clicks inside cross-origin provider iframes — the YouTube players/embeds, Facebook video/reel plugins and the LinkedIn post embed — are invisible to the parent page (no click/pointer events reach the document; they also do not reach the site's own click-outside handlers). Weak proxies such as `window` `blur` or focus changes are deliberately **not** used. A burst crossing into an iframe may be under-counted.
+
+#### Semantic resolver and classification (`interactionResolver.ts`)
+
+*Identity (innermost wins, only existing stable attributes):* `data-tag-id` → `skill`; `data-thought-id` → `vision_tooltip`; `data-visibility-target-type/-id` (`timeline_project`, `project_intro`, `project_content`, `filtered_project`, `skills_person`, `vision_*`); the CV / person LinkedIn controls → `person`; company LinkedIn, company email copy/mailto → `company:mentor-game-studio`; `data-external-link-type` + `data-project-id` → `project`; navbar links → `navbar:<about|timeline|contact>`; the open dialog's `data-project-id` → `project`; `data-person` → `person`; `data-company-id` → `company`. Presentation ids (`tl-*`) are never used. All ids must match the Worker's `[A-Za-z0-9_.:-]{1,64}`.
+
+*Region:* closed enum above, from region containers (`.navbar`, `#rotate-overlay`, `dialog[data-project-modal]`, `#person-bar`, `#filter-results`, then `#contact`/`#timeline`/`#about`), falling back to `semanticState.surface` for modal/filter backdrops.
+
+*Interactive vs noninteractive (`target_class`):* an activation is **interactive** if it hit `a[href]`, `button`, form controls, `summary`, `label`, `iframe`/`embed`/`object`, `video`/`audio` with `controls`, an element with an interactive `role` or a non-negative `tabindex`, or a known delegated/dismiss surface (`.filter-backdrop`, `.person-backdrop`, the `<dialog>` element itself = its backdrop). Otherwise it is noninteractive. **This describes whether the activation hit DOM controls / known actionable surfaces — NOT that the visitor's intended action happened or succeeded.** There is no listener introspection; a future `<div>` with a delegated handler would need adding to the known-surface list.
+
+#### `noninteractive_click`
+
+Deliberately **allowlisted**, emitted immediately (not at burst end) for one qualifying activation. Means only: *the visitor activated an allowlisted noninteractive semantic element*. `target_type`/`target_id` = the element's canonical identity; `view_instance_id` when a blocking surface is current; properties `element` (closed enum), `project_id` (only for surfaces where several projects share one view, i.e. Skill Filtered View), `pointer_type` when known. Never emitted when the activation hit a control.
+
+| `element` | Target | Detection |
+|---|---|---|
+| `tag_pill` | `skill:<WorkTag id>` | project-modal tag pill (`<li data-tag-id>`, now rendered from canonical ids, never labels) |
+| `unlinked_skill_tag` | `skill:<WorkTag id>` | non-button tag inside `.side-panel` (see the note below) |
+| `gallery_media` | `project_content:<media id>` | inside `.shot-frame` of an `image`/`gif`/`image-row` item (not captions, not video/provider frames) |
+| `filtered_card` | `filtered_project:<key>` | Skill Filtered View card box, header/title, and spacing containers — not prose, media or the project link chip |
+| `person_card` | `person:<id>` | sticky-card body, **touch only**, never a control or the Skills content |
+| `section_title` | `section:timeline\|contact` | `data-section-title` pills |
+| `partner_logo` | `partner_logo:<logo id>` | reusable `data-partner-logo="<logo id>"` marker on a rendered logo (`ProjectDetail`'s logo and the Timeline `node-logo`); the canonical **logo id** from the logo registry (`data/logos.ts`), never a project id, path, filename or URL. Project context (`project_id` property, `view_instance_id`) stays separately recoverable. |
+| `static_project_card` | `timeline_project:<id>` | the unnamed, non-clickable Timeline card (currently Ericsson Hungary): card box / content wrapper only, via `data-static-card` |
+
+Not instrumented: prose/body text, decorative timeline geometry/whitespace, backdrops (they have dismissal semantics), interactive video/provider iframes. Person-photo hit testing (`pointer-events: none`) was not changed. **Logo identity.** Logos are their own resource (`src/data/logos.ts`): `LogoId` → `LogoDef {id, src, previewWidth?, detailWidth?}`, and a `ProjectDef`/`CompanyDef` optionally references one with `logoId` (explicit only — a project never inherits its company's logo). The same logo can be shared by many projects/companies without duplicating its asset config, and its id is the telemetry identity (`partner_logo/<logo id>`), so the same logo shown by different projects is one target. `lol-universe` maps to `logoId: 'riot-games'` with exactly the sizes it previously carried inline (80 px preview, 130 px modal header). Company logos (Black Hole, Primal, Flying Wild Hog — `company.logoId`) render beside the company name in the company box header via `CompanyLogo.astro`, on a light plate (dark-on-transparent artwork), a black plate (white-on-transparent artwork) or none (artwork with its own black background), as declared per logo by `LogoDef.plate`; they are noninteractive and use the same `partner_logo` telemetry identity. The Primal and Flying Wild Hog files were trimmed of their transparent padding.
+
+**Unlinked Skills tags:** a production build enumerates 34 canonical tags rendered as 50 linked buttons across the two people and **zero** unlinked spans today, so `unlinked_skill_tag` is future-proofing; the `Tag.astro` span now carries `data-tag-id` like the button. **Note:** the Skill Filtered View renders no tag pills (`FilterResults` does not pass tags), so `tag_pill` currently only occurs in Project Detail modals.
+
+#### `context_menu`
+
+One shared capture listener; emits only when a meaningful semantic target resolves: company email (copy button / mailto / pill), CV, LinkedIn (person and company), project official-site / LinkedIn-fallback link (`destination_type`), skill tag, and gallery/embedded media frames (`content_type`). Arbitrary prose/body/background never emits. It means **only** that the browser context menu was invoked over the target — never Copy, Copy Link Address, Open in New Tab, Save Image or any other command; native Copy Link Address success is not observable by the page. `pointer_type` only when the event actually exposes it (a keyboard-invoked or unsupported case stays unknown). Platform limits: iOS Safari long-press shows a native callout without a page-visible `contextmenu` (**verify on a device**); Android Chrome long-press does fire it; `pointerType` on `contextmenu` is Chromium-tested only.
+
+#### `action_failed`
+
+A deliberate user action our own code attempted and objectively knows FINALLY failed. `properties.action` + `properties.reason` are closed enums (`ACTION_FAILURE_REASONS`, `explicitEvents.ts`); no exception messages; target is the action's own identity.
+
+| action | reasons | notes |
+|---|---|---|
+| `contact_email_copy` | `clipboard_denied` (`NotAllowedError`/`SecurityError`), `clipboard_unavailable` (no API and the fallback failed), `copy_failed` | Emitted only when **every** mechanism failed; a rejected async API rescued by the `execCommand` fallback is a success. `contact_email_copy` (success) and `action_failed` never both fire. |
+| `project_open` | `dialog_not_found`, `dialog_open_error` (`showModal()` threw) | target `project:<canonical id from the enclosing Timeline row>`; an already-open dialog is not a failure |
+
+**Copy UI fix.** The copied checkmark previously appeared even if every copy mechanism failed. It now runs only from the final success outcome (`copyWithFeedback`); a failure shows a brief non-celebratory shake (`.is-copy-failed`) and an explanatory `aria-label`, and never the checkmark.
+
+**Not `action_failed`:** provider/passive-media failures (a blocked YouTube API script, YouTube provider errors, automatic native-video resume rejection, blocked LinkedIn embed) — see the `media_load_failed` TODO; and anything downstream and unknowable (email actually sent, LinkedIn contact happening, a destination page loading, a CV being read). The rotate overlay's `sessionStorage` failure (a bug tracked in `docs/TODO.md`) would map to a future `action_failed` `rotate_overlay_dismiss` / `storage_blocked` once that flow is fixed on its own; nothing was changed there in this pass. This is not generic exception reporting.
+
+#### `auxclick` (middle-click) fix
+
+The Pass 3 handlers listened only to `click`; a middle-click on a link fires `auxclick` (and no `click`), so CV, LinkedIn (person and company), official-site/LinkedIn-fallback and `mailto:` activations were undercounted. `onLinkActivation` now registers both events on those links; `isLinkActivation` accepts `click` and `auxclick` **only for button 1**, so other auxiliary buttons never count, and one physical activation maps to exactly one event (a middle-click never fires `click`). Native navigation/new-tab behavior is untouched (no `preventDefault`), `pointer_type` stays objective (undefined when the event has none), and left-click behavior is unchanged. `mailto:` was included because middle-clicking a `mailto:` anchor performs its link activation (**verify per browser/OS**). Not applicable: the copy button (a `<button>`), navbar links (in-page navigation would only open a second site instance).
+
+#### Research conclusions (closed)
+
+- **Outbound handoff.** No reliable privacy-light browser signal proves what happens after a `mailto:` or external-navigation activation. `visibilitychange`, focus/blur and page lifecycle changes are all confounded (background-tab opens, popup blockers, the user switching tabs, `rel=noopener`, no handler configured) and are insufficient. Activation telemetry remains the reliable boundary; `contact_email_open` = mailto activation only, LinkedIn/outbound clicks = navigation activation only. The concrete actionable improvement — the middle-click undercount — is fixed above.
+- **Native context menu / Copy Link Address.** `contextmenu` proves only menu invocation; the resulting command (and the success of Copy Link Address) is unobservable. Never equate `context_menu` with a copy.
+
+#### Tests and manual verification
+
+`test/pass4.test.ts` (61 cases, including burst centroid/spread) and `test/logos.test.ts` (10 cases: registry, company/project references, shared logo, `lol-universe` mapping, canonical logo telemetry id) covers activation filtering, all burst thresholds/anchoring/caps/suppression, lifecycle finalisation (hidden, pagehide, both, 1–2 activations, ordering in `client.ts`), payload shape, the resolver and allowlist per category, context menu, copy/project-open flows, auxclick, and Worker validation of every new event. `workers/telemetry/test/worker.test.ts` adds the vocabulary test (new events accepted, `repeated_noninteractive_click` rejected). Local D1 journeys (real trusted pointer input in the Browser pane): modal tag pill → `noninteractive_click`; 4 rapid activations on prose → one `click_burst`; 4 rapid Skills-toggle activations → `skills_lock/unlock` events + one interactive `click_burst`; 3 activations then hidden+pagehide → one confirmed `click_burst` finalised ~45 ms after it began; right-click on the official-site chip → `context_menu`; real copy → `contact_email_copy` + checkmark, simulated total failure → `action_failed clipboard_denied`, no checkmark; missing dialog → `action_failed project_open`. Middle-click could not be produced as trusted input in the Browser pane, so `auxclick` button 1 / 2 and `click` were dispatched synthetically on the link (one event for button 1, none for 2, one for `click`).
+
 ## 18. Derived analysis (not browser events)
 
 Examples:
@@ -1235,7 +1344,7 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 11. Instrument Project Detail and Filtered View through shared ProjectDetail semantics. (Done as of Telemetry Pass 1: section 17.6 — `project_intro`, `project_content` (every discovered content type), `filtered_project`, context-dependent ownership, generalized instance-boundary rule. Pass 2 remains: video/media playback-specific behavior beyond ordinary visibility.)
 12. Instrument Contact/CV/LinkedIn/email/navbar interactions. (Done: section 17.8 — `nav_click`, `cv_download`, `linkedin_click`, `contact_email_copy`, `contact_email_open`, `external_link_click`.)
 13. Add video playback-duration enrichment where reliably available.
-14. Add conservative noninteractive/repeated-click signals.
+14. Add conservative noninteractive/repeated-click signals. (Done: section 17.9 — `noninteractive_click`, `click_burst`, `context_menu`, `action_failed`; `repeated_noninteractive_click` retired.)
 15. Validate suspension, hidden-tab timing, batching, retries, and mobile/pointer behavior.
 16. Add public privacy/analytics statement.
 17. Enable production telemetry.

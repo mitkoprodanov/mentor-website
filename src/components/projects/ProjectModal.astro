@@ -28,16 +28,17 @@ interface Props {
 	 *  projectModal.client.ts to disable their sticky Skills toggle while
 	 *  the modal is open (so the closed card reads as their attribution). */
 	personIds?: string[];
-	/** Tag labels rendered as pills. */
-	tags?: string[];
+	/** Canonical WorkTag ids rendered as (noninteractive) pills — the label is
+	 *  looked up from data/tags.ts and the id rides on the pill as `data-tag-id`. */
+	tagIds?: string[];
 	media?: ProjectMedia[];
 	url?: string;
 	urlLabel?: string;
 	/** Optional partner/IP logo shown in the modal header. */
-	logo?: { src: string; detailWidth?: number };
+	logo?: { id: string; src: string; detailWidth?: number };
 }
 
-const { modalId, projectId, title, subtitle, dateRange, people, personIds = [], tags = [], media = [], url, urlLabel, logo } = Astro.props;
+const { modalId, projectId, title, subtitle, dateRange, people, personIds = [], tagIds = [], media = [], url, urlLabel, logo } = Astro.props;
 const titleId = `project-modal-title-${modalId}`;
 ---
 
@@ -61,7 +62,7 @@ const titleId = `project-modal-title-${modalId}`;
 			subtitle={subtitle}
 			dateRange={dateRange}
 			people={people}
-			tags={tags}
+			tagIds={tagIds}
 			media={media}
 			url={url}
 			urlLabel={urlLabel}

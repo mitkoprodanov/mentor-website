@@ -135,3 +135,54 @@ export function buildExternalLinkClick(
 		properties: props({ destination_type: destinationType, pointer_type: pointerTypeOf({ pointerType }) }),
 	};
 }
+
+// ---- auxclick / activation --------------------------------------------------
+
+/** Does this DOM event represent a genuine activation of a native link?
+ *  `click` is always the primary activation; `auxclick` counts ONLY for the
+ *  middle button (button 1 — the browser's "open in new tab"), never for other
+ *  auxiliary buttons. A physical middle-click fires `auxclick` and no `click`,
+ *  and a left-click fires `click` and no `auxclick`, so one physical activation
+ *  maps to exactly one handler call. */
+export function isLinkActivation(type: string, button: number | undefined): boolean {
+	if (type === 'click') return true;
+	return type === 'auxclick' && button === 1;
+}
+
+export interface LinkTargetLike {
+	addEventListener(type: string, listener: (e: any) => void): void;
+}
+
+/** Runs `handler` once per genuine activation (left click, keyboard-activated
+ *  click, or middle-click) of a native link. Never interferes with the event. */
+export function onLinkActivation(el: LinkTargetLike, handler: (event: { pointerType?: string }) => void): void {
+	for (const type of ['click', 'auxclick']) {
+		el.addEventListener(type, (event: { button?: number; pointerType?: string }) => {
+			if (isLinkActivation(type, event.button)) handler(event);
+		});
+	}
+}
+
+// ---- action_failed ------------------------------------------------------------
+
+/** Closed vocabulary: an action our own code attempted and objectively knows failed. */
+export const ACTION_FAILURE_REASONS: Record<string, ReadonlySet<string>> = {
+	contact_email_copy: new Set(['clipboard_denied', 'clipboard_unavailable', 'copy_failed']),
+	project_open: new Set(['dialog_not_found', 'dialog_open_error']),
+};
+
+export function buildActionFailed(
+	action: string,
+	reason: string,
+	targetType?: string | null,
+	targetId?: string | null,
+): EmitOptions | null {
+	if (!ACTION_FAILURE_REASONS[action]?.has(reason)) return null;
+	const id = validId(targetId);
+	const opts: EmitOptions = { properties: { action, reason } };
+	if (id && targetType) {
+		opts.target_type = targetType;
+		opts.target_id = id;
+	}
+	return opts;
+}
