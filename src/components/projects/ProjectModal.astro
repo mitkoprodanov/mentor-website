@@ -1,5 +1,6 @@
 ---
 import type { ProjectMedia } from '../../data/projects';
+import type { LogoDef } from '../../data/logos';
 import ProjectDetail from './ProjectDetail.astro';
 
 /**
@@ -35,7 +36,7 @@ interface Props {
 	url?: string;
 	urlLabel?: string;
 	/** Optional partner/IP logo shown in the modal header. */
-	logo?: { id: string; src: string; detailWidth?: number };
+	logo?: LogoDef;
 }
 
 const { modalId, projectId, title, subtitle, dateRange, people, personIds = [], tagIds = [], media = [], url, urlLabel, logo } = Astro.props;

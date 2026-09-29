@@ -3,7 +3,7 @@ import { getEntry, render } from 'astro:content';
 import { getPerson, type PersonId } from '../../data/people';
 import { sortTagIdsByIndex } from '../../data/tags';
 import { resolveLogo } from '../../data/logos';
-import CompanyLogo from '../common/CompanyLogo.astro';
+import Logo from '../common/Logo.astro';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import { parseDateRange, isOngoing } from './dateRange';
@@ -207,7 +207,7 @@ const tracks = await Promise.all(
 							{showEnd && <span class="track-year">{end}</span>}
 							<div class="track-title-row">
 								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-								{resolveLogo(company) && <CompanyLogo logo={resolveLogo(company)!} />}
+								{resolveLogo(company) && <Logo logo={resolveLogo(company)!} variant="header" />}
 							</div>
 						</div>
 						<div class="track-projects">

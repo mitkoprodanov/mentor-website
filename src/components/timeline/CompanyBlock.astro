@@ -2,7 +2,7 @@
 import { MENTOR_ERA, type CompanyDef } from '../../data/timeline';
 import { parseDateRange, isOngoing } from './dateRange';
 import ProjectRow from './ProjectRow.astro';
-import CompanyLogo from '../common/CompanyLogo.astro';
+import Logo from '../common/Logo.astro';
 import { resolveLogo } from '../../data/logos';
 
 interface Props {
@@ -111,7 +111,7 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		{endSide && <span class="company-year">{end}</span>}
 		<div class="company-title-row">
 			<h3 class:list={{ emphasized }}>{company.name}</h3>
-			{companyLogo && <CompanyLogo logo={companyLogo} />}
+			{companyLogo && <Logo logo={companyLogo} variant="header" />}
 		</div>
 	</div>
 	<div class="company-projects">

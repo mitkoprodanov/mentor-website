@@ -42,8 +42,9 @@ export const logos: Record<LogoId, LogoDef> = {
 	'riot-games': {
 		id: 'riot-games',
 		src: '/logos/riot/riot-games-lockup-red.png',
-		previewWidth: 80,
-		detailWidth: 130,
+		previewWidth: 120,
+		detailWidth: 150,
+		plate: 'black',
 	},
 	// Dark wordmark on a transparent background → needs a light plate.
 	primal: {

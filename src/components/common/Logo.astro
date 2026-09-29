@@ -1,0 +1,66 @@
+---
+import type { LogoDef } from '../../data/logos';
+
+/**
+ * The single renderer for a registry logo (data/logos.ts), used everywhere a
+ * logo is shown. The registry definition says what the artwork needs (backing
+ * plate); the `variant` says where it is shown and so how it is sized:
+ *   - 'header':  beside a company name in a company box header (fixed height);
+ *   - 'preview': small badge beside a project name on the Timeline (fixed width);
+ *   - 'detail':  beside the title in the project modal (fixed width).
+ * Purely presentational and noninteractive. `data-partner-logo` carries the
+ * canonical logo id (telemetry identity).
+ */
+interface Props {
+	logo: LogoDef;
+	variant: 'header' | 'preview' | 'detail';
+}
+
+const { logo, variant } = Astro.props;
+
+const size = {
+	header: `height: ${logo.headerHeight ?? 26}px;`,
+	preview: `width: ${logo.previewWidth ?? 80}px;`,
+	detail: `width: ${logo.detailWidth ?? 130}px;`,
+}[variant];
+---
+
+<span class:list={['logo', `logo--${variant}`, logo.plate && `logo--${logo.plate}`]}>
+	<img src={logo.src} alt="" aria-hidden="true" data-partner-logo={logo.id} style={size} />
+</span>
+
+<style>
+	.logo {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+		overflow: hidden;
+		line-height: 0;
+	}
+
+	.logo img {
+		display: block;
+		width: auto;
+		height: auto;
+		max-width: 100%;
+		object-fit: contain;
+	}
+
+	.logo--preview {
+		opacity: 0.85;
+	}
+
+	.logo--detail {
+		opacity: 0.9;
+	}
+
+	.logo--light {
+		background: #f3eee4;
+		padding: 4px 9px;
+	}
+
+	.logo--black {
+		background: #000;
+		padding: 3px 8px;
+	}
+</style>

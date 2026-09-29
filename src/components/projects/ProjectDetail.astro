@@ -2,6 +2,8 @@
 import type { ProjectMedia } from '../../data/projects';
 import { asset } from '../../utils/asset';
 import { getTag } from '../../data/tags';
+import type { LogoDef } from '../../data/logos';
+import Logo from '../common/Logo.astro';
 
 /**
  * The inner detail of a Project — head, meta, tag pills, a body slot, and the
@@ -33,7 +35,7 @@ interface Props {
 	/** Heading level for the title — h3 in a modal, h4 when nested in the results view. */
 	as?: 'h3' | 'h4';
 	/** Optional partner/IP logo shown above the title in the header. */
-	logo?: { id: string; src: string; detailWidth?: number };
+	logo?: LogoDef;
 	/**
 	 * Canonical project id (the catalog key — `project.modalId ?? project.id`,
 	 * matching `timeline_project`/`project_open`/`project_close`). Drives the
@@ -230,14 +232,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 	<div class="project-modal__title-row">
 		<Title id={titleId} class="project-modal__title">{title}</Title>
 		{logo && (
-			<img
-				class="project-modal__logo"
-				data-partner-logo={logo.id}
-				src={logo.src}
-				alt=""
-				aria-hidden="true"
-				style={`width: ${logo.detailWidth ?? 130}px;`}
-			/>
+			<Logo logo={logo} variant="detail" />
 		)}
 	</div>
 	{subtitle && <p class="project-modal__detail">{subtitle}</p>}
@@ -416,14 +411,6 @@ function personStyle(m: ProjectMedia): string | undefined {
 		justify-content: center;
 		flex-wrap: wrap;
 		gap: 1rem;
-	}
-
-	/* Partner / IP-owner logo inline with the title. Width set per-project. */
-	.project-modal__logo {
-		flex-shrink: 0;
-		height: auto;
-		object-fit: contain;
-		opacity: 0.9;
 	}
 
 	.project-modal__head .project-modal__meta {

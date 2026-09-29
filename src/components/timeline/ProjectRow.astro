@@ -4,6 +4,7 @@ import { getPerson, COLUMN } from '../../data/people';
 import { sortTagIdsByIndex } from '../../data/tags';
 import { PLACEHOLDER_MEDIA } from '../../data/projects';
 import { resolveLogo } from '../../data/logos';
+import Logo from '../common/Logo.astro';
 import type { ProjectDef } from '../../data/timeline';
 import ExperienceCard from './ExperienceCard.astro';
 import ProjectModal from '../projects/ProjectModal.astro';
@@ -123,14 +124,7 @@ const visibilityId = project.modalId ?? project.id;
 						<div class="node-title-row">
 							<h5 class="node-label">{project.name}</h5>
 							{logo && (
-								<img
-									class="node-logo"
-									data-partner-logo={logo.id}
-									src={logo.src}
-									alt=""
-									aria-hidden="true"
-									style={`width: ${logo.previewWidth ?? 80}px;`}
-								/>
+								<Logo logo={logo} variant="preview" />
 							)}
 						</div>
 					)}
@@ -467,14 +461,6 @@ const visibilityId = project.modalId ?? project.id;
 		justify-content: center;
 		flex-wrap: wrap;
 		gap: 0.75rem;
-	}
-
-	/* Partner / IP-owner logo inline with the title. Width set per-project. */
-	.node-logo {
-		flex-shrink: 0;
-		height: auto;
-		object-fit: contain;
-		opacity: 0.85;
 	}
 
 	/* Project preview names render as small-and-large capitals — capitals
