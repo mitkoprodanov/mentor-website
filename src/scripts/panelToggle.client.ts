@@ -241,29 +241,20 @@ function modalActive(): boolean {
  * below already blocks scroll while the pointer is over a card, but the reader
  * can move the pointer onto the timeline (or use keyboard/touch) and scroll the
  * page underneath. Lock the body scroll for the whole time the panel is open so
- * the timeline stays put no matter where the input lands. Compensate for the
- * scrollbar disappearing so the layout doesn't shift.
+ * the timeline stays put no matter where the input lands.
  */
-let lockedScrollbarPad = '';
 function syncBodyScrollLock(): void {
 	const active = modalActive();
-	const isMobile = window.matchMedia('(max-width: 900px)').matches;
 	const html = document.documentElement;
 	if (active) {
 		if (html.dataset.scrollLocked === '1') return;
-		// Compensate for scrollbar disappearing only on desktop (mobile has no
-		// visible scrollbar that would shift layout when overflow:hidden fires).
-		if (!isMobile) {
-			const scrollbarWidth = window.innerWidth - html.clientWidth;
-			lockedScrollbarPad = document.body.style.paddingRight;
-			if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
-		}
+		// `html { scrollbar-gutter: stable }` (Layout.astro) keeps the scrollbar
+		// lane reserved under overflow:hidden, so no padding compensation needed.
 		html.style.overflow = 'hidden';
 		html.dataset.scrollLocked = '1';
 	} else {
 		if (html.dataset.scrollLocked !== '1') return;
 		html.style.overflow = '';
-		document.body.style.paddingRight = lockedScrollbarPad;
 		delete html.dataset.scrollLocked;
 	}
 }

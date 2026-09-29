@@ -45,6 +45,9 @@ const {
 
 	/* Firefox — thin, tinted; the color inherits to inner scroll containers. */
 	html {
+		/* Keep the root scrollbar lane reserved when panelToggle/filterModal set
+		   overflow:hidden on <html>, so fixed elements (NavBar) don't shift. */
+		scrollbar-gutter: stable;
 		scrollbar-width: thin;
 		scrollbar-color: var(--scrollbar-thumb) transparent;
 	}
