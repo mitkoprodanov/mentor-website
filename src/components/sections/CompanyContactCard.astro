@@ -46,11 +46,15 @@ import { asset } from '../../utils/asset';
 				<span class="external-link-icon" aria-hidden="true">↗</span>
 			</a>
 		</div>
-		<ExternalLink href={STUDIO_CONTACT.linkedin} class="contact-pill btn-sheen">LinkedIn</ExternalLink>
+		<ExternalLink href={STUDIO_CONTACT.linkedin} class="contact-pill btn-sheen company-linkedin-link">LinkedIn</ExternalLink>
 	</div>
 </div>
 
 <script>
+	import { telemetry } from '../../lib/telemetry';
+	import { buildContactEmailCopy, buildContactEmailOpen, buildLinkedinClick } from '../../lib/telemetry/explicitEvents.ts';
+	import { STUDIO_CONTACT } from '../../data/contact';
+
 	document.querySelectorAll<HTMLButtonElement>('.email-copy-btn').forEach(btn => {
 		btn.addEventListener('click', () => {
 			const email = btn.dataset.email;
@@ -59,34 +63,72 @@ import { asset } from '../../utils/asset';
 			const markCopied = () => {
 				btn.classList.add('is-copied');
 				btn.setAttribute('aria-label', 'Email address copied');
-				// Future telemetry hook: contact_email_copy
 				setTimeout(() => {
 					btn.classList.remove('is-copied');
 					btn.setAttribute('aria-label', 'Copy email address to clipboard');
 				}, 1500);
 			};
+			// contact_email_copy fires only once the copy is actually confirmed to
+			// have worked — never merely on click (docs/telemetry.md section 5). The
+			// checkmark/UI behavior itself is unchanged: markCopied() still runs on
+			// every path below exactly as before.
+			const emitCopied = () => {
+				const opts = buildContactEmailCopy(STUDIO_CONTACT.id);
+				if (opts) telemetry.emit('contact_email_copy', opts);
+			};
 
 			if (navigator.clipboard?.writeText) {
-				navigator.clipboard.writeText(email).then(markCopied).catch(() => {
-					legacyCopy(email);
+				navigator.clipboard.writeText(email).then(() => {
 					markCopied();
+					emitCopied();
+				}).catch(() => {
+					const ok = legacyCopy(email);
+					markCopied();
+					if (ok) emitCopied();
 				});
 			} else {
-				legacyCopy(email);
+				const ok = legacyCopy(email);
 				markCopied();
+				if (ok) emitCopied();
 			}
 		});
 	});
 
-	function legacyCopy(text: string): void {
+	/** Returns whether the browser actually reported a successful copy. */
+	function legacyCopy(text: string): boolean {
 		const ta = document.createElement('textarea');
 		ta.value = text;
 		ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
 		document.body.appendChild(ta);
 		ta.select();
-		document.execCommand('copy');
+		let ok = false;
+		try {
+			ok = document.execCommand('copy');
+		} catch {
+			ok = false;
+		}
 		document.body.removeChild(ta);
+		return ok;
 	}
+
+	document.querySelectorAll<HTMLAnchorElement>('.email-mailto-link').forEach(link => {
+		link.addEventListener('click', (event) => {
+			const opts = buildContactEmailOpen(STUDIO_CONTACT.id, (event as PointerEvent).pointerType);
+			if (opts) telemetry.emit('contact_email_open', opts);
+			// mailto: hands off to the OS mail client, not a page navigation — no
+			// flush() call here (compare the real outbound navigations below).
+		});
+	});
+
+	document.querySelectorAll<HTMLAnchorElement>('.company-linkedin-link').forEach(link => {
+		link.addEventListener('click', (event) => {
+			const opts = buildLinkedinClick('company', STUDIO_CONTACT.id, (event as PointerEvent).pointerType);
+			if (opts) {
+				telemetry.emit('linkedin_click', opts);
+				void telemetry.flush(); // before external navigation, where practical (docs section 14)
+			}
+		});
+	});
 </script>
 
 <style>

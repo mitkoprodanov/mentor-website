@@ -727,6 +727,7 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 | `uiEvents.ts` | Dependency-free contract between UI scripts and the coordinator (event names, detail types, `announce()`) |
 | `state.ts` | Semantic state coordinator + `bindUiEvents()` (section 17.2) |
 | `visibility.ts` | Visibility Matrix engine: appearance lifecycle + nested-threshold accounting (section 17.3) |
+| `explicitEvents.ts` | Pure payload construction for explicit-action events — `nav_click`, `cv_download`, `linkedin_click`, `contact_email_copy`, `contact_email_open`, `external_link_click` (section 17.8) |
 | `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener, the Visibility Matrix engine's materialize/pause/resume |
 | `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `telemetry.observeVisibility(el, type, id)`, `semanticState` |
 
@@ -820,7 +821,7 @@ Properties whose value the code cannot determine are omitted, never guessed. `tr
 - Touch Skills opens `locked: true` (it persists until toggled or dismissed, like a lock).
 - Project Detail's `cancel` reason comes from the dialog's native `cancel` event, so a mobile back gesture (or any other platform cancellation) that cancels the dialog is also `cancel` — deliberately not `escape`, since only the browser/platform cancellation is actually known, not which physical input triggered it.
 - Section 11 lists close reason `outside`; the request for this step suggested `outside_click`. The documented name `outside` is used.
-- Navbar clicks while Skills is up close Skills (the navbar click is also an outside click), reason `navigation`. `nav_click` itself is not instrumented yet.
+- Navbar clicks while Skills is up close Skills (the navbar click is also an outside click), reason `navigation`. `nav_click` is instrumented as of Telemetry Pass 3 (section 17.8) and reads `origin_surface`/`skills_mode` from this same coordinator, before the click's own `skills_close` (`navigation`) fires.
 - Clicking a tag inside the Skills panel on desktop auto-locks it (existing UI behavior not previously documented); that is the `skills_lock` with `cause: skill_click`.
 - Clicking the Skills toggle button itself can incidentally give it keyboard focus (Chromium does this on click; Firefox/Safari on macOS normally do not), which is then a genuine focus reveal reason like any other — so on Chromium, unlocking via a mouse click can leave Skills open (revealed by that residual button focus) until focus or hover actually leaves, matching what `:focus-within` shows. This is observed, not corrected, per the same "report the UI, don't drive it" rule the CSS focus behavior already gets everywhere else.
 
@@ -1092,6 +1093,90 @@ The "not suspended" column is the engine's `playableSuspended` flag (`Visibility
 - A native `<video>`'s continuing to decode/play in the background after its owning Project Modal closes (the finding above) is a real, minor site behavior (harmless — muted, and telemetry does not leak time from it either way) worth a future look if ever revisited, but is not a telemetry defect and was left alone per this pass's scope (don't fix product behavior, audit and instrument it as it actually is).
 - The collapsed-pre-load-height interaction between `image`/`gif` items and native `loading="lazy"` (noted above) is a genuine, if narrow, structural observation about the content model's CSS, not something this pass changes — flagged for whoever next touches gallery layout or lazy-loading behavior.
 
+### 17.8 Implemented explicit-action events (Telemetry Pass 3)
+
+**Goal.** Instrument the six explicit-action events section 10 already named but left unimplemented: `nav_click`, `cv_download`, `linkedin_click`, `contact_email_copy`, `contact_email_open`, `external_link_click`. No new Worker/schema work was needed — all six were already in `EVENT_TYPES` (`workers/telemetry/src/validate.ts`) and the generic `target_type`/`target_id`/`properties` validation already covers every shape used here.
+
+**Audit of the real action paths (done before writing any listener).**
+
+- **Navbar** (`NavBar.astro` + `navScroll.client.ts`) — one authoritative handler: a single `click` listener on `.navbar` that intercepts only `href="#about|#timeline|#contact"` and calls `event.preventDefault()` before smooth-scrolling. Every other link (there are none today) falls through to the browser's native jump untouched. This is the instrumentation point — no second/generic listener was added.
+- **Navbar availability** — unchanged, confirmed by reading (not by adding new checks): `main`/`skills` leave `.navbar` (`z-index: 10`, fixed) on top and clickable. Project Modal is a native `<dialog>` opened via `showModal()`, which renders in the browser's top layer above any fixed `z-index`, so the navbar is structurally unreachable while it's open. Skill Filtered View promotes `.person-bar`/`.filter-results` to `position: fixed` at `z-index: 27` (`ScrollyRegion.astro`), above the navbar's `10`. Neither required a code change; both already made "unavailable" true before this pass.
+- **Sticky Person cards** (`ScrollyRegion.astro`'s `.side-panel[data-person]`) — CV download (`CvDownloadLink.astro`'s `.cv-download`) and, in Contact mode only, person LinkedIn (`.side-panel-linkedin .linkedin-pill`, crossfaded in over the Skills toggle at the same position — confirmed in CSS: `.side-panel-linkedin { opacity: 0; pointer-events: none }` until `body.contact-mode`, and hidden again under `body.filter-active`). Both are plain, always-in-DOM anchors with **no existing JS attached at all** — `explicitActions.client.ts` (new) is the first script to listen on them.
+- **Company Contact card** (`CompanyContactCard.astro`) — a split "email pill" (`.email-copy-btn` clipboard copy + `.email-mailto-link` mailto) plus a separate LinkedIn pill (`ExternalLink`, marked `.company-linkedin-link` this pass so its own script can select it precisely without also matching the split email pill's outer wrapper `div.contact-pill`). The copy button already had its own click handler (with a `// Future telemetry hook: contact_email_copy` comment marking exactly this point) — extended in place rather than duplicated elsewhere.
+- **Other meaningful external links** — audited every `target="_blank"` anchor site-wide. Two, both in `ProjectDetail.astro` (shared by Project Modal and Skill Filtered View): the project's official-site chip (`.project-link-chip`, from `ProjectDef.url`) and the LinkedIn-post embed's blocked-tracker fallback (`.shot-linkedin__fallback`, shown only when the LinkedIn iframe itself fails to load). Both marked with `data-external-link-type`/`data-project-id` rather than hardcoded per-selector JS, so a future instrumented link needs no script change. `PersonContactCard.astro` (a `mailto:` link + its own `CvDownloadLink`/`ExternalLink` usage) is **dead code** — never imported/rendered anywhere (`Contact.astro` renders only `<CompanyContactCard />`); confirmed by a repository-wide reference search before deciding not to instrument it.
+- **Skills availability by state** — read, not changed: Skills remains a `main`/`skills`-owned reveal (docs section 4.3); Project Modal and Skill Filtered View strip the cards to "name + role... no Skills/CV/LinkedIn buttons... nothing clickable" (`ScrollyRegion.astro`'s own comment, `body.filter-active` rules), so CV/LinkedIn/Skills genuinely cannot be activated from those states — no extra guard needed in the new listeners.
+- **Main-page section/navigation behavior** — About/Timeline/Contact remain one continuous `main` surface (docs section 4.1); the only existing "which section" signals are `personPhotos.client.ts`'s `body.cards-arrived` (About → Timeline hand-off, scroll-driven) and `contactMode.client.ts`'s `body.contact-mode` (IntersectionObserver on `#contact`). `nav_click`'s `origin_section` reuses exactly these two classes rather than adding a third, competing "current section" observer.
+
+**Event vocabulary implemented (all six; see also section 11).**
+
+| Event | target_type / target_id | properties |
+|---|---|---|
+| `nav_click` | *(none — the destination is a UI label, not a content entity)* | `target` (about/timeline/contact), `origin_surface` (main/skills), `origin_section` (main only), `skills_mode` (skills only), `pointer_type` |
+| `cv_download` | `person` / `mitko`\|`adam` | `pointer_type` |
+| `linkedin_click` | `person` / `mitko`\|`adam`, or `company` / `mentor-game-studio` | `pointer_type` |
+| `contact_email_copy` | `company` / `mentor-game-studio` | *(none — identity alone says what happened, docs section 12)* |
+| `contact_email_open` | `company` / `mentor-game-studio` | `pointer_type` |
+| `external_link_click` | `project` / `<project-id>`, when the destination has one | `destination_type` (`official_site` \| `linkedin_post_fallback`), `pointer_type` |
+
+`STUDIO_CONTACT.id` (`'mentor-game-studio'`, new field on `data/contact.ts`) is a telemetry-only identity, deliberately distinct from any `ProjectDef`/`CompanyDef` id in `data/timeline.ts` (e.g. the unrelated `mentor` *project* id) — there was no existing "the studio, as a contactable entity" id to reuse.
+
+**Payload construction is pure and unit-tested** (`src/lib/telemetry/explicitEvents.ts`, `test/explicitEvents.test.ts`) — the same split as `state.ts`/`visibility.ts` already established: a `build*` function validates its inputs against the same enums/regexes the Worker enforces and returns `null` (never emit) when identity isn't recognized, so DOM wiring code just collects inputs and calls these; nothing about *whether* to emit is decided in a `.client.ts` file. `pointerTypeOf()` mirrors `panelToggle.client.ts`'s existing `clickMethod()` technique: only a real `PointerEvent.pointerType` of `mouse`/`touch`/`pen` is ever recorded; a keyboard-activated `click` reports `pointerType: ''`, which is correctly *omitted*, never guessed as `'keyboard'` (docs section 8).
+
+**Navbar (`nav_click`) — origin context, precisely.** `navScroll.client.ts`'s click handler reads `semanticState.get()` and the two body classes above **before** it mutates anything (in particular, before it sets `body.contact-mode` to the *destination* state) — otherwise a click landing on `#contact` would read its own destination as its origin. `origin_surface`/`skills_mode` come from the exact same coordinator `skills_open`/`skills_lock` already use (section 17.2), not a parallel read of the DOM. If `semanticState.get().surface` is ever `project_modal`/`skill_filtered` (structurally shouldn't happen — the navbar is unreachable then, per the audit above), `buildNavClick` rejects the surface as unrecognized and no event is emitted, rather than mislabeling it as `main`.
+
+**CV download / person LinkedIn / generic external links (`explicitActions.client.ts`, new).** A dedicated telemetry-wiring script — the same role `visibility.client.ts` already plays for the Visibility Matrix — not a generic document click listener: each of its three `querySelectorAll` calls names one specific, enumerated selector (`.cv-download`, `.side-panel-linkedin .linkedin-pill`, `[data-external-link-type]`), and every other click on the page is untouched. Person identity reuses `panelToggle.client.ts`'s own `personOf()` convention (`el.closest('.side-panel')?.dataset.person`) rather than inventing a second identity scheme. All three targets are static at page load (every Project Modal/Skill Filtered View card is pre-rendered; nothing is created dynamically — confirmed by reading `projectModal.client.ts`'s `showModal()` wiring), so a one-time scan at module load is sufficient, the same assumption `visibility.client.ts` already makes.
+
+**Company email/LinkedIn (`CompanyContactCard.astro`'s own script, extended).** `contact_email_copy` fires only from inside the success continuation of `navigator.clipboard.writeText().then(...)`, or after `legacyCopy()`'s `document.execCommand('copy')` **actually returns `true`** — the pre-existing fallback ignored that return value and always reported success; it now genuinely gates telemetry (and only telemetry — the existing checkmark/UI feedback, `markCopied()`, still runs on every path exactly as before, per the task's explicit "preserve the existing checkmark/UI behavior"). `contact_email_open` (the `.email-mailto-link` segment) and `linkedin_click` (`.company-linkedin-link`, newly marked so it can't be confused with the split email pill's own wrapper `div.contact-pill`) are new listeners beside it. No email address is ever placed in `properties` — event identity alone says what happened (docs section 12); confirmed with a live D1 scan (below) that no stored Pass 3 event contains `@` or a URL.
+
+**`telemetry.flush()` before real outbound navigation (docs section 14).** `linkedin_click` and `external_link_click` call `void telemetry.flush()` right after emitting (a `target="_blank"` navigation could otherwise outlive the periodic 20 s timer on a fast bounce). `contact_email_open` does not — a `mailto:` hand-off to the OS mail client doesn't unload the page the way an actual navigation can. `cv_download` (a same-page `download`) and `contact_email_copy` (no navigation at all) don't either. `nav_click` is in-page and unaffected.
+
+**Interaction/trigger metadata actually used.** Only `pointer_type` (`mouse`/`touch`/`pen`, from the real `click`/`PointerEvent`), on every event in this pass except `contact_email_copy` (deliberately bare — docs section 12's "properties are additive facts", and clipboard success/failure is already the whole story). No keyboard-vs-mouse inference beyond what `pointerTypeOf()` already reports as `undefined` — consistent with docs section 8's "do not infer 'mouse user'".
+
+**Chronology — real examples (live D1 rows, local dev, this pass).** Three full journeys, unedited (only the properties column shown):
+
+```
+elapsed_ms  event_type           properties
+15516       nav_click            {"target":"timeline","origin_surface":"main","origin_section":"about","pointer_type":"mouse"}
+30402       nav_click            {"target":"contact","origin_surface":"main","origin_section":"timeline","pointer_type":"mouse"}
+45980       contact_email_copy   (target: company:mentor-game-studio)
+```
+
+```
+elapsed_ms  event_type           properties
+102312      skills_open          {"trigger_person":"mitko","trigger_method":"hover","locked":false}
+102317      cv_download          (target: person:mitko)
+110184      linkedin_click       (target: person:adam)
+117775      contact_email_open   (target: company:mentor-game-studio)
+121219      linkedin_click       (target: company:mentor-game-studio)
+```
+
+```
+elapsed_ms  event_type           properties
+59842       skills_open          {"trigger_person":"mitko","trigger_method":"hover","locked":false}
+59844       skills_lock          {"trigger_person":"mitko"}
+77793       nav_click            {"target":"contact","origin_surface":"skills","skills_mode":"locked","pointer_type":"mouse"}
+77794       skills_close         {"reason":"navigation","locked":true}
+```
+
+The third example is the exact "Skills exploration → `nav_click` from Skills, locked" chronology the task asked to be reconstructable: `nav_click` captured `origin_surface: "skills"`/`skills_mode: "locked"` **before** the click's own outside-click listener closed Skills a millisecond later (`skills_close reason: "navigation"`) — both queued in the same synchronous turn and flushed together by the existing semantic-state-boundary flush (section 17.3), with no manual flush trigger and no 20 s wait. None of the three examples contain a derived intent label — only raw facts, per docs section 10.
+
+**Manual local verification (this pass).** Local workflow as in 17.1–17.2 (`telemetry:clear`, `telemetry:dev`, `dev:telemetry`), driven via this tool's built-in Browser pane against real rendered markup:
+
+- **A. `main`/`timeline` → navbar Contact → company email copy** — confirmed live exactly as the first chronology example above; `contact_email_copy` carries only `target_type: "company", target_id: "mentor-game-studio"`, no `properties`.
+- **B. CV download** — Mitko's `.cv-download` (inside the Contact-mode sticky card) produced `cv_download` with `target_id: "mitko"`.
+- **C. Skills open → navbar Contact → Skills context + chronology** — confirmed live exactly as the third chronology example above, including the `skills_close (navigation)` ordering.
+- **D. Person LinkedIn activation** — Ádám's `.linkedin-pill` produced `linkedin_click` with `target_id: "adam"` (the Browser pane blocked the resulting new-tab open, which is the tool's own new-tab policy, not a code path this pass touches — the click handler had already run and queued the event before that block).
+- **E. Company email mailto, not confused with copy** — `.email-mailto-link` produced `contact_email_open` (`target_type: "company"`), a distinct event from `contact_email_copy`, confirmed side by side in the same session.
+- **F. Representative external link** — Might & Magic: Heroes VI's official-site chip (`ProjectDef.url`) produced `external_link_click` with `target_type: "project", target_id: "heroes6", properties: {"destination_type":"official_site","pointer_type":"mouse"}`. The other wired destination (`linkedin_post_fallback`, on `.shot-linkedin__fallback`) shares the exact same `buildExternalLinkClick` code path and `data-external-link-type` mechanism — not separately live-fired this pass (in this dev environment the LinkedIn iframe itself loaded successfully, so its fallback anchor stayed behind the opaque iframe, unreachable — which is the *correct*, intended real-world behavior, not a gap).
+- Also confirmed: company LinkedIn (`.company-linkedin-link`) produced `linkedin_click` with `target_type: "company"`, sharing the event with the person case but never emitting a duplicate `external_link_click` for the same click (docs section 7's "choose the more specific event").
+- **No accidental duplicate specific + generic outbound events.** Every LinkedIn click (person and company) in the D1 rows produced exactly one event, `linkedin_click` — never also `external_link_click`.
+- **No PII stored.** A live scan of every Pass 3 event this session (`properties LIKE '%@%' OR properties LIKE '%http%'`) returned zero rows.
+- **Tool-environment note, reported per the existing 17.5 precedent:** the Browser pane briefly reported `window.innerWidth`/`innerHeight` as `0` and produced an inconsistent `contact-mode` reading while its own compositing was in the "hidden" state this session (`tabs_context` explicitly said so) — the same class of pane-compositing limitation 17.5 already documented for `IntersectionObserver`. Resizing the emulated viewport (which also re-fronts compositing) resolved it; not a defect in this pass's code, and every chronology example above was captured after that recovery, at a real, non-zero viewport size.
+
+**Tests.** 19 new deterministic cases in `src/lib/telemetry/test/explicitEvents.test.ts` (141 total in `telemetry:test`, all passing): `pointerTypeOf`'s keyboard/synthetic (`''`) case is `undefined`, never guessed; `nav_click`'s main-vs-skills property shape (never both `origin_section` and `skills_mode` on the same event); unknown target/surface/section/mode is dropped or rejected, never invented; `cv_download`/`linkedin_click` reject an unrecognized person id even when it matches the generic id pattern; `linkedin_click`'s person/company split; `contact_email_copy` never carries an email address; `contact_email_open`/`external_link_click` carry `pointer_type` only when known; `external_link_click` rejects an unwired `destination_type`; and one batch containing all six event types passes the real Worker validator (`validateBatch`) unmodified. `npm run telemetry:test` (141/141), `npm run worker:test` (19/19, unchanged — no Worker/schema change was needed), `npx tsc --noEmit -p .` and `npx astro check` show the same 2 pre-existing, unrelated errors already noted in 17.6/17.7 (`alignApartPairs.client.ts`, `syncApartHeights.client.ts`), `npm run build` clean.
+
+**Explicitly not built this pass** (per the task's own exclusions): context-menu telemetry, dead/noninteractive-click and repeated-click heuristics, any generic global click listener, session-end inference, derived intent, `max_attainable_ratio`, dashboards/analysis queries, and no change to playable-media/provider behavior beyond this pass's own scope.
+
 ## 18. Derived analysis (not browser events)
 
 Examples:
@@ -1148,7 +1233,7 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 9. Instrument Skills/person exposure. (Done as part of step 7: `skills_person`.)
 10. Instrument Timeline project previews. (Done as part of step 7: `timeline_project`.)
 11. Instrument Project Detail and Filtered View through shared ProjectDetail semantics. (Done as of Telemetry Pass 1: section 17.6 — `project_intro`, `project_content` (every discovered content type), `filtered_project`, context-dependent ownership, generalized instance-boundary rule. Pass 2 remains: video/media playback-specific behavior beyond ordinary visibility.)
-12. Instrument Contact/CV/LinkedIn/email/navbar interactions.
+12. Instrument Contact/CV/LinkedIn/email/navbar interactions. (Done: section 17.8 — `nav_click`, `cv_download`, `linkedin_click`, `contact_email_copy`, `contact_email_open`, `external_link_click`.)
 13. Add video playback-duration enrichment where reliably available.
 14. Add conservative noninteractive/repeated-click signals.
 15. Validate suspension, hidden-tab timing, batching, retries, and mobile/pointer behavior.

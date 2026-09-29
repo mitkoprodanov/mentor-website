@@ -33,8 +33,21 @@
  *                rest that contactSnap.client.ts settles on).
  */
 
+import { telemetry, semanticState } from '../lib/telemetry';
+import { buildNavClick } from '../lib/telemetry/explicitEvents.ts';
+
 const navbar = document.querySelector<HTMLElement>('.navbar');
 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Current section on `main`, from the same body classes the rest of the site
+ *  already drives (docs section 11 "Navbar"): `personPhotos.client.ts`'s
+ *  `cards-arrived` (About → Timeline hand-off) and `contactMode.client.ts`'s
+ *  `contact-mode`. No competing observer — reusing exactly what's already there. */
+function currentMainSection(): 'about' | 'timeline' | 'contact' {
+	if (document.body.classList.contains('contact-mode')) return 'contact';
+	if (document.body.classList.contains('cards-arrived')) return 'timeline';
+	return 'about';
+}
 
 if (navbar) {
 	// Contact's snap rest = section flush against viewport top, so the section's
@@ -129,6 +142,18 @@ if (navbar) {
 		// to the browser's native jump.
 		if (id !== 'about' && id !== 'timeline' && id !== 'contact') return;
 		if (id !== 'about' && !anchorFor(id)) return;
+
+		// Read origin context BEFORE anything below mutates it (contact-mode is
+		// about to be set to the DESTINATION, not the section the click came from).
+		const state = semanticState.get();
+		const opts = buildNavClick({
+			target: id,
+			originSurface: state.surface,
+			originSection: state.surface === 'main' ? currentMainSection() : null,
+			skillsMode: state.skillsMode,
+			pointerType: (event as PointerEvent).pointerType,
+		});
+		if (opts) telemetry.emit('nav_click', opts);
 
 		event.preventDefault();
 

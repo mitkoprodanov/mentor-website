@@ -242,7 +242,15 @@ function personStyle(m: ProjectMedia): string | undefined {
 {
 	url && (
 		<div class="project-modal__link">
-			<a class="project-link-chip btn-sheen" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${resolvedUrlLabel} in a new tab`}>
+			<a
+				class="project-link-chip btn-sheen"
+				href={url}
+				target="_blank"
+				rel="noopener noreferrer"
+				aria-label={`Open ${resolvedUrlLabel} in a new tab`}
+				data-external-link-type="official_site"
+				data-project-id={projectId}
+			>
 				<span class="project-link-chip__label">{resolvedUrlLabel}</span>
 				<span class="project-link-chip__icon" aria-hidden="true">↗</span>
 			</a>
@@ -310,7 +318,14 @@ function personStyle(m: ProjectMedia): string | undefined {
 							    from loading. The successfully-loaded iframe is opaque and
 							    covers this; a blocked one is transparent and lets it
 							    show through. */}
-							<a class="shot-linkedin__fallback" href={m.src} target="_blank" rel="noopener noreferrer">
+							<a
+								class="shot-linkedin__fallback"
+								href={m.src}
+								target="_blank"
+								rel="noopener noreferrer"
+								data-external-link-type="linkedin_post_fallback"
+								data-project-id={projectId}
+							>
 								<span class="shot-linkedin__fallback-title">LinkedIn post</span>
 								<span class="shot-linkedin__fallback-hint">Embedded post blocked by your browser — open on LinkedIn ↗</span>
 							</a>
