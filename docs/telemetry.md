@@ -21,6 +21,28 @@ npm run telemetry:check       # readiness summary
 
 `telemetry:dev` creates and maintains `workers/telemetry/.dev.vars` (git-ignored), setting `ALLOWED_ORIGINS` to the localhost and LAN Astro origins on port 4321. That is CORS configuration, not authentication. Setup succeeded when `npm run telemetry:db:check` prints `[ OK ]` for `sessions` and `events`.
 
+### Privacy-mode development target
+
+The privacy implementation should formalize telemetry startup as one explicit mode:
+
+- `off` — telemetry disabled;
+- `forced` — telemetry starts immediately and bypasses anonymous-analytics consent;
+- `consent` — production-like behavior using the real analytics-consent UI.
+
+Target command mapping:
+
+| Command | Telemetry mode | Infrastructure | Purpose |
+|---|---|---|---|
+| `npm run dev` | `off` | none | ordinary site development |
+| `npm run dev:telemetry` | `forced` | local Worker + local D1 | fast telemetry development |
+| `npm run dev:production-like` | `consent` | local Worker + local D1 | test the real production privacy/consent flow |
+
+Prefer a single explicit setting such as `PUBLIC_TELEMETRY_MODE=off|forced|consent`. Production must always resolve to `consent`; a local/debug setting must never accidentally force production analytics on.
+
+The `forced` mode bypasses only custom anonymous-analytics consent. Third-party YouTube/Facebook/LinkedIn permission remains contextual in every mode.
+
+**Implementation status:** `dev:production-like` and the explicit three-state mode are part of the privacy implementation TODO and may not exist yet. Until implemented, the current commands below describe the existing local workflow.
+
 ### Every time I want to test
 
 | | Command |
@@ -103,7 +125,7 @@ Cross-cutting privacy and consent policy is defined in **`docs/privacy.md`** and
 - Raw production `sessions` and `events` expire automatically after **90 days**; longer-lived aggregates must not permit reconstruction of an individual visit.
 - Third-party media permission is separate from analytics consent. Telemetry must not treat media permission as analytics consent or vice versa. Provider-loading rules are defined in `docs/privacy.md`.
 
-Local explicit development modes such as `dev:telemetry` may bypass the production consent UI for testing.
+Local development follows the `off | forced | consent` model described above and in `docs/privacy.md`. `forced` may bypass anonymous-analytics consent for local telemetry work; `consent` must exercise the real production consent lifecycle.
 
 ## 3. Infrastructure
 
