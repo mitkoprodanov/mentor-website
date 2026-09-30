@@ -1,7 +1,7 @@
 # Mentor Game Studio Telemetry Specification
 
 **Status:** Living V1 specification  
-**Last design review:** 2026-09-29  
+**Last design review:** 2026-10-01  
 **Site:** mentorgamestudio.com  
 **Repository:** mitkoprodanov/mentor-website
 
@@ -90,21 +90,80 @@ Raw telemetry records objective observations and interactions. Interpretations s
 
 ## 2. Privacy constraints
 
-V1 is intentionally privacy-light.
+V1 is intentionally privacy-light and **consent-gated in production**.
 
-- No analytics cookies.
+### 2.1 Anonymous analytics consent
+
+Production custom telemetry is **off by default**. It starts only after the visitor explicitly chooses to allow anonymous analytics.
+
+Before analytics consent:
+
+- do not start the telemetry client;
+- do not generate a telemetry `session_id`;
+- do not install telemetry-only interaction/visibility listeners;
+- do not queue or send telemetry events;
+- do not send requests to the telemetry Worker;
+- do not reconstruct or backfill pre-consent behavior after consent is later granted.
+
+After analytics consent:
+
+- start a new anonymous telemetry session at that moment;
+- the existing semantic/visibility/event model may run normally;
+- the consent preference may be remembered so returning visitors are not repeatedly prompted, but that stored preference must never become a visitor identifier or telemetry correlation key;
+- withdrawal must be available from an always-accessible Privacy / Analytics control; after withdrawal, stop future telemetry collection and do not create another session unless consent is granted again.
+
+Local `dev:telemetry` / explicit development overrides may continue to enable telemetry directly for testing; this production consent rule is about real visitors.
+
+### 2.2 Core data-minimisation rules
+
 - No persistent visitor identifier across visits.
+- A random anonymous session ID exists only for the current telemetry-enabled browser visit; a returning visitor is a new anonymous session.
 - No fingerprinting.
 - No session replay.
 - No cross-site tracking.
-- No intentional collection of names, email addresses, phone numbers, form contents, or other visitor PII.
-- A random anonymous session ID exists only for the current browser visit.
-- A returning visitor is a new anonymous session.
-- Country may be added server-side from Cloudflare's coarse request metadata if retained; no precise location.
+- No intentional collection of names, email addresses, phone numbers, form contents, arbitrary DOM text, keystrokes, detailed pointer trails, or other visitor PII.
 - Do not store raw IP addresses.
+- Country may be added server-side from Cloudflare's coarse request metadata if retained; no city or precise location.
+- Exact viewport/screen dimensions and pointer/touch/hover capability may be retained because they serve responsive/UX analysis; do not expand this into fingerprint-oriented device entropy.
 - Do not derive or store subjective intent in the browser.
+- Do not correlate anonymous telemetry sessions with later-known identities, email conversations, LinkedIn identities, CRM/contact records, or individual prospects.
 
-A short public analytics/privacy statement should be added before production telemetry is enabled.
+### 2.3 Referrer and campaign attribution
+
+Referrer and campaign attribution are separate concepts.
+
+- `referrer` should retain at most scheme/host/path as useful source context; strip query parameters and fragments before telemetry storage.
+- Continue to collect only the intentional allowlisted UTM fields: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`.
+- UTMs are for campaign/link attribution, including public-link variants such as `utm_source=linkedin`, `utm_medium=organic_social`, `utm_campaign=portfolio_site_launch`, `utm_content=mitko_launch_post|adam_launch_post|company_launch_post`.
+- Campaign attribution must describe the public link/campaign, not identify the person who clicked it. Do not create recipient-specific tracking parameters for individual prospects.
+
+### 2.4 Event-property hardening
+
+The Worker must keep a closed event vocabulary and should additionally enforce a **per-event property allowlist**. Each event type may persist only its documented properties. Unknown properties should be rejected server-side rather than relying only on client discipline.
+
+This is defense in depth: a future UI change must not be able to accidentally persist email addresses, arbitrary text, full URLs, exception contents, or other undeclared data merely by placing them in `properties`.
+
+### 2.5 Retention
+
+Raw `sessions` and `events` have a **90-day retention period** in production and must be deleted automatically after that period.
+
+Longer-lived derived aggregates are allowed only when they no longer permit reconstruction of an individual visit/session. Do not retain raw visit history indefinitely merely because storage is available.
+
+### 2.6 Third-party media is a separate permission
+
+Analytics consent does **not** grant permission to load third-party media, and loading third-party media does **not** grant analytics consent.
+
+For YouTube, Facebook, and LinkedIn embedded content:
+
+- before provider-specific permission, do not load the provider iframe, SDK/API script, or otherwise initiate the embed's third-party network connection;
+- show a local placeholder/preview and an ordinary external-navigation option instead;
+- an explicit contextual action such as `Load & play YouTube video`, `Load Facebook video`, or `Load LinkedIn post` may grant permission for that provider/content flow;
+- YouTube must continue to use Privacy Enhanced Mode (`youtube-nocookie.com`) once loaded;
+- Facebook may use its standard `facebook.com/plugins/video.php` embed only after Facebook media permission;
+- LinkedIn may use its standard `linkedin.com/embed/feed/update/...` post embed only after LinkedIn media permission;
+- provider permission may optionally be remembered separately, but it must remain independent from anonymous analytics consent.
+
+A short public privacy/analytics statement and the consent controls must be present before production telemetry is enabled.
 
 ## 3. Infrastructure
 
@@ -1316,7 +1375,7 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 
 - persistent visitor identity
 - cross-session behavior
-- cookies for custom telemetry
+- analytics cookies or persistent telemetry identifiers (a minimal first-party preference may remember consent choices but must not identify/correlate visitors)
 - session replay
 - fingerprinting
 - exact geographic location
@@ -1346,8 +1405,11 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 13. Add video playback-duration enrichment where reliably available.
 14. Add conservative noninteractive/repeated-click signals. (Done: section 17.9 — `noninteractive_click`, `click_burst`, `context_menu`, `action_failed`; `repeated_noninteractive_click` retired.)
 15. Validate suspension, hidden-tab timing, batching, retries, and mobile/pointer behavior.
-16. Add public privacy/analytics statement.
-17. Enable production telemetry.
+16. Implement production anonymous-analytics consent gating and persistent Privacy / Analytics withdrawal control.
+17. Gate YouTube/Facebook/LinkedIn embeds behind separate contextual provider permission; keep ordinary external links available without provider permission.
+18. Sanitize referrer storage, enforce per-event Worker property allowlists, and add automatic 90-day raw-data retention.
+19. Add the public privacy/analytics statement describing analytics, campaign attribution, retention, third-party media, and withdrawal.
+20. Enable production telemetry only after the privacy/consent work above is complete.
 
 ## 22. Change discipline
 
