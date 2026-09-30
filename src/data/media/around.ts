@@ -7,8 +7,8 @@ import type { ProjectMedia } from './types';
 export const aroundMedia: ProjectMedia[] = [
 	{
 		id: 'around-trailer',
-		src: 'https://www.facebook.com/watch/?v=297734748254498',
-		kind: 'facebook-video',
+		src: '/projects/around/around_trailer.mp4',
+		kind: 'video',
 		caption: 'Around trailer',
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'prototyping', 'playtesting'],
 	},
@@ -30,8 +30,8 @@ export const aroundMedia: ProjectMedia[] = [
 	},
 	{
 		id: 'around-narrative-flow',
-		src: 'https://www.facebook.com/watch/?v=291274308860973',
-		kind: 'facebook-video',
+		src: '/projects/around/around_slide.mp4',
+		kind: 'video',
 		caption: 'Around gameplay showing narrative flow supported by inventory usage',
 		tagIds: ['gameplay', 'ui', 'prototyping', 'playtesting', 'narrative-design', 'puzzle-design', 'unreal-engine', 'unreal-gamesync', 'blueprint-scripting', 'navigation'],
 	},
@@ -53,15 +53,15 @@ export const aroundMedia: ProjectMedia[] = [
 	},
 	{
 		id: 'around-blurry-memories',
-		src: 'https://www.facebook.com/watch/?v=323920638727021',
-		kind: 'facebook-video',
-		caption: 'Around - Some of our memories are unclear like a blurry painting',
+		src: '/projects/around/around_memories.mp4',
+		kind: 'video',
+		caption: 'Some of our memories are unclear like a blurry painting',
 		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay'],
 	},
 	{
 		id: 'around-immersive-world',
-		src: 'https://www.facebook.com/reel/651147125502357',
-		kind: 'facebook-video',
+		src: '/projects/around/around_carousel.mp4',
+		kind: 'video',
 		caption: 'An immersive hand-drawn world',
 		tagIds: ['visuals', 'systems-design', 'level-design', 'ui', 'ux-design', 'narrative-design', 'puzzle-design', 'unreal-engine', 'gameplay', 'navigation'],
 	},

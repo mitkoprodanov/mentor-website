@@ -12,8 +12,8 @@ export const beastsOfBrawliaMedia: ProjectMedia[] = [
 	},
 	{
 		id: 'bob-gameplay',
-		src: 'https://www.facebook.com/watch/?v=938966559787679',
-		kind: 'facebook-video',
+		src: '/projects/bob/bob_brawl.mp4',
+		kind: 'video',
 		person: 'adam',
 		caption: 'Beasts of Brawlia - gameplay video.',
 		tagIds: ['systems-design', 'level-design', 'ui', 'ux-design', 'ability', 'unreal-engine', 'blueprint-scripting', 'prototyping', 'playtesting', 'balance'],
