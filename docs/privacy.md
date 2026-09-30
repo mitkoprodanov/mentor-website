@@ -58,7 +58,27 @@ After explicit analytics consent:
 
 Withdrawal must be available through the persistent Privacy / Analytics control. After withdrawal, stop future telemetry collection and do not create another telemetry session unless consent is granted again.
 
-Explicit local development/test modes such as `dev:telemetry` may bypass the production consent UI.
+### 2.4 Development/test modes
+
+Production always requires the real consent flow. Local development may expose explicit modes so privacy behavior can be tested without making telemetry work cumbersome:
+
+- `off` — custom telemetry disabled;
+- `forced` — local custom analytics starts immediately without analytics consent, for fast telemetry development;
+- `consent` — production-like local behavior: analytics stays off until the real consent UI grants it.
+
+The intended command mapping is:
+
+- `npm run dev` -> `off`;
+- `npm run dev:telemetry` -> `forced`, using the existing local Worker + local D1 workflow;
+- `npm run dev:production-like` -> `consent`, still using local Worker + local D1.
+
+Prefer one explicit mode such as `PUBLIC_TELEMETRY_MODE=off|forced|consent` rather than accumulating independent booleans.
+
+The real production site must resolve to `consent`; no build/environment switch may accidentally force analytics on for production visitors.
+
+`forced` bypasses **only Mentor's anonymous-analytics consent**. YouTube/Facebook/LinkedIn contextual media permission remains active in every mode unless a separate explicit provider-debug facility is intentionally designed later.
+
+Local telemetry modes must preserve the existing safety guarantee that development commands use local Worker/D1 infrastructure only and never silently switch to remote storage.
 
 ## 3. Third-party media
 
