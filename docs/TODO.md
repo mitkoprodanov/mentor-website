@@ -16,9 +16,12 @@ Not a ticketing system: keep entries short, update status inline, delete when do
 - **Type:** Improvement / Privacy
 - **Status:** Open
 - Implement the anonymous-analytics consent flow and persistent Privacy / Analytics control
-  defined in `docs/privacy.md` §2. Production telemetry stays inactive before consent;
-  explicit local `dev:telemetry` behavior remains available for testing.
-- **Area:** telemetry bootstrap/config, privacy UI
+  defined in `docs/privacy.md` §2. Production telemetry stays inactive before consent.
+  Formalize local startup as `off | forced | consent`: keep `dev:telemetry` as forced-on
+  local telemetry, and add `dev:production-like` using the same local Worker/D1 while
+  exercising the real consent lifecycle. Ensure no debug mode can force analytics on in
+  real production, and keep third-party media permission contextual in every mode.
+- **Area:** telemetry bootstrap/config, scripts/telemetry.mjs, package.json, privacy UI
 
 ### Gate third-party media behind contextual provider permission
 - **Type:** Improvement / Privacy
