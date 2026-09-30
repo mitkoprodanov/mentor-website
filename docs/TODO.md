@@ -12,6 +12,51 @@ Not a ticketing system: keep entries short, update status inline, delete when do
 
 ## Open
 
+### Production privacy + anonymous analytics consent gate
+- **Type:** Improvement / Privacy
+- **Status:** Open
+- Add the non-blocking first-visit Anonymous Analytics choice and an always-accessible
+  Privacy / Analytics control for changing/withdrawing it. Production telemetry must not
+  initialize, generate a telemetry session, attach telemetry-only measurement, queue
+  events, or contact the Worker until explicit analytics consent. Starting after consent
+  creates a fresh session from that point forward; never backfill pre-consent behavior.
+  Remember allow/refuse as a generic first-party preference only, never as a visitor id.
+  Preserve explicit local `dev:telemetry` testing behavior.
+- **Area:** telemetry bootstrap/config, privacy UI
+
+### Gate third-party media behind contextual provider permission
+- **Type:** Improvement / Privacy
+- **Status:** Open
+- Do not load YouTube API/iframes, Facebook video-plugin iframes, or LinkedIn post iframes
+  before the visitor explicitly asks to load that provider's content. Before permission,
+  show a local placeholder/preview plus an ordinary external link/new-tab option.
+  Permission is independent from analytics consent. After permission: YouTube uses
+  `youtube-nocookie.com`; Facebook uses `facebook.com/plugins/video.php`; LinkedIn uses
+  `linkedin.com/embed/feed/update/...`. Decide during implementation whether provider
+  permission is one-shot or remembered per provider, but never bundle providers together.
+- **Area:** ProjectDetail.astro, projectModal.client.ts, privacy UI
+
+### Telemetry privacy hardening before production
+- **Type:** Improvement / Privacy
+- **Status:** Open
+- (1) sanitize `document.referrer` to scheme/host/path and strip query/fragment;
+  (2) keep the four intentional UTM fields separately for public campaign attribution
+  (e.g. LinkedIn / organic_social / portfolio_site_launch / mitko|adam|company post),
+  never recipient-specific visitor tracking; (3) add Worker-side per-event property
+  allowlists; (4) automatically delete raw production sessions/events after 90 days;
+  longer-lived aggregates are allowed only if an individual visit cannot be reconstructed;
+  (5) do not correlate telemetry sessions with known contacts/identities.
+- **Area:** src/lib/telemetry/session.ts, workers/telemetry, D1/maintenance
+
+### Public privacy / analytics explanation
+- **Type:** Improvement / Privacy
+- **Status:** Open
+- Add concise visitor-facing details covering anonymous analytics purpose/data, lack of
+  persistent visitor identity, campaign UTMs, 90-day raw retention, how to withdraw,
+  and the separate contextual loading of YouTube/Facebook/LinkedIn content. Keep it
+  reachable from the persistent Privacy / Analytics control.
+- **Area:** site privacy UI/content
+
 ### Rotate overlay: storage failure can trap "Continue anyway"
 - **Type:** Bug
 - **Status:** Open
