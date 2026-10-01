@@ -11,7 +11,7 @@ export const LIMITS = {
   maxElapsedMs: 24 * 60 * 60 * 1000,
   maxDimension: 20000,
   maxReferrer: 512,
-  maxUtm: 128,
+  maxUtm: 40,
   maxPropertiesBytes: 2048,
   maxPropertyKeys: 20,
   maxPropertyString: 200,
@@ -109,6 +109,7 @@ const TARGET_TYPE_RE = /^[a-z][a-z0-9_]{0,39}$/;
 const TARGET_ID_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
 const SITE_VERSION_RE = /^[A-Za-z0-9._+-]{1,40}$/;
 const PROP_KEY_RE = /^[a-z][a-z0-9_]{0,39}$/;
+const UTM_RE = /^[a-z0-9_-]+$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/;
 
 type Obj = Record<string, unknown>;
@@ -177,14 +178,36 @@ function timestampField(o: Obj, key: string, path: string): string {
   return d.toISOString();
 }
 
-/** Free-form context strings are truncated rather than rejected so that a long
- *  referrer or UTM value cannot make the whole batch fail. */
-function looseString(o: Obj, key: string, max: number, path: string): string | null {
+/** Campaign attribution: trimmed + lowercased, then omitted (null) unless it is
+ *  `[a-z0-9_-]{1..maxUtm}`. Never truncated, so no arbitrary string/URL reaches D1.
+ *  A non-string is a malformed payload and rejected like any other wrong type. */
+function utmField(o: Obj, key: string, path: string): string | null {
   const v = o[key];
   if (v === undefined || v === null) return null;
   if (typeof v !== 'string') fail(`${path}.${key}`, 'must be a string');
-  const s = (v as string).slice(0, max);
-  return s === '' ? null : s;
+  const s = (v as string).trim().toLowerCase();
+  return s.length > 0 && s.length <= LIMITS.maxUtm && UTM_RE.test(s) ? s : null;
+}
+
+/** Referrer keeps scheme + host[:port] + path (useful: which page linked here) and drops the
+ *  query string, fragment and any credentials (docs/privacy.md). Anything that is not an
+ *  http(s) URL is omitted rather than rejected, so a bad referrer cannot fail the whole batch.
+ *  Keep in sync with `sanitizeReferrer` in src/lib/telemetry/session.ts. */
+export function sanitizeReferrer(raw: string, max: number): string | null {
+  try {
+    const u = new URL(raw.trim());
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return `${u.origin}${u.pathname}`.slice(0, max);
+  } catch {
+    return null;
+  }
+}
+
+function referrerField(o: Obj, key: string, max: number, path: string): string | null {
+  const v = o[key];
+  if (v === undefined || v === null) return null;
+  if (typeof v !== 'string') fail(`${path}.${key}`, 'must be a string');
+  return sanitizeReferrer(v as string, max);
 }
 
 const SESSION_MINIMAL = ['session_id', 'telemetry_version'] as const;
@@ -213,11 +236,11 @@ function parseSession(raw: unknown): { session_id: string; row: SessionRow | nul
     row: {
       session_id,
       started_at: timestampField(raw, 'started_at', p),
-      referrer: looseString(raw, 'referrer', LIMITS.maxReferrer, p),
-      utm_source: looseString(raw, 'utm_source', LIMITS.maxUtm, p),
-      utm_medium: looseString(raw, 'utm_medium', LIMITS.maxUtm, p),
-      utm_campaign: looseString(raw, 'utm_campaign', LIMITS.maxUtm, p),
-      utm_content: looseString(raw, 'utm_content', LIMITS.maxUtm, p),
+      referrer: referrerField(raw, 'referrer', LIMITS.maxReferrer, p),
+      utm_source: utmField(raw, 'utm_source', p),
+      utm_medium: utmField(raw, 'utm_medium', p),
+      utm_campaign: utmField(raw, 'utm_campaign', p),
+      utm_content: utmField(raw, 'utm_content', p),
       viewport_width: intField(raw, 'viewport_width', LIMITS.maxDimension, p, false),
       viewport_height: intField(raw, 'viewport_height', LIMITS.maxDimension, p, false),
       screen_width: intField(raw, 'screen_width', LIMITS.maxDimension, p, false),
@@ -258,21 +281,83 @@ function checkNested(vals: (number | null)[], names: string[], path: string): vo
   });
 }
 
-function parseProperties(raw: unknown, path: string): string | null {
+/** Value kinds an event property may have. Strings are short identifier-like tokens only
+ *  (`[A-Za-z0-9_.:-]{1,64}`), so no free text, URL or PII can be persisted in `properties`. */
+type PropKind = 'token' | 'int' | 'num' | 'bool';
+const TOKEN_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+
+const POINTER = { pointer_type: 'token' } as const;
+
+/** Explicit per-event-type property allowlist (docs/privacy.md, docs/telemetry.md section 14.1).
+ *  Audited against every producer in src/lib/telemetry + src/scripts; an event type not listed
+ *  here cannot carry properties, and an undeclared key is rejected, never persisted generically. */
+export const EVENT_PROPERTIES: Record<string, Readonly<Record<string, PropKind>>> = {
+  session_start: {},
+  viewport_changed: { viewport_width: 'int', viewport_height: 'int' },
+  skills_open: { trigger_person: 'token', trigger_method: 'token', locked: 'bool' },
+  skills_lock: { trigger_person: 'token', cause: 'token' },
+  skills_unlock: { trigger_person: 'token' },
+  skills_close: { reason: 'token', locked: 'bool', trigger_person: 'token' },
+  skill_filter_open: {},
+  skill_filter_close: { reason: 'token' },
+  project_open: {},
+  project_close: { reason: 'token' },
+  nav_click: {
+    target: 'token', origin_surface: 'token', origin_section: 'token', skills_mode: 'token', ...POINTER,
+  },
+  skill_click: { trigger_person: 'token' },
+  cv_download: { ...POINTER },
+  linkedin_click: { ...POINTER },
+  contact_email_copy: {},
+  contact_email_open: { ...POINTER },
+  external_link_click: { destination_type: 'token', ...POINTER },
+  video_start: { content_type: 'token', person: 'token' },
+  context_menu: { element: 'token', destination_type: 'token', content_type: 'token', ...POINTER },
+  noninteractive_click: { element: 'token', project_id: 'token', ...POINTER },
+  click_burst: {
+    start_elapsed_ms: 'num', duration_ms: 'num', click_count: 'int', region: 'token',
+    distinct_targets: 'int', unresolved_clicks: 'int', target_class: 'token', spread_px: 'num',
+    center_x_ratio: 'num', center_y_ratio: 'num', ...POINTER,
+  },
+  action_failed: { action: 'token', reason: 'token' },
+  visibility_delta: { content_type: 'token', person: 'token', trigger_method: 'token' },
+};
+
+function parseProperties(raw: unknown, path: string, eventType: string): string | null {
   if (raw === undefined || raw === null) return null;
   if (!isObj(raw)) return fail(path, 'must be an object');
+  const schema = EVENT_PROPERTIES[eventType] ?? {};
   const keys = Object.keys(raw);
   if (keys.length > LIMITS.maxPropertyKeys) fail(path, 'too many keys');
   const clean: Obj = {};
   for (const k of keys) {
     if (!PROP_KEY_RE.test(k)) fail(path, `invalid key "${k.slice(0, 40)}"`);
+    const kind = Object.hasOwn(schema, k) ? schema[k] : undefined;
+    if (!kind) fail(`${path}.${k}`, `property not allowed on ${eventType}`);
     const v = raw[k];
-    if (typeof v === 'string') {
-      if (v.length > LIMITS.maxPropertyString) fail(`${path}.${k}`, 'string too long');
-    } else if (typeof v === 'number') {
-      if (!Number.isFinite(v)) fail(`${path}.${k}`, 'must be finite');
-    } else if (typeof v !== 'boolean' && v !== null) {
-      fail(`${path}.${k}`, 'must be a string, number, boolean or null');
+    if (v === null) {
+      clean[k] = null;
+      continue;
+    }
+    switch (kind) {
+      case 'token':
+        if (typeof v !== 'string' || v.length > LIMITS.maxPropertyString || !TOKEN_RE.test(v)) {
+          fail(`${path}.${k}`, 'must be a short identifier token');
+        }
+        break;
+      case 'int':
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 1e9) {
+          fail(`${path}.${k}`, 'must be a non-negative integer');
+        }
+        break;
+      case 'num':
+        if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1e9) {
+          fail(`${path}.${k}`, 'must be a non-negative finite number');
+        }
+        break;
+      case 'bool':
+        if (typeof v !== 'boolean') fail(`${path}.${k}`, 'must be a boolean');
+        break;
     }
     clean[k] = v;
   }
@@ -353,7 +438,7 @@ function parseEvent(raw: unknown, path: string): EventRow {
     v50_ms, v70_ms, v85_ms, v95_ms, max_visibility_ratio,
     playable_v50_ms, playable_v70_ms, playable_v85_ms, playable_v95_ms,
     playing_v50_ms, playing_v70_ms, playing_v85_ms, playing_v95_ms,
-    properties: parseProperties(raw.properties, `${path}.properties`),
+    properties: parseProperties(raw.properties, `${path}.properties`, event_type as string),
   };
 }
 

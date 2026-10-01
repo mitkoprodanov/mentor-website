@@ -34,7 +34,10 @@ Not a ticketing system: keep entries short, update status inline, delete when do
   YouTube frames as empty placeholders; YouTube IFrame API `onError` codes (2, 5, 100,
   101, 150); automatic native-video resume `play()` rejections (autoplay policy); the
   LinkedIn embed being blocked (currently only a CSS fallback, no JS signal). The
-  loadYouTubeApi hang is also worth fixing on its own (`script.onerror` → reject).
+  loadYouTubeApi hang is fixed (privacy pass: `script.onerror` rejects, the gate is restored);
+  only the telemetry signal for it remains. All provider loads are now behind per-embed
+  permission gates (docs/privacy.md section 3, one External media permission), so "embed loaded" vs "embed blocked" is also
+  observable there.
 - **Area:** src/scripts/projectModal.client.ts, telemetry
 
 ### Real-device verification for Pass 4
@@ -89,7 +92,43 @@ Not a ticketing system: keep entries short, update status inline, delete when do
   Matrix should continue measuring actual geometry. Not implemented yet.
 - **Area:** image/GIF rendering components (timeline media?)
 
+### Privacy follow-ups (from the consent/privacy pass)
+- **Type:** Improvement
+- **Status:** Open
+- Real-browser check of the External media gates (YouTube/Facebook/LinkedIn) on a **production** build and
+  on phones (autoplay refusal after Load, iOS Safari, blocked-API fallback). No project in
+  the data currently uses a Facebook embed (the Facebook path was exercised with the exact
+  gate markup injected into an open modal); verify when one is added.
+- Cross-tab withdrawal: a tab that already has analytics running keeps running until its
+  next load if the preference is withdrawn in another tab (a `storage` listener would fix it).
+- After the Worker is next deployed, confirm the daily cron (`17 3 * * *`) shows in the
+  Cloudflare dashboard and review the `retention purge` log line. Not done here (no remote
+  commands by design).
+- **Area:** docs/privacy.md, workers/telemetry
+
 ## Done
+
+### External media permission (replaces per-item embed gates)
+- **Type:** Improvement
+- **Status:** Done
+- One remembered `External media` permission (own storage key, independent of analytics) replaces the per-item/provider contextual gates: self-hosted media (image, gif, image-row, text, native video) is never gated; youtube / linkedin-post / facebook-* stay unloaded until it is allowed, then all rendered and later-rendered embeds load automatically; turning it off removes iframes/players and restores placeholders. Classified in one place (`requiresExternalMediaConsent`, `src/lib/embeds.ts`). Privacy bar/Details now cover both choices. See docs/privacy.md sections 1 and 3.
+
+### Development modes formalized
+- **Type:** Cleanup / Improvement
+- **Status:** Done
+- One `PUBLIC_TELEMETRY_MODE=off | forced | consent` resolved in `config.ts` replaces `PUBLIC_TELEMETRY` / `PUBLIC_TELEMETRY_CONSENT`: `npm run dev` (off), `npm run dev:telemetry` (forced), `npm run dev:production-like` (consent, replaces `dev:telemetry:consent`). Production is always consent; forced is dev-build-only; non-production modes need a local endpoint; `astro build` rejects the variables. See telemetry.md "Development modes", privacy.md section 2.
+
+### Privacy/consent implementation
+- **Type:** Improvement
+- **Status:** Done (privacy pass)
+- Anonymous analytics is opt-in in production (prompt + always-available `Privacy · Analytics`
+  control + panel); telemetry has a real start/stop lifecycle (`lifecycle.ts`, client
+  `stop()`); third-party embeds are gated behind the single External media permission (see "External media" below) with "Open on ..." links and
+  YouTube privacy-enhanced mode; referrer sanitized (scheme/host/path); per-event Worker
+  property allowlists (telemetry.md 14.1); 90-day raw retention via a daily Cron Trigger
+  (telemetry.md 16.2). Full behavior and decisions: docs/privacy.md. The 4 UTM fields are
+  unchanged (telemetry.md 13.2).
+- Added "Public privacy/analytics statement" (telemetry.md step 16) — done in the same pass.
 
 ### Research outbound handoff measurement limits
 - **Type:** Research

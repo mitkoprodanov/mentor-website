@@ -6,6 +6,9 @@
  * fires until the user actually opens it.
  */
 
+import { youtubeEmbedUrl } from '../lib/embeds.ts';
+import { externalMedia } from '../lib/externalMedia.ts';
+
 function youTubeVideoId(url: string): string | null {
 	try {
 		const parsed = new URL(url);
@@ -30,9 +33,10 @@ function youTubeVideoId(url: string): string | null {
 function buildEmbed(link: string, previewImage: string | undefined): HTMLElement {
 	const videoId = youTubeVideoId(link);
 
-	if (videoId) {
+	// A YouTube link is only embedded once External media is allowed; until then it is a plain link.
+	if (videoId && externalMedia.status().allowed) {
 		const iframe = document.createElement('iframe');
-		iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+		iframe.src = youtubeEmbedUrl(videoId);
 		iframe.title = 'Showcase video';
 		iframe.loading = 'lazy';
 		iframe.allow = 'accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
@@ -76,6 +80,16 @@ function init() {
 		if (!link) return;
 
 		container.appendChild(buildEmbed(link, container.dataset.previewImage));
+		if (container.firstElementChild?.tagName === 'A' && youTubeVideoId(link)) container.dataset.showcaseGated = '1';
+	});
+
+	// External media allowed later: upgrade the plain links that were waiting for it.
+	externalMedia.subscribe((status) => {
+		if (!status.allowed) return;
+		document.querySelectorAll<HTMLElement>('[data-showcase-embed][data-showcase-gated]').forEach((c) => {
+			delete c.dataset.showcaseGated;
+			c.replaceChildren(buildEmbed(c.dataset.link ?? '', c.dataset.previewImage));
+		});
 	});
 }
 

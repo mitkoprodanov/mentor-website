@@ -18,6 +18,8 @@ const FLUSH_INTERVAL_MS = 20_000;
 const INITIAL_FLUSH_DELAY_MS = 1_500;
 
 export interface TelemetryClient {
+	/** Withdrawal: stops every listener/timer/observer and drops anything unsent. Idempotent. */
+	stop(): void;
 	emit(eventType: string, opts?: EmitOptions): void;
 	flush(): Promise<void>;
 	/** Registers a DOM element for Visibility Matrix accounting. See visibility.ts. */
@@ -50,6 +52,9 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 			? (...args: unknown[]) => console.debug('[telemetry]', ...args)
 			: () => {};
 
+		const abort = new AbortController();
+		const { signal } = abort;
+		let stopped = false;
 		const origin = browserClock.now();
 		const session = buildSessionContext(
 			browserSessionEnv(),
@@ -60,6 +65,10 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 		const queue = new EventQueue(browserClock, origin, randomId, () =>
 			log('queue full: new events are being dropped'),
 		);
+		/** Every producer goes through this so nothing is queued after withdrawal. */
+		const emit = (type: string, opts?: EmitOptions) => {
+			if (!stopped) queue.emit(type, opts);
+		};
 		const transport = new Transport(
 			config.endpoint,
 			session,
@@ -83,7 +92,7 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 			setTimer: (fn, ms) => setTimeout(fn, ms),
 			clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
 			newId: randomId,
-			emit: (type, opts) => queue.emit(type, opts),
+			emit: (type, opts) => emit(type, opts),
 			getState: () => semantic.get(),
 			subscribe: (fn) => semantic.subscribe(fn),
 			requestFlush: () => {
@@ -98,7 +107,7 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 			{
 				read: () => ({ width: window.innerWidth, height: window.innerHeight }),
 				emit: ({ width, height }) => {
-					queue.emit('viewport_changed', {
+					emit('viewport_changed', {
 						properties: { viewport_width: width, viewport_height: height },
 					});
 					log('viewport_changed', width, height);
@@ -108,20 +117,25 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 				coarsePointer: session.primary_pointer_coarse,
 			},
 		);
-		window.addEventListener('resize', () => {
-			try {
-				viewport.onResize();
-			} catch {
-				/* never affect the site */
-			}
-		});
+		window.addEventListener(
+			'resize',
+			() => {
+				try {
+					viewport.onResize();
+				} catch {
+					/* never affect the site */
+				}
+			},
+			{ signal },
+		);
 
 		// Pass 4 (docs section 17.9): one shared capture-phase pointer/contextmenu
 		// listener set. Ordinary activations stay in memory; only allowlisted
 		// noninteractive clicks, meaningful context menus and CONFIRMED bursts are queued.
 		const interactions = startInteractionCapture({
 			target: window,
-			emit: (type, opts) => queue.emit(type, opts),
+			signal,
+			emit: (type, opts) => emit(type, opts),
 			getState: () => {
 				const s = semantic.get();
 				return { surface: s.surface, viewInstanceId: s.viewInstanceId };
@@ -134,6 +148,7 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 		});
 
 		safeFlush = (lifecycle: boolean): Promise<void> => {
+			if (stopped) return Promise.resolve();
 			// Integration point (docs section "Flush integration"): account
 			// visibility through now and materialize unsent deltas into the queue
 			// BEFORE the transport captures its batch, for every flush path
@@ -175,6 +190,7 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 		};
 
 		document.addEventListener('visibilitychange', () => {
+			if (stopped) return;
 			if (document.visibilityState === 'hidden') {
 				stopTimer(); // no periodic work while hidden
 				// Account through the hide instant and stop counting (docs section
@@ -194,9 +210,9 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 				}
 				startTimer();
 			}
-		});
+		}, { signal });
 		// pagehide covers navigation/close where visibilitychange may not fire.
-		window.addEventListener('pagehide', () => void safeFlush(true));
+		window.addEventListener('pagehide', () => void safeFlush(true), { signal });
 
 		if (document.visibilityState !== 'hidden') {
 			startTimer();
@@ -206,9 +222,23 @@ export function startClient(config: TelemetryConfig, semantic: SemanticStateRead
 		}
 
 		return {
+			stop() {
+				if (stopped) return;
+				stopped = true; // first: nothing more can be queued or sent
+				try {
+					abort.abort(); // resize / visibilitychange / pagehide / pointer + contextmenu capture
+					stopTimer();
+					transport.stop();
+					viewport.finalize(); // clears its timers; its emit is now a no-op
+					visibility.dispose();
+					log('telemetry stopped; unsent events discarded');
+				} catch {
+					/* never affect the site */
+				}
+			},
 			emit(eventType, opts) {
 				try {
-					queue.emit(eventType, opts);
+					emit(eventType, opts);
 				} catch {
 					/* never affect the site */
 				}

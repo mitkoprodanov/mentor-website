@@ -26,10 +26,11 @@ npm run telemetry:check       # readiness summary
 | | Command |
 |---|---|
 | Terminal 1 (Worker + local D1, `:8787`) | `npm run telemetry:dev` |
-| Terminal 2 (Astro with telemetry ON, `:4321`) | `npm run dev:telemetry` |
+| Terminal 2 (Astro, mode `forced`: telemetry ON immediately, `:4321`) | `npm run dev:telemetry` |
+| Terminal 2 alternative (mode `consent`: real consent flow) | `npm run dev:production-like` |
 | Open | <http://localhost:4321/> (use `localhost`, not another host or port) |
 
-`dev:telemetry` runs `astro dev --host --force --port 4321` and sets `PUBLIC_TELEMETRY=1` and `PUBLIC_TELEMETRY_ENDPOINT` (to `http://<your LAN IP>:8787/v1/batch`, or `localhost` if there is no LAN address) itself; no environment variables to set. `--force` replaces an already-running Astro dev server and clears the content cache. Plain `npm run dev` still keeps telemetry off.
+`dev:telemetry` runs `astro dev --host --force --port 4321` and sets `PUBLIC_TELEMETRY_MODE=forced` and `PUBLIC_TELEMETRY_ENDPOINT` (to `http://<your LAN IP>:8787/v1/batch`, or `localhost` if there is no LAN address) itself; no environment variables to set. `--force` replaces an already-running Astro dev server and clears the content cache. `npm run dev` keeps telemetry off (mode `off`, see "Development modes").
 
 `telemetry:dev` force-restarts the same way: if port 8787 is already in use (a Worker left running from before), it stops whatever local process is listening there first, then starts a fresh one — no more manually killing a stale Worker before re-running the command. This only ever targets the LOCAL port 8787 listener on your own machine.
 
@@ -43,12 +44,26 @@ npm run telemetry:check       # readiness summary
 - Restart Astro (Terminal 2) after editing `astro.config.mjs` or changing the endpoint/port.
 - New migration in `migrations/`: `npm run telemetry:db:init` (applies only unapplied files).
 
+### Development modes
+
+One explicit build-time setting, `PUBLIC_TELEMETRY_MODE=off | forced | consent`, resolved only in `src/lib/telemetry/config.ts` (`resolveConfig`) and set for you by `scripts/telemetry.mjs`. Each command prints its mode at startup (e.g. `Telemetry mode: forced — local Worker/D1, analytics consent bypassed`).
+
+| Command | Mode | Behaviour |
+|---|---|---|
+| `npm run dev` | `off` | Custom telemetry completely disabled (the Privacy control shows *not active*, even if a stale "allow" is stored). No Worker needed. Normal site development. |
+| `npm run dev:telemetry` | `forced` | Local Worker + local D1 (Terminal 1: `npm run telemetry:dev`). Telemetry starts immediately; the Mentor analytics-consent requirement is bypassed and no prompt is shown. Console diagnostics on. For implementing/debugging telemetry. |
+| `npm run dev:production-like` | `consent` | The **same** local Worker + local D1, but the real production lifecycle (privacy.md section 2): no telemetry session before consent; first-visit prompt; `No thanks` / `Allow analytics`; remembered preference; withdrawal; a fresh session only when consent is granted; no backfill. The canonical workflow for testing privacy behaviour. |
+
+Safety (privacy.md section 2): production is always `consent` whatever the variable says; `forced` only exists in a development build (a production build asked for it resolves to `off`); a non-production mode needs an explicit **local** endpoint (localhost / loopback / private LAN) or it resolves to `off`, so nothing can fall back to the production Worker; the dev commands only ever pass the local Worker URL, and `astro build` throws if `PUBLIC_TELEMETRY_MODE` or `PUBLIC_TELEMETRY_ENDPOINT` is set. All D1 access stays local-only (below). **External media (third-party embeds) is independent of the mode and of analytics**: YouTube, Facebook and LinkedIn stay unloaded until the separate External media permission is allowed, identically in all three modes (privacy.md section 3); self-hosted video is never gated. To reset a browser's remembered consent while testing, clear `localStorage['mgs_analytics_consent']` (or use the Privacy control).
+
 ### Check what happened
 
 Events flush ~1.5 s after page load, every 20 s while visible, and when the tab is hidden or closed.
 
 ```powershell
-npm run telemetry:sessions    # recent sessions (viewport, pointer, UTM, event count)
+npm run dev:production-like   # (Terminal 2 alternative) mode consent: production-like privacy flow, telemetry off until you click Allow analytics
+npm run telemetry:prune       # LOCAL only: delete sessions/events older than 90 days (-- --dry-run, -- --days N)
+npm run telemetry:sessions    # recent sessions (viewport, pointer, UTM source/medium/campaign/content, event count)
 npm run telemetry:events      # recent events (id, session, elapsed_ms, type, target, view, properties)
 npm run telemetry:viewport    # recent viewport_changed events with size + orientation
 npm run telemetry:events -- --limit 100 --session 3fa9c1d2   # options for all three
@@ -90,9 +105,12 @@ Raw telemetry records objective observations and interactions. Interpretations s
 
 ## 2. Privacy constraints
 
-V1 is intentionally privacy-light.
+V1 is intentionally privacy-light. Cross-cutting privacy decisions (consent, third-party media, retention, the visitor statement) are specified in [privacy.md](privacy.md); this section is the telemetry-specific contract.
 
-- No analytics cookies.
+- **Opt-in in production.** Custom telemetry is OFF by default on the production site and starts only after the visitor chooses `Allow analytics`; before that no client, session ID, queue, telemetry listener or Worker request exists. Withdrawal stops everything immediately and discards unsent events.
+- **Raw retention is 90 days** (daily Cron Trigger purge; section 16.2).
+
+- No analytics cookies. The only browser storage is the generic `allow`/`refuse` consent preference (`localStorage['mgs_analytics_consent']`): no visitor ID, never sent to the Worker, never used for correlation.
 - No persistent visitor identifier across visits.
 - No fingerprinting.
 - No session replay.
@@ -104,7 +122,7 @@ V1 is intentionally privacy-light.
 - Do not store raw IP addresses.
 - Do not derive or store subjective intent in the browser.
 
-A short public analytics/privacy statement should be added before production telemetry is enabled.
+The public analytics/privacy statement is the bar/Details behind the `Privacy` control (privacy.md section 6).
 
 ## 3. Infrastructure
 
@@ -460,6 +478,49 @@ Resize events can fire continuously while a window is dragged. Do not emit every
 - **Noise threshold** (compared with the baseline, so slow drift accumulates rather than being lost): emit only if |Δwidth| >= 10 px or |Δheight| >= 10 px. On a coarse primary pointer (phones/tablets), a height-only change (|Δwidth| < 10 px) must be >= 120 px, to ignore mobile URL-bar show/hide (~50-100 px). Rotation, maximize/restore and deliberate desktop resizes exceed these. An on-screen keyboard (~250+ px height change) can still emit.
 - **Lifecycle**: `client.ts` keeps its single `visibilitychange -> hidden` / `pagehide` listeners. Before a lifecycle flush it calls `ViewportTracker.finalize()`, which cancels pending timers, measures the current size and, if meaningful, queues `viewport_changed`; the existing lifecycle flush then sends it. There is no second lifecycle listener.
 
+
+### 13.2 Campaign attribution (UTM)
+
+Attribution belongs to the **session**, not to events: the four values live once on the `sessions` row (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, all nullable) and are joined to events through `session_id`. A visitor without these parameters is simply unattributed (all four NULL).
+
+Only these four query parameters are recognized. Everything else in the URL (including `utm_term`, `fbclid`, etc.) is ignored and never sent.
+
+| Parameter | Meaning |
+|-----------|---------|
+| `utm_source` | where the visitor came from (`linkedin`, `facebook`, `email`, `devlog`) |
+| `utm_medium` | channel category (`social`, `outreach`, `content`) |
+| `utm_campaign` | the outreach/marketing initiative (`portfolio_launch`, `devlog`, `studio_outreach`) |
+| `utm_content` | the particular post/link/variant (`company_post`, `mitko_post`, `initial`, `followup`) |
+
+The example values are conventions, not an allowlist. Naming convention: lowercase, `snake_case` (`a-z 0-9 _ -`).
+
+Example campaign URLs:
+
+```
+https://mentorgamestudio.com/?utm_source=linkedin&utm_medium=social&utm_campaign=portfolio_launch&utm_content=company_post
+https://mentorgamestudio.com/?utm_source=linkedin&utm_medium=social&utm_campaign=portfolio_launch&utm_content=mitko_post
+https://mentorgamestudio.com/?utm_source=linkedin&utm_medium=social&utm_campaign=portfolio_launch&utm_content=collaboration_followup
+https://mentorgamestudio.com/?utm_source=facebook&utm_medium=social&utm_campaign=portfolio_launch&utm_content=company_post
+https://mentorgamestudio.com/?utm_source=devlog&utm_medium=content&utm_campaign=devlog&utm_content=article_03
+https://mentorgamestudio.com/?utm_source=email&utm_medium=outreach&utm_campaign=studio_outreach&utm_content=initial
+https://mentorgamestudio.com/?utm_source=email&utm_medium=outreach&utm_campaign=studio_outreach&utm_content=followup
+```
+
+**Normalization** (identical in the client `session.ts` and the Worker `validate.ts`): trim, lowercase, then the value must match `^[a-z0-9_-]{1,40}$`. A value that is empty or fails the pattern/length is **omitted** (NULL), never truncated or sent raw. The Worker re-validates independently, so a hand-crafted request cannot store arbitrary strings, URLs or PII there; a non-string value, or any other unknown session field (e.g. `url`, `search`, `utm_term`), rejects the batch like every other malformed field.
+
+**Privacy / scope**: read once from `location.search` when the page-load session is created, and sent only in the creation batch. No cookies, `localStorage` or `sessionStorage`; the full URL and other query parameters are never stored, and `referrer` is sanitized on both client and Worker to scheme + host + path (query string, fragment and credentials stripped; unparseable/non-http(s) dropped), so a referring page's query — including our own campaign URL's parameters on a same-site navigation — never reaches D1; the visible URL is not rewritten. Attribution is page-load/session scoped and deliberately does not persist: a later visit, reload or in-site navigation that lacks the parameters is a new, unattributed session.
+
+```sql
+-- sessions of one campaign, newest first
+SELECT * FROM sessions WHERE utm_campaign = 'portfolio_launch' ORDER BY started_at DESC;
+
+-- their events
+SELECT s.utm_source, s.utm_content, e.*
+FROM sessions s JOIN events e ON e.session_id = s.session_id
+WHERE s.utm_campaign = 'portfolio_launch';
+```
+
+`sessions.started_at` is always a canonical UTC ISO-8601 string `YYYY-MM-DDTHH:MM:SS.sssZ` (the client produces `Date.toISOString()` and the Worker re-normalizes through `toISOString()`, accepting years 2020-2100 only), so `ORDER BY started_at` and lexical range comparisons are chronologically correct.
 ## 14. Transport and batching
 
 Use DELTAS, not snapshots/upserts.
@@ -494,6 +555,32 @@ At 40 seconds send only newly accumulated values:
 - v85 +2000
 - v95 +0
 
+### 14.1 Per-event property schema
+
+`events.properties` is JSON of the event's own declared keys only (`EVENT_PROPERTIES` in `workers/telemetry/src/validate.ts`; audited against every producer, pinned by `privacy.test.ts` in both the client and Worker test folders). Value kinds: `token` (`[A-Za-z0-9_.:-]{1,64}`), `int`, `num` (non-negative, finite), `bool`; `null` is allowed for any declared key.
+
+| Event | Declared properties |
+|---|---|
+| `session_start`, `skill_filter_open`, `project_open`, `contact_email_copy` | none |
+| `viewport_changed` | `viewport_width`, `viewport_height` (int) |
+| `skills_open` | `trigger_person`, `trigger_method`, `locked` (bool) |
+| `skills_lock` | `trigger_person`, `cause` |
+| `skills_unlock` | `trigger_person` |
+| `skills_close` | `reason`, `locked` (bool), `trigger_person` |
+| `skill_filter_close`, `project_close` | `reason` |
+| `nav_click` | `target`, `origin_surface`, `origin_section`, `skills_mode`, `pointer_type` |
+| `skill_click` | `trigger_person` |
+| `cv_download`, `linkedin_click`, `contact_email_open` | `pointer_type` |
+| `external_link_click` | `destination_type`, `pointer_type` |
+| `video_start` | `content_type`, `person` |
+| `context_menu` | `element`, `destination_type`, `content_type`, `pointer_type` |
+| `noninteractive_click` | `element`, `project_id`, `pointer_type` |
+| `click_burst` | `start_elapsed_ms`, `duration_ms`, `click_count`, `region`, `distinct_targets`, `unresolved_clicks`, `target_class`, `spread_px`, `center_x_ratio`, `center_y_ratio`, `pointer_type` |
+| `action_failed` | `action`, `reason` |
+| `visibility_delta` | `content_type`, `person`, `trigger_method` |
+
+A new property or event type must be added to this table, the Worker schema and its test in the same change.
+
 ## 15. Proposed D1 schema
 
 Keep storage generic and append-oriented.
@@ -527,6 +614,8 @@ CREATE TABLE sessions (
 ) STRICT;
 
 CREATE INDEX idx_sessions_started_at ON sessions(started_at);
+-- migration 0003:
+CREATE INDEX idx_sessions_utm_campaign ON sessions(utm_campaign, started_at);
 ```
 
 ### `events`
@@ -656,7 +745,9 @@ Source: `workers/telemetry/` (`src/index.ts` handler, `src/validate.ts` validati
 - Requests with no `Origin` header (non-browser clients) are not rejected by CORS. CORS is not authentication; validation and size limits apply to every request.
 - Request `Content-Type` must be `application/json` (so `sendBeacon` must send a `Blob` of that type, which triggers a preflight).
 
-**Limits**: body <= 64 KiB; <= 100 events per batch; `elapsed_ms` <= 24 h; each delta (`v*_ms`, `playing*_ms`) <= 10 min; viewport/screen dimensions <= 20000; `referrer` truncated to 512 chars and UTM values to 128 (free-form context is truncated rather than rejected); `properties` <= 2 KiB and 20 keys.
+**Event properties (section 14.1).** `properties` must match the event type's declared schema (`EVENT_PROPERTIES`); undeclared keys, wrong value kinds and non-token strings are rejected with 400.
+
+**Limits**: body <= 64 KiB; <= 100 events per batch; `elapsed_ms` <= 24 h; each delta (`v*_ms`, `playing*_ms`) <= 10 min; viewport/screen dimensions <= 20000; `referrer` sanitized to scheme + host + path (query/fragment/credentials stripped, non-http(s) omitted, max 512 chars); UTM values are normalized to `[a-z0-9_-]{1,40}` or omitted (section 13.2); `properties` <= 2 KiB and 20 keys.
 
 **Session** (`session_id` and `telemetry_version` = 1 always required)
 - Creation batch: includes `started_at` and all capability booleans (strict JSON booleans, stored as 0/1). Optional: referrer, UTM fields, viewport/screen dimensions, `site_version`. Stored with `INSERT OR IGNORE`, so re-sending is harmless (first write wins).
@@ -678,6 +769,10 @@ Source: `workers/telemetry/` (`src/index.ts` handler, `src/validate.ts` validati
 **Local development**: the Worker runs locally with local D1 via `npm run telemetry:dev`; see "Local development" at the top of this document. Browser telemetry stays disabled in plain `npm run dev` (see 17.1); `npm run dev:telemetry` enables it against the local Worker.
 
 A separate public read/query API is not required for V1. Analysis can initially use D1 SQL/Cloudflare tooling.
+
+### 16.2 Retention
+
+Raw `sessions` and `events` expire **90 days** after `sessions.started_at`. `workers/telemetry/wrangler.jsonc` declares a daily Cron Trigger (`17 3 * * *`); the Worker's `scheduled()` handler runs `purgeExpired` (`src/retention.ts`): one D1 batch (transaction) that deletes events (`occurred_at` older than the cutoff, or belonging to an expired session) and then the expired sessions. `started_at` is canonical UTC ISO text, so `started_at < cutoff` is exact; a session exactly 90 days old is kept until the next run. `npm run telemetry:prune` (`-- --days N`, `-- --dry-run`) applies the same SQL to the LOCAL database only. Tested against real SQLite with the real migrations (`workers/telemetry/test/privacy.test.ts`). Deploying the Worker registers the trigger; nothing is run remotely from this repository's tooling.
 
 ## 17. Client architecture
 
@@ -719,7 +814,7 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 |------|----------------|
 | `types.ts` | Wire types mirroring the Worker contract |
 | `config.ts` | The single enablement decision (pure) |
-| `session.ts` | Random ID, UTM parsing, session context |
+| `session.ts` | Random ID, UTM parsing + normalization, session context |
 | `queue.ts` | In-memory queue, event creation, `elapsed_ms` |
 | `transport.ts` | Batching, single-flight flush, retry/backoff |
 | `viewport.ts` | Resize coalescing / noise filtering for `viewport_changed` (pure, injected timers) |
@@ -728,9 +823,13 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 | `visibility.ts` | Visibility Matrix engine: appearance lifecycle + nested-threshold accounting (section 17.3) |
 | `explicitEvents.ts` | Pure payload construction for explicit-action events — `nav_click`, `cv_download`, `linkedin_click`, `contact_email_copy`, `contact_email_open`, `external_link_click` (section 17.8) |
 | `client.ts` | Browser wiring: session start, timers, page lifecycle, resize listener, the Visibility Matrix engine's materialize/pause/resume |
-| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `telemetry.observeVisibility(el, type, id)`, `semanticState` |
+| `index.ts` | Public API: `initTelemetry()`, `telemetry.emit(type, opts)`, `telemetry.flush()`, `telemetry.observeVisibility(el, type, id)`, `semanticState`, and `telemetryControl` (`status/allow/refuse/subscribe/onStart`) |
+| `consent.ts` | The generic remembered `allow`/`refuse` preference (guarded `localStorage`; no IDs) |
+| `lifecycle.ts` | `TelemetryLifecycle`: modes `unavailable`/`forced`/`consent`, start/stop, `onStart` hooks. Pure; unit-tested |
 
-**Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`. The current page URL is never sent. No User-Agent is collected.
+**Session**: created once per page load, in memory only (no cookies, `localStorage`, `sessionStorage`). `session_id` is `crypto.randomUUID()` (hex from `getRandomValues` fallback; telemetry stays off if neither exists). A reload or return visit is a new session. Context fields are exactly those in section 13; capability fields are real booleans (`(pointer|any-pointer): coarse|fine`, `(hover: hover)`, `touch_capable = maxTouchPoints > 0 || 'ontouchstart' in window`). Only the four documented UTM parameters are read from the landing URL; the referrer is `document.referrer`, sanitized to scheme/host/path. The current page URL is never sent.
+
+**Lifecycle / consent (privacy.md section 2)**: `initTelemetry()` builds a `TelemetryLifecycle` and only *starts* telemetry in mode `forced` (local development) or, in mode `consent` (production, or `dev:production-like`), after a remembered `allow` or a click on `Allow analytics`; mode `off` never starts. Starting (`startSession` in `index.ts`) creates the `SemanticStateCoordinator` + `bindUiEvents`, then `startClient` (session ID, queue, transport, visibility engine, resize/visibility/pagehide and pointer/contextmenu listeners, all bound to one `AbortController`) and finally runs the `telemetryControl.onStart` hooks (`visibility.client.ts` registers its targets and tooltip relays; `explicitActions.client.ts` attaches its link listeners). Stopping reverses all of it: `TelemetryClient.stop()` aborts the listeners, stops the flush timer, `Transport.stop()` (no request, ever, even for queued events), finalizes/clears the viewport tracker and `VisibilityMatrixEngine.dispose()`; hook cleanups and `bindUiEvents`' unbind run too. Because the coordinator is created on start, a blocking surface already open at that instant is not known to it (the consent UI sits below `<dialog>` modals, so this is not reachable in practice). No User-Agent is collected.
 
 **Events**: `event_id` is generated when the event is created and never regenerated. `elapsed_ms` = `performance.now()` since session start (`session_start` is 0); `occurred_at` is the ISO wall-clock time.
 
@@ -742,7 +841,7 @@ Source: `src/lib/telemetry/` (tests in `src/lib/telemetry/test/`, run with `npm 
 
 **Lifecycle**: a flush ~1.5 s after start (so short visits still record the session), a 20 s periodic flush only while the document is visible (no timer while hidden), a flush on `visibilitychange` -> hidden, and on `pagehide`. Lifecycle flushes use `fetch(..., {keepalive: true})` and ignore backoff. `sendBeacon` and `unload` are not used.
 
-**Enablement** (`config.ts`, the only place this is decided): on when the build is a production build AND `location.hostname === 'mentorgamestudio.com'`; otherwise off (so `astro dev` and `astro preview` on localhost send nothing). Deliberate local override: build-time `PUBLIC_TELEMETRY=1` (also turns on console diagnostics), optionally with `PUBLIC_TELEMETRY_ENDPOINT` (e.g. `http://localhost:8787/v1/batch`). `npm run dev:telemetry` sets both for you; the dev origin is in the local Worker's git-ignored `.dev.vars` `ALLOWED_ORIGINS`. `?telemetry_debug` adds console diagnostics on an already-enabled site but never enables telemetry.
+**Enablement / mode** (`config.ts`, the only place this is decided; see "Development modes" in Local development). `resolveConfig` returns one `mode`: the production site (production build on `mentorgamestudio.com`) is always `consent` with the production endpoint, ignoring the build-time request and any endpoint override; elsewhere the mode is the parsed `PUBLIC_TELEMETRY_MODE` (unknown or unset = `off`), `forced` is downgraded to `off` in a production build, and any non-`off` mode without an explicit local `PUBLIC_TELEMETRY_ENDPOINT` (e.g. `http://localhost:8787/v1/batch`; `isLocalEndpoint` accepts localhost, loopback and private-LAN addresses only) is `off`. So `astro preview` on localhost and an ordinary `astro dev` send nothing. Console diagnostics are on in `forced` mode; `?telemetry_debug` adds them on an already-running site but never enables telemetry. The dev origin must be in the local Worker's git-ignored `.dev.vars` `ALLOWED_ORIGINS`.
 
 **`site_version`**: short (7-char) commit SHA, injected at build by `astro.config.mjs` (`GITHUB_SHA` in the GitHub Pages workflow, else `git rev-parse`, else `dev`).
 
@@ -1346,8 +1445,8 @@ Use chronology and the last meaningful state/action/visibility evidence. Page-hi
 13. Add video playback-duration enrichment where reliably available.
 14. Add conservative noninteractive/repeated-click signals. (Done: section 17.9 — `noninteractive_click`, `click_burst`, `context_menu`, `action_failed`; `repeated_noninteractive_click` retired.)
 15. Validate suspension, hidden-tab timing, batching, retries, and mobile/pointer behavior.
-16. Add public privacy/analytics statement.
-17. Enable production telemetry.
+16. Add public privacy/analytics statement. (Done: `Privacy` bar/Details; privacy.md.)
+17. Enable production telemetry. (Consent gating, per-event property allowlists, sanitized referrer and 90-day retention are implemented; production remains opt-in.)
 
 ## 22. Change discipline
 

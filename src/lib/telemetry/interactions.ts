@@ -27,6 +27,8 @@ export interface InteractionDeps {
 	setTimer: BurstDeps['setTimer'];
 	clearTimer: BurstDeps['clearTimer'];
 	viewport: BurstDeps['viewport'];
+	/** Aborting removes every listener this capture installed (analytics withdrawal). */
+	signal?: AbortSignal;
 }
 
 export interface InteractionCapture {
@@ -75,7 +77,7 @@ export function startInteractionCapture(deps: InteractionDeps): InteractionCaptu
 		clearTimer: deps.clearTimer,
 		viewport: deps.viewport,
 	});
-	const opts = { capture: true, passive: true };
+	const opts = deps.signal ? { capture: true, passive: true, signal: deps.signal } : { capture: true, passive: true };
 
 	deps.target.addEventListener(
 		'pointerdown',

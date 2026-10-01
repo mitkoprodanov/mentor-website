@@ -3,6 +3,7 @@
 
 import { LIMITS, TELEMETRY_VERSION, validateBatch } from './validate.ts';
 import type { EventRow, SessionRow } from './validate.ts';
+import { purgeExpired } from './retention.ts';
 
 export interface Env {
   DB: D1Database;
@@ -196,5 +197,15 @@ export default {
     if (request.method !== 'POST') return error(405, 'method_not_allowed', cors, undefined, { Allow: 'POST, OPTIONS' });
 
     return handleBatch(request, env, cors);
+  },
+
+  /** Daily Cron Trigger (wrangler.jsonc): delete raw sessions/events older than 90 days. */
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      purgeExpired(env.DB).then(
+        (r) => console.log('retention purge', JSON.stringify(r)),
+        (err) => console.error('retention purge failed', err instanceof Error ? err.message.slice(0, 300) : ''),
+      ),
+    );
   },
 } satisfies ExportedHandler<Env>;

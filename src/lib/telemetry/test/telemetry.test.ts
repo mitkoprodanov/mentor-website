@@ -28,32 +28,38 @@ const clock = () => {
 
 // ---- config -------------------------------------------------------------
 
-test('config: on only for a production build on the real hostname', () => {
-	const base = { forceEnable: false, search: '' };
-	assert.equal(resolveConfig({ ...base, isProductionBuild: true, hostname: 'mentorgamestudio.com' }).enabled, true);
-	assert.equal(resolveConfig({ ...base, isProductionBuild: true, hostname: 'localhost' }).enabled, false);
-	assert.equal(resolveConfig({ ...base, isProductionBuild: false, hostname: 'localhost' }).enabled, false);
-	assert.equal(resolveConfig({ ...base, isProductionBuild: false, hostname: 'mentorgamestudio.com' }).enabled, false);
+test('config: the real production site is consent mode, whatever the build-time request says', () => {
+	const prod = { isProductionBuild: true, hostname: 'mentorgamestudio.com', search: '' };
+	assert.equal(resolveConfig(prod).mode, 'consent');
+	for (const mode of ['off', 'forced', 'consent', 'nonsense', undefined]) {
+		const c = resolveConfig({ ...prod, mode, endpointOverride: 'http://localhost:8787/v1/batch' });
+		assert.equal(c.mode, 'consent', String(mode));
+		assert.equal(c.endpoint, PRODUCTION_ENDPOINT); // an endpoint override can never redirect production
+	}
 });
 
-test('config: explicit override enables + debug, endpoint override applies', () => {
-	const c = resolveConfig({
-		isProductionBuild: false, forceEnable: true, hostname: 'localhost', search: '',
-		endpointOverride: 'http://localhost:8787/v1/batch',
-	});
-	assert.equal(c.enabled, true);
-	assert.equal(c.debug, true);
-	assert.equal(c.endpoint, 'http://localhost:8787/v1/batch');
-	const prod = resolveConfig({ isProductionBuild: true, forceEnable: false, hostname: 'mentorgamestudio.com', search: '' });
-	assert.equal(prod.endpoint, PRODUCTION_ENDPOINT);
-	assert.equal(prod.debug, false);
+test('config: anything that is not the production site is off unless a local mode + local endpoint are set', () => {
+	const local = { isProductionBuild: false, hostname: 'localhost', search: '' };
+	assert.equal(resolveConfig(local).mode, 'off');
+	assert.equal(resolveConfig({ ...local, isProductionBuild: true }).mode, 'off'); // astro preview
+	assert.equal(resolveConfig({ isProductionBuild: false, hostname: 'mentorgamestudio.com', search: '' }).mode, 'off'); // dev build on the real host
+});
+
+test('config: explicit local modes apply with a local endpoint; forced also turns on console diagnostics', () => {
+	const ep = 'http://localhost:8787/v1/batch';
+	const f = resolveConfig({ isProductionBuild: false, mode: 'forced', hostname: 'localhost', search: '', endpointOverride: ep });
+	assert.deepEqual([f.mode, f.debug, f.endpoint], ['forced', true, ep]);
+	const c = resolveConfig({ isProductionBuild: false, mode: 'consent', hostname: 'localhost', search: '', endpointOverride: ep });
+	assert.deepEqual([c.mode, c.debug, c.endpoint], ['consent', false, ep]);
+	assert.equal(resolveConfig({ isProductionBuild: false, mode: 'off', hostname: 'localhost', search: '', endpointOverride: ep }).mode, 'off');
+	assert.equal(resolveConfig({ isProductionBuild: false, mode: ' forced ', hostname: 'localhost', search: '', endpointOverride: ep }).mode, 'forced');
 });
 
 test('config: ?telemetry_debug never enables telemetry by itself', () => {
-	const c = resolveConfig({ isProductionBuild: true, forceEnable: false, hostname: 'localhost', search: '?telemetry_debug' });
-	assert.equal(c.enabled, false);
+	const c = resolveConfig({ isProductionBuild: true, hostname: 'localhost', search: '?telemetry_debug' });
+	assert.equal(c.mode, 'off');
 	assert.equal(c.debug, false);
-	assert.equal(resolveConfig({ isProductionBuild: true, forceEnable: false, hostname: 'mentorgamestudio.com', search: '?telemetry_debug' }).debug, true);
+	assert.equal(resolveConfig({ isProductionBuild: true, hostname: 'mentorgamestudio.com', search: '?telemetry_debug' }).debug, true);
 });
 
 // ---- session / UTM ------------------------------------------------------

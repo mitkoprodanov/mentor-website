@@ -5,6 +5,8 @@
   "compatibility_date": "2026-09-01",
   // Keep variables/secrets configured in the Cloudflare dashboard (e.g. ALLOWED_ORIGINS).
   "keep_vars": true,
+  // Raw data retention (90 days): daily purge at 03:17 UTC. See src/retention.ts.
+  "triggers": { "crons": ["17 3 * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

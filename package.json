@@ -6,7 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "node scripts/telemetry.mjs astro off",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -15,7 +15,8 @@
     "worker:dev": "wrangler dev --config workers/telemetry/wrangler.jsonc",
     "worker:deploy": "wrangler deploy --config workers/telemetry/wrangler.jsonc",
     "telemetry:test": "node --test \"src/lib/telemetry/test/*.test.ts\"",
-    "dev:telemetry": "node scripts/telemetry.mjs astro",
+    "dev:telemetry": "node scripts/telemetry.mjs astro forced",
+    "dev:production-like": "node scripts/telemetry.mjs astro consent",
     "telemetry:dev": "node scripts/telemetry.mjs dev",
     "telemetry:check": "node scripts/telemetry.mjs check",
     "telemetry:db:init": "node scripts/telemetry.mjs db-init",
@@ -23,7 +24,8 @@
     "telemetry:sessions": "node scripts/telemetry.mjs sessions",
     "telemetry:events": "node scripts/telemetry.mjs events",
     "telemetry:viewport": "node scripts/telemetry.mjs viewport",
-    "telemetry:clear": "node scripts/telemetry.mjs clear"
+    "telemetry:clear": "node scripts/telemetry.mjs clear",
+    "telemetry:prune": "node scripts/telemetry.mjs prune"
   },
   "dependencies": {
     "astro": "^7.3.2"

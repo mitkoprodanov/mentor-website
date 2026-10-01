@@ -49,7 +49,7 @@
  * same as every other UI script.
  */
 
-import { telemetry } from '../lib/telemetry';
+import { telemetry, telemetryControl } from '../lib/telemetry';
 import type { ObserveOptions, PlayableKind, PropertyValue, Surface } from '../lib/telemetry';
 import { UI_EVENT } from '../lib/telemetry/uiEvents.ts';
 import type { VisionTooltipHideDetail, VisionTooltipShowDetail } from '../lib/telemetry/uiEvents.ts';
@@ -95,7 +95,11 @@ function wireGifLoadGate(el: HTMLElement): void {
 	img.addEventListener('load', () => telemetry.setVisibilityPlayableSuspended(el, false), { once: true });
 }
 
-function init(): void {
+/** Runs once per analytics start (never before consent): registers every target with the
+ *  fresh engine and relays tooltip announcements; the cleanup removes the relays on withdrawal. */
+function register(): () => void {
+	const abort = new AbortController();
+	const { signal } = abort;
 	document.querySelectorAll<HTMLElement>('[data-visibility-target-type]').forEach((el) => {
 		const targetType = el.dataset.visibilityTargetType;
 		const targetId = el.dataset.visibilityTargetId;
@@ -104,7 +108,8 @@ function init(): void {
 		telemetry.observeVisibility(el, targetType, targetId, options);
 		if (options?.playableKind === 'gif') {
 			wireGifLoadGate(el);
-		} else if (options?.playableKind && STARTS_SUSPENDED.has(options.playableKind)) {
+		} else if (options?.playableKind && STARTS_SUSPENDED.has(options.playableKind) && el.dataset.embedLive !== '1') {
+			// (An embed the visitor already loaded before analytics started is genuinely live: leave it unsuspended.)
 			telemetry.setVisibilityPlayableSuspended(el, true);
 		}
 	});
@@ -120,12 +125,17 @@ function init(): void {
 		const { tooltipId, method } = (e as CustomEvent<VisionTooltipShowDetail>).detail ?? {};
 		const el = tooltipEl(tooltipId);
 		if (el) telemetry.setVisibilityTriggerContext(el, method);
-	});
+	}, { signal });
 	document.addEventListener(UI_EVENT.visionTooltipHide, (e) => {
 		const { tooltipId } = (e as CustomEvent<VisionTooltipHideDetail>).detail ?? {};
 		const el = tooltipEl(tooltipId);
 		if (el) telemetry.endVisibilityAppearance(el);
-	});
+	}, { signal });
+	return () => abort.abort();
+}
+
+function init(): void {
+	telemetryControl.onStart(register);
 }
 
 if (document.readyState === 'loading') {

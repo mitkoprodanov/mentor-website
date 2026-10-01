@@ -3,15 +3,18 @@ import Layout from '../layouts/Layout.astro';
 import NavBar from '../components/NavBar.astro';
 import About from '../components/sections/About.astro';
 import ScrollyRegion from '../components/ScrollyRegion.astro';
+import PrivacyConsent from '../components/PrivacyConsent.astro';
 ---
 
 <Layout>
 	<NavBar />
 	<About />
 	<ScrollyRegion />
+	<PrivacyConsent />
 </Layout>
 
 <script>
 	import '../scripts/telemetry.client';
+	import '../scripts/privacyConsent.client';
 	import '../scripts/visibility.client';
 </script>

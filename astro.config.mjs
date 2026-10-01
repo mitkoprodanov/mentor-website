@@ -16,6 +16,14 @@ function siteVersion() {
 	}
 }
 
+// Defence in depth for telemetry (docs/privacy.md section 2): the development-only variables must
+// never be baked into a production bundle. (config.ts also ignores them on the production site.)
+if (process.argv.includes('build') && (process.env.PUBLIC_TELEMETRY_MODE || process.env.PUBLIC_TELEMETRY_ENDPOINT)) {
+	throw new Error(
+		'PUBLIC_TELEMETRY_MODE / PUBLIC_TELEMETRY_ENDPOINT are development-only and must not be set for "astro build".',
+	);
+}
+
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://mentorgamestudio.com',

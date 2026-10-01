@@ -10,6 +10,9 @@
 import { startClient } from './client.ts';
 import type { TelemetryClient } from './client.ts';
 import { resolveConfig } from './config.ts';
+import { browserConsentStorage } from './consent.ts';
+import { TelemetryLifecycle } from './lifecycle.ts';
+import type { StartHook, TelemetryStatus } from './lifecycle.ts';
 import { randomId } from './session.ts';
 import { bindUiEvents, SemanticStateCoordinator } from './state.ts';
 import type { SemanticState, Surface } from './state.ts';
@@ -19,45 +22,99 @@ import type { ObserveOptions } from './visibility.ts';
 export type { SemanticState, Surface } from './state.ts';
 export type { ObserveOptions, PlayableKind } from './visibility.ts';
 export type { PropertyValue } from './types.ts';
+export type { TelemetryStatus } from './lifecycle.ts';
+export type { TelemetryMode } from './config.ts';
 
 // Injected by astro.config.mjs (vite `define`).
 declare const __SITE_VERSION__: string;
 
 let client: TelemetryClient | null = null;
-let started = false;
 
-// Semantic UI state (main / skills / project_modal / skill_filtered). Always
-// tracked once initTelemetry() has run, even with telemetry disabled: emit is a
-// silent no-op then, and the coordinator only listens to UI announcements.
+// Semantic UI state (main / skills / project_modal / skill_filtered). Exists
+// ONLY while telemetry is running: it is created with the session and torn
+// down on withdrawal, so nothing is listening before consent.
 let coordinator: SemanticStateCoordinator | null = null;
 
-/** Call once from the page entry point. Later calls do nothing. */
+let lifecycle: TelemetryLifecycle | null = null;
+let started = false;
+
+/** Builds a brand-new anonymous session plus every telemetry listener; the returned
+ *  handle tears all of it down again. Called by the lifecycle, never on page load
+ *  in production before consent. */
+function startSession(config: ReturnType<typeof resolveConfig>) {
+	const coord = new SemanticStateCoordinator({
+		emit: (type, opts) => telemetry.emit(type, opts),
+		newId: () => randomId(),
+	});
+	const unbind = bindUiEvents(coord, document);
+	coordinator = coord;
+	const c = startClient(config, semanticState);
+	if (!c) {
+		unbind();
+		coordinator = null;
+		return null;
+	}
+	client = c;
+	return {
+		stop() {
+			c.stop();
+			unbind();
+			client = null;
+			coordinator = null;
+		},
+	};
+}
+
+/** Call once from the page entry point. Later calls do nothing. In production this only
+ *  decides whether telemetry may start (remembered `allow`); it never starts otherwise. */
 export function initTelemetry(): void {
 	if (started) return;
 	started = true;
 	try {
-		coordinator = new SemanticStateCoordinator({
-			emit: (type, opts) => telemetry.emit(type, opts),
-			newId: () => randomId(),
-		});
-		bindUiEvents(coordinator, document);
-	} catch {
-		coordinator = null;
-	}
-	try {
 		const config = resolveConfig({
 			isProductionBuild: import.meta.env.PROD,
-			forceEnable: import.meta.env.PUBLIC_TELEMETRY === '1',
+			mode: import.meta.env.PUBLIC_TELEMETRY_MODE,
 			endpointOverride: import.meta.env.PUBLIC_TELEMETRY_ENDPOINT,
 			hostname: location.hostname,
 			search: location.search,
 			siteVersion: typeof __SITE_VERSION__ === 'string' ? __SITE_VERSION__ : undefined,
 		});
-		if (config.enabled) client = startClient(config, semanticState);
+		const lc = new TelemetryLifecycle({
+			config,
+			storage: browserConsentStorage(),
+			startSession: () => startSession(config),
+		});
+		lifecycle = lc;
+		lc.init();
 	} catch {
+		lifecycle = null;
 		client = null;
+		coordinator = null;
 	}
 }
+
+/** Consent + lifecycle control for the privacy UI and for telemetry-only wiring. */
+export const telemetryControl = {
+	status(): TelemetryStatus {
+		return lifecycle?.status() ?? { mode: 'off', consent: null, running: false, remembered: true };
+	},
+	subscribe(fn: (s: TelemetryStatus) => void): () => void {
+		return lifecycle ? lifecycle.subscribe(fn) : () => {};
+	},
+	/** `Allow analytics`. */
+	allow(): void {
+		lifecycle?.allow();
+	},
+	/** `No thanks` / withdrawal. */
+	refuse(): void {
+		lifecycle?.refuse();
+	},
+	/** Install telemetry-only listeners/registrations: runs only while telemetry runs
+	 *  (now if already running, again on every later start); cleanup runs on stop. */
+	onStart(hook: StartHook): void {
+		lifecycle?.onStart(hook);
+	},
+};
 
 export const telemetry = {
 	emit(eventType: string, opts?: EmitOptions): void {

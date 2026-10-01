@@ -57,6 +57,8 @@ interface Props {
 	owner?: 'project_modal' | 'skill_filtered';
 }
 
+import { facebookVideoEmbed, linkedInEmbed, linkedInPostUrl, requiresExternalMediaConsent, youtubeId, youtubeWatchUrl } from '../../lib/embeds.ts';
+
 const { title, subtitle, dateRange, people, tagIds = [], media = [], url, urlLabel, titleId, as = 'h3', logo, projectId, owner } = Astro.props;
 const Title = as;
 
@@ -107,10 +109,13 @@ const PLAYABLE_KIND: Partial<Record<ProjectMedia['kind'], 'native-video' | 'yout
  *  media of their own — those still get project-prefixed here so two
  *  different projects' placeholders never collide under the same id. */
 function mediaVisibilityAttrs(m: ProjectMedia) {
-	if (!projectId || !m.id) return {};
+	// Privacy classification of the media kind (lib/embeds.ts), independent of telemetry ids.
+	const privacy = { 'data-media-privacy': requiresExternalMediaConsent(m.kind) ? 'external' : 'local' };
+	if (!projectId || !m.id) return privacy;
 	const contentId = m.id.startsWith(`${projectId}-`) ? m.id : `${projectId}-${m.id}`;
 	const playableKind = PLAYABLE_KIND[m.kind];
 	return {
+		...privacy,
 		'data-visibility-target-type': 'project_content',
 		'data-visibility-target-id': contentId,
 		'data-visibility-owner': owner,
@@ -140,65 +145,8 @@ function defaultUrlLabel(href: string): string {
 }
 const resolvedUrlLabel = urlLabel ?? (url ? defaultUrlLabel(url) : undefined);
 
-/**
- * Facebook embed URL — the video plugin's iframe form, so no Facebook SDK or
- * script is needed on the page. `href` is the public page URL of a Facebook
- * video (facebook.com/watch/?v=…) or reel (facebook.com/reel/…) — the plugin
- * handles both. The 640×360 base is a 16:9 landscape box; the iframe is then
- * CSS-transform-scaled to exactly fill its container width (see .shot-video +
- * the scaler in projectModal.client.ts), so it fills the card horizontally
- * with no letterboxing at any width.
- */
-const VIDEO_BASE_W = 640;
-const VIDEO_BASE_H = 360;
-function facebookVideoEmbed(pageUrl: string): string {
-	const params = new URLSearchParams({ href: pageUrl, show_text: 'false', width: String(VIDEO_BASE_W), height: String(VIDEO_BASE_H) });
-	return `https://www.facebook.com/plugins/video.php?${params.toString()}`;
-}
-
 /** Both Facebook kinds render identically (same plugin) — only the badge differs. */
 const isFacebookEmbed = (kind: string) => kind === 'facebook-reel' || kind === 'facebook-video';
-
-/**
- * LinkedIn post embed URL. Accepts a full post URL
- * ('https://www.linkedin.com/feed/update/urn:li:activity:…'), a bare activity
- * URN ('urn:li:activity:…'), or just the numeric activity id — all resolve to
- * LinkedIn's public /embed/feed/update/urn:li:activity:<id> iframe endpoint.
- */
-function linkedInEmbed(src: string): string {
-	let id = src.trim();
-	const urnMatch = id.match(/urn:li:(?:activity|share|ugcPost):(\d+)/);
-	if (urnMatch) id = urnMatch[1];
-	else if (/^\d+$/.test(id)) {
-		/* already a bare id */
-	} else {
-		try {
-			const u = new URL(id);
-			const m = u.pathname.match(/urn:li:(?:activity|share|ugcPost):(\d+)/);
-			if (m) id = m[1];
-		} catch {
-			/* leave as-is; the iframe will show LinkedIn's own error */
-		}
-	}
-	return `https://www.linkedin.com/embed/feed/update/urn:li:activity:${id}`;
-}
-
-/** Pull the 11-char video id out of any YouTube URL form (or pass through a bare id). */
-function youtubeId(src: string): string {
-	try {
-		const u = new URL(src);
-		const host = u.hostname.replace(/^www\./, '');
-		if (host === 'youtu.be') return u.pathname.slice(1);
-		if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
-			if (u.pathname === '/watch') return u.searchParams.get('v') ?? src;
-			const m = u.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/);
-			if (m) return m[1];
-		}
-	} catch {
-		/* not a URL — assume it's already an id */
-	}
-	return src;
-}
 
 function mediaTags(m: ProjectMedia): string {
 	return (m.tagIds ?? []).join(' ');
@@ -285,6 +233,13 @@ function personStyle(m: ProjectMedia): string | undefined {
 								data-end={m.end != null ? String(m.end) : undefined}
 								title={m.alt ?? m.caption}
 							/>
+							{/* Privacy gate: nothing from YouTube (no API script, iframe or thumbnail) loads until External media is allowed. */}
+							<div class="embed-gate" data-embed-gate data-provider="youtube">
+								<span class="embed-gate__title">YouTube video</span>
+								<button type="button" class="embed-gate__load" data-embed-load>Load video</button>
+								<span class="embed-gate__note">External media — requires permission to load content from YouTube.</span>
+								<a class="embed-gate__open" href={youtubeWatchUrl(youtubeId(m.src), m.start)} target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>
+							</div>
 							<span class="shot-badge">YOUTUBE</span>
 						</div>
 						<figcaption>
@@ -293,16 +248,14 @@ function personStyle(m: ProjectMedia): string | undefined {
 					</figure>
 				) : isFacebookEmbed(m.kind) ? (
 					<figure class={shotClasses(m, 'shot--video')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
-						<div class="shot-frame shot-frame--video">
-							<iframe
-								class="shot-video"
-								src={facebookVideoEmbed(m.src)}
-								title={m.alt ?? m.caption}
-								loading="lazy"
-								scrolling="no"
-								allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-								allowfullscreen
-							/>
+						<div class="shot-frame shot-frame--video" data-embed-src={facebookVideoEmbed(m.src)} data-embed-title={m.alt ?? m.caption}>
+							{/* Privacy gate: the Facebook plugin iframe is only created once External media is allowed (projectModal.client.ts). */}
+							<div class="embed-gate" data-embed-gate data-provider="facebook">
+								<span class="embed-gate__title">Facebook {m.kind === 'facebook-reel' ? 'reel' : 'video'}</span>
+								<button type="button" class="embed-gate__load" data-embed-load>Load video</button>
+								<span class="embed-gate__note">External media — requires permission to load content from Facebook.</span>
+								<a class="embed-gate__open" href={m.src} target="_blank" rel="noopener noreferrer">Open on Facebook ↗</a>
+							</div>
 							<span class="shot-badge">{m.kind === 'facebook-reel' ? 'REEL' : 'VIDEO'}</span>
 						</div>
 						<figcaption>
@@ -311,31 +264,22 @@ function personStyle(m: ProjectMedia): string | undefined {
 					</figure>
 				) : m.kind === 'linkedin-post' ? (
 					<figure class={shotClasses(m, 'shot--linkedin')} data-media-tags={mediaTags(m)} data-media-person={m.person} style={personStyle(m)} {...mediaVisibilityAttrs(m)}>
-						<div class="shot-frame shot-frame--linkedin">
-							{/* Fallback beneath the iframe — visible when a shields/tracker
-							    blocker (Brave, uBlock, etc.) prevents the LinkedIn embed
-							    from loading. The successfully-loaded iframe is opaque and
-							    covers this; a blocked one is transparent and lets it
-							    show through. */}
-							<a
-								class="shot-linkedin__fallback"
-								href={m.src}
-								target="_blank"
-								rel="noopener noreferrer"
-								data-external-link-type="linkedin_post_fallback"
-								data-project-id={projectId}
-							>
-								<span class="shot-linkedin__fallback-title">LinkedIn post</span>
-								<span class="shot-linkedin__fallback-hint">Embedded post blocked by your browser — open on LinkedIn ↗</span>
-							</a>
-							<iframe
-								class="shot-linkedin"
-								src={linkedInEmbed(m.src)}
-								title={m.alt ?? m.caption}
-								loading="lazy"
-								allow="encrypted-media"
-								allowfullscreen
-							/>
+						<div class="shot-frame shot-frame--linkedin" data-embed-src={linkedInEmbed(m.src)} data-embed-title={m.alt ?? m.caption}>
+							{/* Privacy gate: the LinkedIn iframe is only created once External media is allowed (projectModal.client.ts).
+							    The link keeps its established `linkedin_post_fallback` telemetry identity. */}
+							<div class="embed-gate" data-embed-gate data-provider="linkedin">
+								<span class="embed-gate__title">LinkedIn post</span>
+								<button type="button" class="embed-gate__load" data-embed-load>Load post</button>
+								<span class="embed-gate__note">External media — requires permission to load content from LinkedIn.</span>
+								<a
+									class="embed-gate__open"
+									href={linkedInPostUrl(m.src)}
+									target="_blank"
+									rel="noopener noreferrer"
+									data-external-link-type="linkedin_post_fallback"
+									data-project-id={projectId}
+								>Open on LinkedIn ↗</a>
+							</div>
 							<span class="shot-badge">LINKEDIN</span>
 						</div>
 						<figcaption>
@@ -672,7 +616,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		--frame-bg: #000;
 	}
 
-	.shot-video {
+	.shot-frame--video :global(.shot-video) {
 		position: absolute;
 		top: 0;
 		left: 0;
@@ -712,7 +656,7 @@ function personStyle(m: ProjectMedia): string | undefined {
 		--frame-bg: var(--bg);
 	}
 
-	.shot-linkedin {
+	.shot-frame--linkedin :global(.shot-linkedin) {
 		position: absolute;
 		inset: 0;
 		width: 100%;
@@ -720,33 +664,60 @@ function personStyle(m: ProjectMedia): string | undefined {
 		border: 0;
 	}
 
-	/* The fallback sits behind the iframe; a loaded embed covers it, a
-	   blocked (transparent) one lets it show through as the clickable link
-	   out to LinkedIn. */
-	.shot-linkedin__fallback {
+	/* Local placeholder shown in place of a third-party embed until the visitor asks for it.
+	   Uses only our own styling/assets: no provider thumbnail, script or frame is requested. */
+	.embed-gate {
 		position: absolute;
 		inset: 0;
+		z-index: 2;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 0.4rem;
+		gap: 0.55rem;
 		padding: 1rem;
 		text-align: center;
-		text-decoration: none;
 		color: var(--fg);
-		background: color-mix(in oklab, var(--accent) 4%, var(--bg));
+		background:
+			radial-gradient(120% 120% at 50% 0%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 60%),
+			color-mix(in oklab, var(--accent) 4%, var(--bg));
 	}
 
-	.shot-linkedin__fallback-title {
+	.embed-gate[hidden] {
+		display: none;
+	}
+
+	.embed-gate__title {
 		font-size: 1rem;
 		font-weight: 600;
 		color: var(--accent-3);
 	}
 
-	.shot-linkedin__fallback-hint {
-		font-size: 0.85rem;
+	.embed-gate__load {
+		font: inherit;
+		font-size: 0.9rem;
+		padding: 0.45rem 1rem;
+		border-radius: 999px;
+		border: 1px solid var(--mentor);
+		background: var(--mentor-bg);
+		color: var(--fg);
+		cursor: pointer;
+	}
+
+	.embed-gate__load:hover,
+	.embed-gate__load:focus-visible {
+		border-color: var(--mentor-strong);
+	}
+
+	.embed-gate__note {
+		max-width: 28rem;
+		font-size: 0.75rem;
 		color: var(--fg-muted);
+	}
+
+	.embed-gate__open {
+		font-size: 0.85rem;
+		color: var(--fg);
 	}
 
 	/* A composite of several images laid out horizontally. Each <img> uses

@@ -15,6 +15,8 @@
  */
 
 import { telemetry } from '../lib/telemetry';
+import { YOUTUBE_API_SRC, isPrivacyEnhancedYouTubeEmbed, youtubeEmbedUrl } from '../lib/embeds.ts';
+import { EXTERNAL_MEDIA_REQUEST_EVENT, externalMedia } from '../lib/externalMedia.ts';
 import { announce, UI_EVENT } from '../lib/telemetry/uiEvents.ts';
 import { attemptOpenProject } from '../lib/telemetry/actionFlows.ts';
 import { buildActionFailed } from '../lib/telemetry/explicitEvents.ts';
@@ -153,8 +155,13 @@ function initNativeVideoPlayback(): void {
 }
 
 /* ---- YouTube embeds -------------------------------------------------------
+ * PRIVACY: nothing here runs for a frame until the visitor asks for THAT video (its
+ * `.embed-gate` button sets `data-embed-allowed` on the frame). Before that no YouTube
+ * script, iframe or thumbnail is ever requested; the API script itself loads lazily on
+ * the first granted video, and the player uses the privacy-enhanced youtube-nocookie.com host.
+ *
  * A `.shot-youtube` mount (data-yt-id / optional data-start / data-end) becomes
- * a YouTube IFrame Player API player the first time its modal opens — the API
+ * a YouTube IFrame Player API player once its video is allowed — the API
  * lets us loop an arbitrary [start, end] segment, which the plain iframe embed
  * params can't do reliably. Players are created lazily (the API script only
  * loads once a modal with a YouTube mount is actually opened), reused on
@@ -165,6 +172,8 @@ interface YtEntry {
 	start: number;
 	end: number | null;
 	timer: number | null;
+	/** What the mount `<div>` looked like, so revoking External media can put it back (the API replaces it). */
+	mount: { id: string; start?: string; end?: string; title: string };
 	/** Set when the scroll-visibility observer (see initVisibilityPause below)
 	 *  paused this player because it scrolled out of view — as opposed to the
 	 *  user pausing it themselves via the player's own controls. Only a
@@ -179,14 +188,21 @@ function loadYouTubeApi(): Promise<any> {
 	const w = window as any;
 	if (w.YT && w.YT.Player) return Promise.resolve(w.YT);
 	if (ytApiPromise) return ytApiPromise;
-	ytApiPromise = new Promise((resolve) => {
+	ytApiPromise = new Promise((resolve, reject) => {
 		const prev = w.onYouTubeIframeAPIReady;
 		w.onYouTubeIframeAPIReady = () => {
 			if (typeof prev === 'function') prev();
 			resolve(w.YT);
 		};
 		const tag = document.createElement('script');
-		tag.src = 'https://www.youtube.com/iframe_api';
+		tag.src = YOUTUBE_API_SRC;
+		// Blocked script (tracker blocker, offline): reject so the caller can put the gate back
+		// instead of leaving an empty frame, and allow a later retry.
+		tag.onerror = () => {
+			ytApiPromise = null;
+			tag.remove();
+			reject(new Error('youtube iframe_api blocked'));
+		};
 		document.head.appendChild(tag);
 	});
 	return ytApiPromise;
@@ -201,6 +217,8 @@ function loadYouTubeApi(): Promise<any> {
  * so this always passes there.
  */
 function isFrameLive(frame: HTMLElement): boolean {
+	// Only once External media is allowed (activateExternalMedia sets this flag); never implied by a modal opening.
+	if (!frame.dataset.embedAllowed) return false;
 	if (frame.closest('.shot')?.classList.contains('fr-hidden')) return false;
 	const card = frame.closest<HTMLElement>('[data-fr-card]');
 	if (card && card.hidden) return false;
@@ -210,8 +228,17 @@ function isFrameLive(frame: HTMLElement): boolean {
 async function activateYouTube(scope: HTMLElement): Promise<void> {
 	const frames = Array.from(scope.querySelectorAll<HTMLElement>('.shot-frame--youtube')).filter(isFrameLive);
 	if (frames.length === 0) return;
-	const YT = await loadYouTubeApi();
+	let YT: any;
+	try {
+		YT = await loadYouTubeApi();
+	} catch {
+		// API script blocked/unreachable: restore the gate so the visitor still has the external link.
+		frames.forEach((frame) => restoreGate(frame));
+		return;
+	}
 	frames.forEach((frame) => {
+		// Permission may have been withdrawn while the API script was loading.
+		if (!isFrameLive(frame)) return;
 		const existing = ytPlayers.get(frame);
 		if (existing) {
 			existing.autoPaused = false;
@@ -224,14 +251,29 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 
 		const start = Number(mount.dataset.start ?? 0) || 0;
 		const end = mount.dataset.end ? Number(mount.dataset.end) : null;
-		const entry: YtEntry = { player: null, start, end, timer: null, autoPaused: false };
+		const entry: YtEntry = {
+			player: null,
+			start,
+			end,
+			timer: null,
+			autoPaused: false,
+			mount: { id: mount.dataset.ytId ?? '', start: mount.dataset.start, end: mount.dataset.end, title: mount.title },
+		};
 
-		entry.player = new YT.Player(mount, {
-			width: '100%',
-			height: '100%',
-			videoId: mount.dataset.ytId,
-			host: 'https://www.youtube-nocookie.com',
-			playerVars: { start, autoplay: 1, mute: 1, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+		// We create the privacy-enhanced iframe ourselves (youtube-nocookie.com/embed/...) and attach the
+		// IFrame API to that existing element, rather than letting YT.Player build one (which would depend
+		// on undocumented host handling). The API only provides playback state/seek/play for telemetry.
+		const src = youtubeEmbedUrl(mount.dataset.ytId ?? '', { start, origin: location.origin });
+		if (!isPrivacyEnhancedYouTubeEmbed(src)) return; // can never happen; never create any other host
+		const iframe = document.createElement('iframe');
+		iframe.className = 'shot-youtube-player';
+		iframe.title = mount.title;
+		iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+		iframe.allowFullscreen = true;
+		iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+		iframe.src = src;
+		mount.replaceWith(iframe);
+		entry.player = new YT.Player(iframe, {
 			events: {
 				// `onReady` is the real, observable moment the IFrame API player
 				// actually exists and can play — before this, `mount` was just a
@@ -241,7 +283,10 @@ async function activateYouTube(scope: HTMLElement): Promise<void> {
 					e.target.seekTo(start, true);
 					e.target.playVideo();
 					const figure = playableFigure(frame);
-					if (figure) telemetry.setVisibilityPlayableSuspended(figure, false);
+					if (figure) {
+						figure.dataset.embedLive = '1';
+						telemetry.setVisibilityPlayableSuspended(figure, false);
+					}
 				},
 				// `onStateChange` is the YouTube IFrame API's real playback-state
 				// signal (docs section 17.7) — the same event this loop logic
@@ -295,7 +340,7 @@ function pauseYouTube(scope: HTMLElement): void {
  * `about:blank` (not empty string) is important — `src=""` resolves relative
  * to the document base and would load the entire page inside each iframe.
  *
- * `loading="eager"` is set in `initFacebook`: inside a <dialog> top-layer or
+ * `loading="eager"` is set in `createFacebookIframe`: inside a <dialog> top-layer or
  * position:fixed panel the browser's IntersectionObserver can't determine
  * visibility, so `loading="lazy"` (the template default) would never trigger
  * and the iframes would stay blank.
@@ -309,18 +354,33 @@ function pauseYouTube(scope: HTMLElement): void {
  * only start (on open) and stop (on close), same as before that feature
  * existed.
  */
-function initFacebook(): void {
-	document.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
-		const initial = iframe.getAttribute('src') ?? '';
-		if (initial) iframe.dataset.fbBase = initial;
-		iframe.loading = 'eager';
-		iframe.src = 'about:blank';
-	});
+/** Creates the Facebook plugin iframe — only ever called from the gate button (contextual permission). */
+function createFacebookIframe(frame: HTMLElement): void {
+	const src = frame.dataset.embedSrc;
+	if (!src || frame.querySelector('.shot-video')) return;
+	const iframe = document.createElement('iframe');
+	iframe.className = 'shot-video';
+	iframe.title = frame.dataset.embedTitle ?? '';
+	iframe.setAttribute('scrolling', 'no');
+	iframe.setAttribute('allow', 'autoplay; clipboard-write; encrypted-media; picture-in-picture');
+	iframe.allowFullscreen = true;
+	iframe.loading = 'eager'; // see the top-layer note above: lazy would never trigger inside a dialog/panel
+	iframe.dataset.fbBase = src;
+	iframe.src = src;
+	frame.prepend(iframe);
+	scaleVideo(frame);
+	// The real src is live from this moment (docs section 17.7).
+	const figure = playableFigure(frame);
+	if (figure) {
+		figure.dataset.embedLive = '1';
+		telemetry.setVisibilityPlayableSuspended(figure, false);
+	}
 }
 
 function stopFacebook(scope: HTMLElement): void {
 	scope.querySelectorAll<HTMLIFrameElement>('.shot-frame--video .shot-video').forEach((iframe) => {
 		iframe.src = 'about:blank';
+		delete (playableFigure(iframe) as HTMLElement | null)?.dataset.embedLive;
 		// Blanked = not live (docs section 17.7) — playable_v* stops accounting.
 		// Also covered by the instance-boundary force-end when this is a real
 		// modal/filter close, but explicit here too since a blanked iframe is
@@ -337,9 +397,131 @@ function activateFacebook(scope: HTMLElement): void {
 		iframe.src = iframe.dataset.fbBase;
 		// The real src is live now (docs section 17.7) — this is the only
 		// signal Facebook's opaque plugin iframe gives us; playing_v* is never
-		// derived from it (no JS/postMessage API — see initFacebook above).
+		// derived from it (no JS/postMessage API — see createFacebookIframe / the embed gates below).
 		const figure = playableFigure(frame);
-		if (figure) telemetry.setVisibilityPlayableSuspended(figure, false);
+		if (figure) {
+			figure.dataset.embedLive = '1';
+			telemetry.setVisibilityPlayableSuspended(figure, false);
+		}
+	});
+}
+
+/* ---- External media (third-party embeds) -------------------------------------
+ * ONE permission covers every third-party embed (YouTube, LinkedIn, Facebook, anything future
+ * that contacts a provider): "External media", lib/externalMedia.ts. It is independent of
+ * anonymous analytics and of the telemetry mode. Which media kinds need it is decided in one
+ * place, requiresExternalMediaConsent() in lib/embeds.ts; self-hosted media (image, gif,
+ * image-row, text, native video) never has a gate and never consults this.
+ *
+ * Until it is allowed every such embed is only a local placeholder (.embed-gate in
+ * ProjectDetail.astro) plus an ordinary "Open on ..." link. Pressing the placeholder's button
+ * does NOT load that one item: it asks the privacy UI to show the External media choice.
+ * Allowing loads every rendered embed at once, later-rendered embeds load as they open, and the
+ * choice is remembered. Turning it off puts every placeholder back and removes the provider
+ * iframes/players (requests already made cannot be undone; a downloaded YouTube API script
+ * simply stays idle). */
+function restoreGate(frame: HTMLElement): void {
+	delete frame.dataset.embedAllowed;
+	frame.querySelector<HTMLElement>('[data-embed-gate]')?.removeAttribute('hidden');
+}
+
+function createLinkedInIframe(frame: HTMLElement): void {
+	const src = frame.dataset.embedSrc;
+	if (!src || frame.querySelector('.shot-linkedin')) return;
+	const iframe = document.createElement('iframe');
+	iframe.className = 'shot-linkedin';
+	iframe.title = frame.dataset.embedTitle ?? '';
+	iframe.setAttribute('allow', 'encrypted-media');
+	iframe.allowFullscreen = true;
+	iframe.src = src;
+	frame.prepend(iframe);
+}
+
+/** Is this gated frame actually on screen (an open modal / the active filter results)? Hidden
+ *  dialogs are skipped: their embeds load when they open, exactly as before. */
+function isRendered(frame: HTMLElement): boolean {
+	if (frame.closest('.shot')?.classList.contains('fr-hidden')) return false;
+	const card = frame.closest<HTMLElement>('[data-fr-card]');
+	if (card && card.hidden) return false;
+	return frame.getClientRects().length > 0;
+}
+
+/** Loads every rendered gated embed in `scope`. A no-op unless External media is allowed. */
+function activateExternalMedia(scope: HTMLElement | Document): void {
+	if (!externalMedia.status().allowed) return;
+	let youtube = false;
+	scope.querySelectorAll<HTMLElement>('[data-embed-gate]').forEach((gate) => {
+		const frame = gate.closest<HTMLElement>('.shot-frame');
+		if (!frame || !isRendered(frame)) return;
+		const provider = gate.dataset.provider;
+		frame.dataset.embedAllowed = provider ?? '';
+		gate.hidden = true;
+		if (provider === 'youtube') youtube = true;
+		else if (provider === 'facebook') {
+			if (frame.querySelector('.shot-video')) activateFacebook(frame.parentElement ?? frame);
+			else createFacebookIframe(frame);
+		} else if (provider === 'linkedin') createLinkedInIframe(frame);
+	});
+	if (youtube) void activateYouTube(scope instanceof Document ? document.body : scope);
+}
+
+/** Withdrawal: every embed goes back to its placeholder and its provider iframe/player is destroyed. */
+function revokeExternalMedia(): void {
+	document.querySelectorAll<HTMLElement>('[data-embed-gate]').forEach((gate) => {
+		const frame = gate.closest<HTMLElement>('.shot-frame');
+		if (!frame) return;
+		const entry = ytPlayers.get(frame);
+		if (entry) {
+			if (entry.timer !== null) clearInterval(entry.timer);
+			try {
+				entry.player?.destroy?.();
+			} catch {
+				/* the iframe is removed below regardless */
+			}
+			ytPlayers.delete(frame);
+			frame.querySelectorAll('iframe').forEach((iframe) => {
+				iframe.src = 'about:blank';
+				iframe.remove();
+			});
+			if (!frame.querySelector('.shot-youtube')) {
+				const mount = document.createElement('div');
+				mount.className = 'shot-youtube';
+				mount.dataset.ytId = entry.mount.id;
+				if (entry.mount.start !== undefined) mount.dataset.start = entry.mount.start;
+				if (entry.mount.end !== undefined) mount.dataset.end = entry.mount.end;
+				mount.title = entry.mount.title;
+				frame.prepend(mount);
+			}
+		}
+		frame.querySelectorAll('iframe').forEach((iframe) => {
+			iframe.src = 'about:blank';
+			iframe.remove();
+		});
+		restoreGate(frame);
+		const figure = playableFigure(frame);
+		if (figure) {
+			delete figure.dataset.embedLive;
+			telemetry.setVisibilityPlaying(figure, false);
+			telemetry.setVisibilityPlayableSuspended(figure, true);
+		}
+	});
+}
+
+function initExternalMedia(): void {
+	document.addEventListener('click', (event) => {
+		const btn = (event.target as Element | null)?.closest<HTMLElement>('[data-embed-load]');
+		if (!btn) return;
+		// Not loading this one item: ask for the one External media permission (from the button, so
+		// the privacy UI can return focus to it).
+		if (externalMedia.status().allowed) activateExternalMedia(document);
+		else btn.dispatchEvent(new CustomEvent(EXTERNAL_MEDIA_REQUEST_EVENT, { bubbles: true }));
+	});
+	let wasAllowed = externalMedia.status().allowed;
+	externalMedia.subscribe((status) => {
+		if (status.allowed === wasAllowed) return;
+		wasAllowed = status.allowed;
+		if (status.allowed) activateExternalMedia(document);
+		else revokeExternalMedia();
 	});
 }
 
@@ -360,7 +542,7 @@ function activateFacebook(scope: HTMLElement): void {
  * enough of a gap that the two states don't flap.
  *
  * Facebook embeds are deliberately excluded — see the comment on
- * initFacebook above.
+ * createFacebookIframe above.
  *
  * IntersectionObserver's ratio already accounts for clipping by scrollable
  * ancestors — the modal's own internally-scrolled panel included — so `root:
@@ -467,7 +649,7 @@ function init(): void {
 
 	initVideos();
 	initImageRows();
-	initFacebook();
+	initExternalMedia();
 	initNativeVideoPlayback();
 	initVisibilityPause();
 
@@ -529,8 +711,7 @@ function init(): void {
 						}
 					});
 				}
-				void activateYouTube(dialog);
-				activateFacebook(dialog);
+				activateExternalMedia(dialog);
 				// Queued after the scroll-position fix above (same animation frame,
 				// registration order), so it measures frames against their final
 				// opening scroll position rather than scrollTop 0.
@@ -571,8 +752,7 @@ function init(): void {
 		pauseYouTube(results);
 		stopFacebook(results);
 		if ((event as CustomEvent<{ active: boolean }>).detail?.active) {
-			void activateYouTube(results);
-			activateFacebook(results);
+			activateExternalMedia(results);
 			requestAnimationFrame(() => refreshVisibility(results));
 		}
 	});

@@ -150,16 +150,20 @@ export function isLinkActivation(type: string, button: number | undefined): bool
 }
 
 export interface LinkTargetLike {
-	addEventListener(type: string, listener: (e: any) => void): void;
+	addEventListener(type: string, listener: (e: any) => void, options?: { signal?: AbortSignal }): void;
 }
 
 /** Runs `handler` once per genuine activation (left click, keyboard-activated
  *  click, or middle-click) of a native link. Never interferes with the event. */
-export function onLinkActivation(el: LinkTargetLike, handler: (event: { pointerType?: string }) => void): void {
+export function onLinkActivation(
+	el: LinkTargetLike,
+	handler: (event: { pointerType?: string }) => void,
+	signal?: AbortSignal,
+): void {
 	for (const type of ['click', 'auxclick']) {
 		el.addEventListener(type, (event: { button?: number; pointerType?: string }) => {
 			if (isLinkActivation(type, event.button)) handler(event);
-		});
+		}, { signal });
 	}
 }
 

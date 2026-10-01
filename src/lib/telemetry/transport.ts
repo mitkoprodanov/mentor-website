@@ -48,6 +48,7 @@ export class Transport {
 	private rerun: FlushOptions | null = null;
 	private failures = 0;
 	private retryAt = 0;
+	private stopped = false;
 
 	private readonly endpoint: string;
 	private readonly session: SessionContext;
@@ -77,7 +78,14 @@ export class Transport {
 	 * in flight schedules one follow-up flush instead of overlapping. Never
 	 * rejects.
 	 */
+	/** Withdrawal: no further request is ever made and nothing queued is sent. */
+	stop(): void {
+		this.stopped = true;
+		this.rerun = null;
+	}
+
 	async flush(opts: FlushOptions = {}): Promise<void> {
+		if (this.stopped) return;
 		if (this.inFlight) {
 			this.rerun = { lifecycle: opts.lifecycle || this.rerun?.lifecycle };
 			return;
@@ -90,7 +98,7 @@ export class Transport {
 			for (;;) {
 				const events = this.queue.peek(MAX_BATCH_EVENTS, MAX_BATCH_BYTES);
 				// Nothing pending: never send (lifecycle flushes included).
-				if (events.length === 0) break;
+				if (events.length === 0 || this.stopped) break;
 				if (!(await this.sendOne(events, opts.lifecycle === true))) break;
 			}
 		} finally {

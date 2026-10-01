@@ -1,0 +1,247 @@
+---
+// Privacy bar + always-available "Privacy" control + short Details panel, for TWO independent
+// choices: Anonymous analytics and External media (third-party embeds).
+// Flow: persistent "Privacy" control -> this small bar -> optional "Details".
+// Behaviour lives in scripts/privacyConsent.client.ts; everything here is hidden until that script
+// runs. Technical detail belongs in docs/privacy.md, not here.
+---
+
+<aside class="privacy-prompt" id="privacy-prompt" aria-label="Privacy choices" hidden>
+	<button type="button" class="privacy-bar__close" data-privacy-action="bar-close" aria-label="Close">×</button>
+
+	<div class="privacy-row" id="privacy-row-analytics">
+		<p class="privacy-prompt__text">
+			<strong>Anonymous analytics</strong> — helps us understand how the portfolio is used. No ads or persistent visitor ID.
+			<span class="privacy-prompt__state" id="privacy-analytics-state"></span>
+		</p>
+		<div class="privacy-prompt__actions">
+			<button type="button" class="privacy-btn" id="privacy-a-no" data-privacy-action="analytics-refuse">No thanks</button>
+			<button type="button" class="privacy-btn privacy-btn--primary" id="privacy-a-yes" data-privacy-action="analytics-allow">Allow analytics</button>
+		</div>
+	</div>
+
+	<div class="privacy-row" id="privacy-row-media">
+		<p class="privacy-prompt__text">
+			<strong>External media</strong> — allows embedded content from services such as YouTube and LinkedIn to load.
+			<span class="privacy-prompt__state" id="privacy-media-state"></span>
+		</p>
+		<div class="privacy-prompt__actions">
+			<button type="button" class="privacy-btn" id="privacy-m-no" data-privacy-action="media-refuse">Not now</button>
+			<button type="button" class="privacy-btn privacy-btn--primary" id="privacy-m-yes" data-privacy-action="media-allow">Allow external media</button>
+		</div>
+	</div>
+
+	<div class="privacy-prompt__actions privacy-prompt__more">
+		<button type="button" class="privacy-btn privacy-btn--link" data-privacy-action="details">Details</button>
+	</div>
+</aside>
+
+<button type="button" class="privacy-toggle" id="privacy-toggle" aria-expanded="false" aria-controls="privacy-prompt" hidden>Privacy</button>
+
+<section class="privacy-panel" id="privacy-panel" role="dialog" aria-modal="false" aria-labelledby="privacy-panel-title" hidden>
+	<header class="privacy-panel__head">
+		<h2 id="privacy-panel-title">Privacy</h2>
+		<button type="button" class="privacy-panel__close" data-privacy-action="close" aria-label="Close details">×</button>
+	</header>
+
+	<div class="privacy-panel__section">
+		<h3>Anonymous analytics</h3>
+		<p class="privacy-panel__status" id="privacy-analytics-status" aria-live="polite"></p>
+		<p class="privacy-panel__note">Optional anonymous usage measurement. Raw data is kept for up to 90 days. No persistent visitor identity.</p>
+		<button type="button" class="privacy-btn privacy-btn--primary" id="privacy-a-switch" data-privacy-action="analytics-switch" hidden></button>
+	</div>
+
+	<div class="privacy-panel__section">
+		<h3>External media</h3>
+		<p class="privacy-panel__status" id="privacy-media-status" aria-live="polite"></p>
+		<p class="privacy-panel__note">Allows embedded content from third-party services such as YouTube and LinkedIn to load. "Open on ..." links always work without it.</p>
+		<button type="button" class="privacy-btn privacy-btn--primary" id="privacy-m-switch" data-privacy-action="media-switch"></button>
+	</div>
+</section>
+
+<style>
+	.privacy-prompt,
+	.privacy-panel {
+		position: fixed;
+		z-index: 30;
+		left: 0.75rem;
+		bottom: 2rem;
+		max-width: min(24rem, calc(100vw - 1.5rem));
+		padding: 0.8rem 0.9rem;
+		background: color-mix(in oklab, var(--bg-alt) 94%, transparent);
+		backdrop-filter: blur(10px);
+		border: 1px solid var(--mentor-border);
+		border-radius: 10px;
+		box-shadow: 0 10px 30px var(--color-shadow-deep);
+		color: var(--fg);
+		font-size: 0.8rem;
+		line-height: 1.45;
+	}
+
+	.privacy-prompt[hidden],
+	.privacy-panel[hidden],
+	.privacy-toggle[hidden],
+	.privacy-btn[hidden] {
+		display: none;
+	}
+
+	.privacy-prompt {
+		padding-right: 1.9rem;
+	}
+
+	.privacy-bar__close {
+		position: absolute;
+		top: 0.3rem;
+		right: 0.45rem;
+		font: inherit;
+		font-size: 1.1rem;
+		line-height: 1;
+		background: none;
+		border: 0;
+		color: var(--fg-muted);
+		cursor: pointer;
+	}
+
+	.privacy-prompt__state {
+		display: block;
+		margin-top: 0.2rem;
+		color: var(--fg-muted);
+	}
+
+	.privacy-prompt__state:empty,
+	[hidden] {
+		display: none;
+	}
+
+	.privacy-panel__note {
+		margin: 0.6rem 0 0;
+	}
+
+	.privacy-row + .privacy-row {
+		margin-top: 0.7rem;
+	}
+
+	.privacy-row[hidden] {
+		display: none;
+	}
+
+	.privacy-prompt__more {
+		margin-top: 0.4rem;
+	}
+
+	.privacy-panel__section {
+		margin-top: 0.7rem;
+	}
+
+	.privacy-panel__section h3 {
+		margin: 0 0 0.2rem;
+		font-size: 0.82rem;
+	}
+
+	.privacy-prompt__text {
+		margin: 0 0 0.6rem;
+	}
+
+	.privacy-prompt__actions,
+	.privacy-panel__controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
+	}
+
+	.privacy-btn {
+		font: inherit;
+		font-size: 0.78rem;
+		padding: 0.35rem 0.75rem;
+		border-radius: 999px;
+		border: 1px solid var(--mentor-border);
+		background: transparent;
+		color: var(--fg);
+		cursor: pointer;
+	}
+
+	.privacy-btn:hover,
+	.privacy-btn:focus-visible {
+		border-color: var(--mentor);
+	}
+
+	.privacy-btn--primary {
+		background: var(--mentor-bg);
+		border-color: var(--mentor);
+	}
+
+	.privacy-btn--link {
+		border-color: transparent;
+		color: var(--fg-muted);
+		text-decoration: underline;
+		padding-inline: 0.3rem;
+	}
+
+	/* Unobtrusive, always reachable: a small muted label on the bottom edge. */
+	.privacy-toggle {
+		position: fixed;
+		z-index: 29;
+		left: 0.5rem;
+		bottom: 0.25rem;
+		font: inherit;
+		font-size: 0.68rem;
+		letter-spacing: 0.02em;
+		padding: 0.15rem 0.45rem;
+		border: 0;
+		border-radius: 6px;
+		background: color-mix(in oklab, var(--bg) 70%, transparent);
+		color: var(--fg-muted);
+		opacity: 0.75;
+		cursor: pointer;
+	}
+
+	.privacy-toggle:hover,
+	.privacy-toggle:focus-visible {
+		opacity: 1;
+		color: var(--fg);
+	}
+
+	.privacy-panel {
+		width: 24rem;
+		max-height: min(70vh, 34rem);
+		overflow-y: auto;
+	}
+
+	.privacy-panel__head {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.4rem;
+	}
+
+	.privacy-panel__head h2 {
+		margin: 0;
+		font-size: 0.9rem;
+	}
+
+	.privacy-panel__close {
+		font: inherit;
+		font-size: 1.2rem;
+		line-height: 1;
+		background: none;
+		border: 0;
+		color: var(--fg-muted);
+		cursor: pointer;
+	}
+
+	.privacy-panel__status {
+		margin: 0 0 0.5rem;
+		color: var(--fg-muted);
+	}
+
+	@media (max-width: 600px) {
+		.privacy-prompt,
+		.privacy-panel {
+			left: 0.5rem;
+			right: 0.5rem;
+			max-width: none;
+			width: auto;
+		}
+	}
+</style>

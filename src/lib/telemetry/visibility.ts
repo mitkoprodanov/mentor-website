@@ -313,11 +313,32 @@ export class VisibilityMatrixEngine {
 	private readonly targets = new Map<Element, Target>();
 	private documentVisible = true;
 	private currentState: SemanticState;
+	private readonly unsubscribe: () => void;
 
 	constructor(deps: VisibilityDeps) {
 		this.deps = deps;
 		this.currentState = deps.getState();
-		deps.subscribe((state) => this.onStateChange(state));
+		this.unsubscribe = deps.subscribe((state) => this.onStateChange(state)) ?? (() => {});
+	}
+
+	/** Withdrawal/teardown: disconnects every geometry source, cancels grace timers and
+	 *  forgets all targets WITHOUT accounting or emitting anything further. */
+	dispose(): void {
+		try {
+			this.unsubscribe();
+		} catch {
+			/* ignore */
+		}
+		for (const target of this.targets.values()) {
+			try {
+				target.unobserve();
+			} catch {
+				/* ignore */
+			}
+			if (target.graceTimer !== null) this.deps.clearTimer(target.graceTimer);
+			target.graceTimer = null;
+		}
+		this.targets.clear();
 	}
 
 	/** Starts tracking `el` as `targetType`/`targetId`. Owner is `options.owner`

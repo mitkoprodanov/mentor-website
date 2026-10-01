@@ -53,9 +53,12 @@ const DEV_VARS_HEADER = '# Local Worker configuration (git-ignored). ALLOWED_ORI
 
 const COMMANDS_BLOCK = `Normal commands
   Start development   Terminal 1: npm run telemetry:dev
-                      Terminal 2: npm run dev:telemetry   (open http://localhost:${ASTRO_PORT}/ or the phone URL it prints)
+                      Terminal 2: npm run dev:telemetry   (mode forced; open http://localhost:${ASTRO_PORT}/ or the phone URL it prints)
   Inspect data        npm run telemetry:sessions | telemetry:events | telemetry:viewport
-  Reset data          npm run telemetry:clear   (LOCAL only)`;
+  Reset data          npm run telemetry:clear   (LOCAL only)
+  Production-like     npm run dev:production-like   (mode consent: off until "Allow analytics"; same local Worker/D1)
+  Plain site dev      npm run dev   (mode off: no telemetry, no Worker)
+  Retention           npm run telemetry:prune [-- --days 90 --dry-run]   (LOCAL only; same SQL as the daily cron)`;
 
 // ---------------------------------------------------------------- utilities
 
@@ -393,14 +396,39 @@ async function cmdWorkerDev() {
 	});
 }
 
-async function cmdAstroDev() {
+/** What each telemetry mode means, printed at startup (same text as docs/telemetry.md "Development modes"). */
+const MODE_BANNER = {
+	off: 'Telemetry mode: off — custom telemetry disabled, no Worker needed',
+	forced: 'Telemetry mode: forced — local Worker/D1, analytics consent bypassed',
+	consent: 'Telemetry mode: consent — production-like privacy flow, local Worker/D1',
+};
+
+/**
+ * Starts Astro in one explicit telemetry mode (PUBLIC_TELEMETRY_MODE):
+ *   off      npm run dev                   plain site development
+ *   forced   npm run dev:telemetry         local telemetry starts immediately
+ *   consent  npm run dev:production-like   real consent lifecycle against the same local Worker
+ * The endpoint is always the LOCAL Worker; forced/consent refuse to start if it were not local.
+ * Third-party media gating is independent of the mode and identical in all three.
+ */
+async function cmdAstroDev(mode = rest[0]) {
+	if (!Object.hasOwn(MODE_BANNER, mode)) die(`Usage: node scripts/telemetry.mjs astro <${Object.keys(MODE_BANNER).join('|')}>`);
+	out(MODE_BANNER[mode]);
+	if (mode === 'off') {
+		// Explicit off (and no endpoint) even if a stale PUBLIC_TELEMETRY_* is exported in this shell.
+		runForeground(ASTRO_JS, ['dev'], { PUBLIC_TELEMETRY_MODE: 'off', PUBLIC_TELEMETRY_ENDPOINT: '' });
+		return;
+	}
+	const { isLocalEndpoint } = await import('../src/lib/telemetry/config.ts');
+	if (!isLocalEndpoint(ENDPOINT)) die(`Refusing to start: ${ENDPOINT} is not a local endpoint.`);
 	if (await portOpen(ASTRO_PORT)) {
 		out(`${tag.warn} Port ${ASTRO_PORT} is in use; --force will replace an existing Astro dev server (it is not started with telemetry unless it was this command).`);
 	}
 	if (!(await portOpen(WORKER_PORT))) {
 		out(`${tag.warn} Worker not detected on :${WORKER_PORT}. In another terminal run: npm run telemetry:dev`);
 	}
-	out(`Astro dev with telemetry ON -> ${ENDPOINT}`);
+	out(`Local telemetry endpoint: ${ENDPOINT} (local Worker + local D1; production is never contacted)`);
+	if (mode === 'consent') out('Nothing is sent until you click "Allow analytics" in the page; use the Privacy control to withdraw.');
 	out(`Desktop: http://localhost:${ASTRO_PORT}/`);
 	if (LAN.length) {
 		for (const ip of LAN) out(`Phone (same Wi-Fi): http://${ip}:${ASTRO_PORT}/`);
@@ -409,7 +437,7 @@ async function cmdAstroDev() {
 		out(`${tag.warn} No LAN IPv4 address found; phone testing unavailable.`);
 	}
 	runForeground(ASTRO_JS, ['dev', '--host', '--force', '--port', String(ASTRO_PORT)], {
-		PUBLIC_TELEMETRY: '1',
+		PUBLIC_TELEMETRY_MODE: mode,
 		PUBLIC_TELEMETRY_ENDPOINT: ENDPOINT,
 	});
 }
@@ -425,7 +453,10 @@ function cmdSessions(argv) {
 		       CASE WHEN s.primary_pointer_coarse = 1 THEN 'coarse' WHEN s.primary_pointer_fine = 1 THEN 'fine' ELSE '-' END AS pointer,
 		       CASE WHEN s.hover_capable = 1 THEN 'hover' ELSE 'no-hover' END AS hover,
 		       CASE WHEN s.touch_capable = 1 THEN 'touch' ELSE '-' END AS touch,
-		       COALESCE(s.utm_source, '') AS utm,
+		       COALESCE(s.utm_source, '') AS source,
+		       COALESCE(s.utm_medium, '') AS medium,
+		       COALESCE(s.utm_campaign, '') AS campaign,
+		       COALESCE(s.utm_content, '') AS content,
 		       COALESCE(NULLIF(s.referrer, ''), '') AS referrer,
 		       COALESCE(s.site_version, '') AS site
 		FROM sessions s
@@ -433,7 +464,7 @@ function cmdSessions(argv) {
 		ORDER BY s.started_at DESC, s.rowid DESC LIMIT ${f.limit}`);
 	if (!rows.length) return out('No local sessions.');
 	out(`Most recent ${rows.length} local session(s), newest first:`);
-	table(['session', 'started_at', 'events', 'viewport', 'pointer', 'hover', 'touch', 'utm', 'referrer', 'site'], rows, 30);
+	table(['session', 'started_at', 'events', 'viewport', 'pointer', 'hover', 'touch', 'source', 'medium', 'campaign', 'content', 'referrer', 'site'], rows, 30);
 }
 
 function cmdEvents(argv) {
@@ -494,6 +525,26 @@ function cmdClear() {
 	);
 	out(`Done. Local DB now has ${after.sessions} sessions, ${after.events} events. Production is untouched.`);
 	out('For a clean test: reload/open a fresh page (a reload is a new session).');
+}
+
+/** Deletes LOCAL sessions/events older than --days (default 90): the same SQL the Worker's daily cron runs. */
+async function cmdPrune(argv) {
+	requireReadyDb();
+	const i = argv.indexOf('--days');
+	const days = i >= 0 ? Number(argv[i + 1]) : 90;
+	if (!Number.isFinite(days) || days < 0) die('--days must be a non-negative number');
+	const { retentionCutoff, PURGE_EVENTS_SQL, PURGE_SESSIONS_SQL } = await import('../workers/telemetry/src/retention.ts');
+	const cutoff = retentionCutoff(new Date(), days);
+	const lit = (sql) => sql.replaceAll('?1', `'${cutoff}'`);
+	const count = () => query(`SELECT (SELECT COUNT(*) FROM sessions) AS sessions, (SELECT COUNT(*) FROM events) AS events`)[0][0];
+	const before = count();
+	if (argv.includes('--dry-run')) {
+		const [[n]] = query(`SELECT COUNT(*) AS sessions FROM sessions WHERE started_at < '${cutoff}'`);
+		return out(`Dry run: ${n.sessions} of ${before.sessions} LOCAL sessions started before ${cutoff} would be deleted (with their events).`);
+	}
+	query(`${lit(PURGE_EVENTS_SQL)}; ${lit(PURGE_SESSIONS_SQL)};`);
+	const after = count();
+	out(`Pruned LOCAL telemetry older than ${days} days (before ${cutoff}): ${before.sessions - after.sessions} sessions, ${before.events - after.events} events. Production is untouched.`);
 }
 
 async function cmdCheck() {
@@ -572,11 +623,12 @@ const commands = {
 	'db-init': cmdDbInit,
 	'db-check': () => process.exit(cmdDbCheck() ? 0 : 1),
 	dev: cmdWorkerDev,
-	astro: cmdAstroDev,
+	astro: () => cmdAstroDev(rest[0]),
 	sessions: () => cmdSessions(rest),
 	events: () => cmdEvents(rest),
 	viewport: () => cmdViewport(rest),
 	clear: cmdClear,
+	prune: () => cmdPrune(rest),
 	check: cmdCheck,
 };
 if (!commands[cmd]) die(`Usage: node scripts/telemetry.mjs <${Object.keys(commands).join('|')}>`);

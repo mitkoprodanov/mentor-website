@@ -47,7 +47,7 @@ const event = (over: Record<string, unknown> = {}) => ({
   playing_v70_ms: 3000,
   playing_v85_ms: 2000,
   playing_v95_ms: 500,
-  properties: { pointer_type: 'mouse', count: 3, locked: false },
+  properties: { content_type: 'image', person: 'adam', trigger_method: 'hover' },
   ...over,
 });
 
@@ -274,7 +274,13 @@ test('validation: session', () => {
 
 test('validation: long free-form context is truncated, not rejected', () => {
   const r = validateBatch({ session: session({ referrer: 'https://a.example/' + 'x'.repeat(5000) }), events: [] });
-  assert.ok(r.ok && r.value.session!.referrer!.length === LIMITS.maxReferrer);
+  assert.ok(r.ok && r.value.session!.referrer!.length === LIMITS.maxReferrer); // long path is truncated, not rejected
+  const q = validateBatch({ session: session({ referrer: 'https://user:pw@l.example/post/1?utm_source=x&fbclid=SECRET#h' }), events: [] });
+  assert.ok(q.ok && q.value.session!.referrer === 'https://l.example/post/1'); // path kept; query, fragment, credentials dropped
+  const junk = validateBatch({ session: session({ referrer: 'javascript:alert(1)' }), events: [] });
+  assert.ok(junk.ok && junk.value.session!.referrer === null);
+  const notUrl = validateBatch({ session: session({ referrer: 'not a url' }), events: [] });
+  assert.ok(notUrl.ok && notUrl.value.session!.referrer === null);
 });
 
 test('validation: events', () => {
@@ -284,6 +290,7 @@ test('validation: events', () => {
     events: [
       event({
         event_type: 'nav_click',
+        properties: { target: 'about', origin_surface: 'main' },
         target_type: undefined,
         target_id: undefined,
         v50_ms: undefined,
@@ -330,13 +337,17 @@ test('validation: events', () => {
 
 test('validation: properties', () => {
   bad({ session: session(), events: [event({ properties: 'str' })] });
-  bad({ session: session(), events: [event({ properties: { nested: { a: 1 } } })] });
-  bad({ session: session(), events: [event({ properties: { arr: [1] } })] });
+  bad({ session: session(), events: [event({ properties: { content_type: { a: 1 } } })] });
+  bad({ session: session(), events: [event({ properties: { content_type: [1] } })] });
   bad({ session: session(), events: [event({ properties: { 'Bad Key': 1 } })] });
-  bad({ session: session(), events: [event({ properties: { s: 'x'.repeat(LIMITS.maxPropertyString + 1) } })] });
+  bad({ session: session(), events: [event({ properties: { content_type: 'x'.repeat(LIMITS.maxPropertyString + 1) } })] });
   bad({ session: session(), events: [event({ properties: Object.fromEntries(Array.from({ length: 21 }, (_, i) => [`k${i}`, 1])) })] });
-  const r = validateBatch({ session: session(), events: [event({ properties: { a: 'x', b: 2, c: true, d: null } })] });
-  assert.ok(r.ok && r.value.events[0].properties === '{"a":"x","b":2,"c":true,"d":null}');
+  // free text / URLs / PII-shaped strings are not tokens
+  bad({ session: session(), events: [event({ properties: { content_type: 'https://evil.test/?a=b' } })] });
+  bad({ session: session(), events: [event({ properties: { person: 'jane doe' } })] });
+  bad({ session: session(), events: [event({ properties: { person: 'jane@acme.com' } })] });
+  const r = validateBatch({ session: session(), events: [event({ properties: { content_type: 'image', person: 'adam', trigger_method: null } })] });
+  assert.ok(r.ok && r.value.events[0].properties === '{"content_type":"image","person":"adam","trigger_method":null}');
 });
 
 test('Pass 4 vocabulary: click_burst / action_failed / noninteractive_click / context_menu are accepted; repeated_noninteractive_click is retired', () => {

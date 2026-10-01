@@ -24,7 +24,7 @@
  * same assumption visibility.client.ts already makes for its own targets.
  */
 
-import { telemetry } from '../lib/telemetry';
+import { telemetry, telemetryControl } from '../lib/telemetry';
 import { buildCvDownload, buildExternalLinkClick, buildLinkedinClick, onLinkActivation } from '../lib/telemetry/explicitEvents.ts';
 
 /** Which person a control belongs to — same `.side-panel[data-person]`
@@ -33,35 +33,42 @@ function personOf(el: Element | null): string | undefined {
 	return el?.closest<HTMLElement>('.side-panel')?.dataset.person;
 }
 
-document.querySelectorAll<HTMLAnchorElement>('.cv-download').forEach((link) => {
-	onLinkActivation(link, (event) => {
-		const opts = buildCvDownload(personOf(link), event.pointerType);
-		if (opts) telemetry.emit('cv_download', opts);
+// Telemetry-only listeners: installed only while analytics is running (after consent),
+// removed again on withdrawal. Nothing is attached before the visitor opts in.
+telemetryControl.onStart(() => {
+	const abort = new AbortController();
+	const { signal } = abort;
+	document.querySelectorAll<HTMLAnchorElement>('.cv-download').forEach((link) => {
+		onLinkActivation(link, (event) => {
+			const opts = buildCvDownload(personOf(link), event.pointerType);
+			if (opts) telemetry.emit('cv_download', opts);
+		}, signal);
 	});
-});
 
-document.querySelectorAll<HTMLAnchorElement>('.side-panel-linkedin .linkedin-pill').forEach((link) => {
-	onLinkActivation(link, (event) => {
-		const opts = buildLinkedinClick('person', personOf(link), event.pointerType);
-		if (opts) {
-			telemetry.emit('linkedin_click', opts);
-			void telemetry.flush(); // before external navigation, where practical (docs section 14)
-		}
+	document.querySelectorAll<HTMLAnchorElement>('.side-panel-linkedin .linkedin-pill').forEach((link) => {
+		onLinkActivation(link, (event) => {
+			const opts = buildLinkedinClick('person', personOf(link), event.pointerType);
+			if (opts) {
+				telemetry.emit('linkedin_click', opts);
+				void telemetry.flush(); // before external navigation, where practical (docs section 14)
+			}
+		}, signal);
 	});
-});
 
-document.querySelectorAll<HTMLAnchorElement>('[data-external-link-type]').forEach((link) => {
-	onLinkActivation(link, (event) => {
-		const opts = buildExternalLinkClick(
-			link.dataset.externalLinkType,
-			link.dataset.projectId,
-			event.pointerType,
-		);
-		if (opts) {
-			telemetry.emit('external_link_click', opts);
-			void telemetry.flush();
-		}
+	document.querySelectorAll<HTMLAnchorElement>('[data-external-link-type]').forEach((link) => {
+		onLinkActivation(link, (event) => {
+			const opts = buildExternalLinkClick(
+				link.dataset.externalLinkType,
+				link.dataset.projectId,
+				event.pointerType,
+			);
+			if (opts) {
+				telemetry.emit('external_link_click', opts);
+				void telemetry.flush();
+			}
+		}, signal);
 	});
+	return () => abort.abort();
 });
 
 export {};
