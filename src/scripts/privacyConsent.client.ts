@@ -8,8 +8,9 @@
 //     Dismissing it decides nothing; the persistent control reopens it.
 //   * A gated third-party embed activated without permission opens the bar on External media.
 //
-// Closing: outside pointer/tap, the x button and Escape ALL do the same thing — close the whole
-// Privacy UI (bar and Details), never falling back from Details to the bar, never changing a choice.
+// Closing: outside pointer/tap, the x button and Escape close the whole Privacy UI (bar and Details),
+// never changing a choice. Exception: while analytics is unanswered and the visitor has never closed
+// Privacy themselves, an outside click only closes Details and leaves the bar up.
 
 import { telemetryControl } from '../lib/telemetry';
 import type { TelemetryStatus } from '../lib/telemetry';
@@ -45,6 +46,26 @@ function init(): void {
 	let swallowBackdropClick = false; // see the capture click handler
 
 	const isOpen = (): boolean => barOpen || panelOpen;
+
+	// Whether the visitor has ever closed the Privacy UI themselves (toggle, x, Escape). A UI-only
+	// hint, kept apart from consent: it never answers analytics. Blocked storage degrades to memory.
+	const DISMISSED_KEY = 'mgs_privacy_dismissed';
+	let dismissedInMemory = false;
+	const wasDismissed = (): boolean => {
+		try {
+			return dismissedInMemory || localStorage.getItem(DISMISSED_KEY) === '1';
+		} catch {
+			return dismissedInMemory;
+		}
+	};
+	const markDismissed = (): void => {
+		dismissedInMemory = true;
+		try {
+			localStorage.setItem(DISMISSED_KEY, '1');
+		} catch {
+			/* blocked: memory only */
+		}
+	};
 
 	/** A modal project <dialog> makes everything outside it inert, so while one is open the bar and
 	 *  Details live inside it (a gated embed's External media prompt must be usable there); otherwise
@@ -127,6 +148,7 @@ function init(): void {
 	/** Closes the WHOLE Privacy UI (bar and Details). Never decides or changes anything. */
 	const closeAll = (restoreFocus: boolean): void => {
 		if (!isOpen()) return;
+		if (restoreFocus) markDismissed(); // user-initiated close (toggle / x / Escape)
 		barOpen = false;
 		panelOpen = false;
 		render();
@@ -149,6 +171,19 @@ function init(): void {
 		render();
 	};
 
+	/** Fresh state (analytics unanswered AND the visitor never closed Privacy themselves): the bar must
+	 *  not vanish on an outside click. An open Details panel still closes, falling back to the bar. */
+	const outsideClickKeepsBar = (): boolean => {
+		const a = telemetryControl.status();
+		if (!(a.mode === 'consent' && a.consent === null && scope !== 'external' && !wasDismissed())) return false;
+		if (panelOpen) {
+			panelOpen = false;
+			render();
+			swallowBackdropClick = true;
+		}
+		return true;
+	};
+
 	// ---- outside pointer / tap ---------------------------------------------------------------
 	// Capture phase on the document, so nothing (dialog handlers, stopPropagation, reparenting)
 	// can hide the event; containment uses composedPath(). pointerdown always precedes the click
@@ -159,6 +194,7 @@ function init(): void {
 			if (!isOpen()) return;
 			const path = e.composedPath();
 			if (path.includes(bar) || path.includes(panel) || path.includes(toggle)) return;
+			if (outsideClickKeepsBar()) return;
 			closeAll(false); // the pointer is already going somewhere else: do not steal focus
 			// The same gesture must not also close a project dialog it lands on (its backdrop).
 			swallowBackdropClick = true;
