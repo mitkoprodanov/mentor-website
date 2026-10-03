@@ -12,40 +12,16 @@ Not a ticketing system: keep entries short, update status inline, delete when do
 
 ## Open
 
-### Production privacy + anonymous analytics consent gate
-- **Type:** Improvement / Privacy
+### Compact privacy control redesign
+- **Type:** Improvement / Privacy / UX
 - **Status:** Open
-- Implement the anonymous-analytics consent flow and persistent Privacy / Analytics control
-  defined in `docs/privacy.md` §2. Production telemetry stays inactive before consent.
-  Formalize local startup as `off | forced | consent`: keep `dev:telemetry` as forced-on
-  local telemetry, and add `dev:production-like` using the same local Worker/D1 while
-  exercising the real consent lifecycle. Ensure no debug mode can force analytics on in
-  real production, and keep third-party media permission contextual in every mode.
-- **Area:** telemetry bootstrap/config, scripts/telemetry.mjs, package.json, privacy UI
-
-### Gate third-party media behind contextual provider permission
-- **Type:** Improvement / Privacy
-- **Status:** Open
-- Implement the provider-specific media permission model in `docs/privacy.md` §3: local
-  placeholder + external navigation before permission, provider embed only after explicit
-  contextual permission, and no coupling to analytics consent. Decide whether provider
-  permission is one-shot or remembered per provider.
-- **Area:** ProjectDetail.astro, projectModal.client.ts, privacy UI
-
-### Telemetry privacy hardening before production
-- **Type:** Improvement / Privacy
-- **Status:** Open
-- Implement the telemetry hardening in `docs/privacy.md` §§4–7: sanitized referrer,
-  allowlisted public-campaign UTMs, Worker-side per-event property allowlists, automatic
-  90-day raw retention, and the anonymous-visit identity boundary.
-- **Area:** src/lib/telemetry/session.ts, workers/telemetry, D1/maintenance
-
-### Public privacy / analytics explanation
-- **Type:** Improvement / Privacy
-- **Status:** Open
-- Add the visitor-facing privacy information specified in `docs/privacy.md` §8 and keep it
-  reachable from the persistent Privacy / Analytics control.
-- **Area:** site privacy UI/content
+- Implement the top-level compact privacy control defined in `docs/privacy.md`: persistent
+  top-right lock button, lightweight unanswered reminder bar, hover/focus preview, click/tap
+  pinning, and the cumulative three-level permission switch
+  (`No optional services` → `External media` → `Site improvement`). Keep existing stored
+  preferences privacy-safe during migration and ensure the control remains reachable above
+  Project Details and Skill Filtered View.
+- **Area:** PrivacyConsent.astro, privacyConsent.client.ts, top-level layout/privacy UI
 
 ### Rotate overlay: storage failure can trap "Continue anyway"
 - **Type:** Bug
