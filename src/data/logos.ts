@@ -37,10 +37,10 @@ export type LogoTransition =
 	| 'soft-double';
 
 /** The one switch for the logo transition treatment, site-wide. */
-export const DEFAULT_LOGO_TRANSITION: LogoTransition = 'double-wide';
+export const DEFAULT_LOGO_TRANSITION: LogoTransition = 'test';
 
 /** Global multiplier for every logo band width (1 = the base widths listed in LogoPlate.astro). */
-export const DEFAULT_LOGO_BAND_SCALE = 2;
+export const DEFAULT_LOGO_BAND_SCALE = 1;
 
 export interface LogoDef {
 	id: LogoId;
