@@ -6,29 +6,35 @@ Single source of truth for privacy **product behavior, consent UX and cross-cutt
 
 ## 1. Privacy model
 
-The visitor-facing model is a **progressive three-level permission ladder**:
+The privacy model has **two independent optional permissions**:
 
-| Level | Visible label | External media | Anonymous analytics |
-|---|---|---:|---:|
-| 0 | **No optional services** | Off | Off |
-| 1 | **External media** | On | Off |
-| 2 | **Site improvement** | On | On |
+- **External media**
+- **Anonymous analytics**
 
-Suggested explanatory copy:
+The primary visitor-facing control is a **progressive three-level preset ladder** for the three most useful combinations, with the two underlying permissions also available as individual choices.
 
-- **No optional services** — no third-party embeds and no analytics.
-- **External media** — load external media for richer project visuals.
-- **Site improvement** — external media plus anonymous analytics to help improve the site.
+| State | Concise copy | External media | Anonymous analytics | Primary preset |
+|---|---|---:|---:|---:|
+| **No optional services** | **Full privacy** | Off | Off | Yes |
+| **External media** | **Essential visuals** | On | Off | Yes |
+| **Site improvement** | **With analytics** | On | On | Yes |
+| **Limited analytics** | **Without media** | Off | On | No |
 
-The rightmost level is intentionally the easiest one-click way to allow both optional features.
+The three primary presets are therefore:
 
-The ladder is cumulative. Moving right grants the permissions included in that level. Moving left revokes permissions above the selected level.
+`No optional services  <<  External media  <<  Site improvement`
+
+The rightmost preset is intentionally the easiest one-click way to allow both optional features. The preset ladder is cumulative: moving right grants the permissions included in that preset; moving left revokes permissions above it.
+
+**Limited analytics** is a valid granular choice, not a fourth primary preset. It is reached by enabling Anonymous analytics while leaving External media disabled. Analytics still runs, but external provider media does not load, so media-related behavior and playback information cannot be observed.
+
+The individual External media and Anonymous analytics controls remain the source of truth. The three-level ladder is a convenience UI that sets those two permissions to common combinations; it does not remove the visitor's ability to choose them independently.
 
 ### Effective default vs explicit choice
 
-Before the visitor answers, the **effective level is 0**: no analytics and no third-party media may load. Internally this is still `unanswered`, not an invented refusal. Only an explicit selection is remembered.
+Before the visitor answers, the **effective permissions are both Off**: no analytics and no third-party media may load. Internally this is still `unanswered`, not an invented refusal. Only an explicit selection is remembered.
 
-This distinction matters for behavior only: an unanswered visitor may still receive the lightweight reminder described below, while an explicit level-0 choice is considered settled.
+This distinction matters for behavior only: an unanswered visitor may still receive the lightweight reminder described below, while an explicit **No optional services** choice is considered settled.
 
 ## 2. Persistent control
 
@@ -81,22 +87,32 @@ A pinned bar closes when:
 
 Clicking inside the bar must not accidentally dismiss it.
 
-### Three-state switch
+### Three-state presets and individual choices
 
-The primary control is a segmented three-state switch ordered left-to-right:
+The primary control is a segmented three-state preset switch ordered left-to-right:
 
 `No optional services  <<  External media  <<  Site improvement`
 
+Use the concise supporting copy:
+
+- **No optional services** — **Full privacy**
+- **External media** — **Essential visuals**
+- **Site improvement** — **With analytics**
+- **Limited analytics** — **Without media**
+
 Requirements:
 
-- the current level is unmistakable: filled/selected segment, not only a subtle color difference;
-- the current state remains visible whenever the bar is shown;
-- each segment is directly selectable; no cycling is required;
-- the rightmost segment grants both External media and analytics in one action;
-- the selected state must be understandable from text/iconography without relying on color alone;
+- the current preset is unmistakable: filled/selected segment, not only a subtle color difference;
+- each preset segment is directly selectable; no cycling is required;
+- the rightmost preset grants both External media and analytics in one action;
+- the two underlying permissions are also exposed as separate binary choices under an **Individual choices** or equivalent expandable area;
+- changing a preset updates both individual choices;
+- changing an individual choice updates the effective state immediately;
+- when the combination is External media Off + Analytics On, no primary preset is selected and the current state is shown as **Limited analytics — Without media**;
+- the selected/effective state must be understandable from text/iconography without relying on color alone;
 - keyboard operation and visible focus are required.
 
-The full descriptive text may be shown beneath or adjacent to the compact labels when space allows. On narrow layouts, labels may wrap or use short headings plus one-line descriptions; the permission meaning must not become ambiguous.
+The concise supporting copy may be shown beneath or adjacent to the labels when space allows. On narrow layouts, labels may wrap; the permission meaning must not become ambiguous.
 
 ## 4. Consent semantics
 
@@ -120,7 +136,7 @@ The media-kind classification remains centralized in `src/lib/embeds.ts` through
 
 ### Anonymous analytics
 
-Production analytics starts **only** when level 2 is explicitly selected or when a remembered analytics consent already exists.
+Production analytics starts **only** when Anonymous analytics is explicitly allowed, either through the **Site improvement** preset, through **Limited analytics**, or through the individual Analytics choice, or when a remembered analytics consent already exists.
 
 Before consent:
 
@@ -149,19 +165,20 @@ Keep the existing category keys so previously stored choices remain readable:
 - `mgs_analytics_consent = allow | refuse`
 - `mgs_external_media_consent = allow | refuse`
 
-The three-level UI maps to them as follows:
+The presets and valid effective states map to them as follows:
 
-| Level | Analytics key | External-media key |
+| State | Analytics key | External-media key |
 |---|---|---|
-| 0 | `refuse` | `refuse` |
-| 1 | `refuse` | `allow` |
-| 2 | `allow` | `allow` |
+| **No optional services — Full privacy** | `refuse` | `refuse` |
+| **External media — Essential visuals** | `refuse` | `allow` |
+| **Site improvement — With analytics** | `allow` | `allow` |
+| **Limited analytics — Without media** | `allow` | `refuse` |
 
-Before any explicit answer, keys may remain unset; effective behavior is still level 0.
+Before any explicit answer, keys may remain unset; effective behavior is still both permissions Off.
 
-Do not auto-grant a permission during migration. A legacy `analytics=allow, external=refuse` combination is therefore preserved as-is until the visitor makes a new selection. If encountered, the UI may show it as a temporary **Custom: analytics only** state rather than falsely displaying one of the three ladder levels. The next explicit selection collapses it into levels 0–2.
+Do not auto-grant a permission during migration. A legacy `analytics=allow, external=refuse` combination is preserved as the valid **Limited analytics — Without media** state rather than being collapsed into one of the three presets.
 
-If storage is unavailable, the selected level applies for the current page load and the UI should state briefly that the preference could not be remembered.
+If storage is unavailable, the selected permissions apply for the current page load and the UI should state briefly that the preference could not be remembered.
 
 No cookies, `sessionStorage`, persistent visitor IDs, consent timestamps or telemetry-linked identifiers are required.
 
@@ -227,12 +244,16 @@ The privacy control should be architected as **top-level site UI**, not as modal
 - Hover/focus previews the bar without changing state.
 - Click/tap pins the bar; pointer leaving no longer closes it.
 - Outside click, `Escape`, or explicit close dismisses it without changing consent.
-- Level 0 disables both optional categories.
-- Level 1 enables External media only.
-- Level 2 enables External media and analytics together.
-- Moving from level 2 to 1 stops analytics but leaves External media enabled.
-- Moving from level 2 or 1 to 0 revokes both.
-- Current level is visually obvious and keyboard accessible.
+- **No optional services — Full privacy** disables both optional categories.
+- **External media — Essential visuals** enables External media only.
+- **Site improvement — With analytics** enables External media and analytics together.
+- **Limited analytics — Without media** enables analytics while External media remains disabled.
+- The three primary presets update the two independent permissions correctly.
+- The individual External media and Anonymous analytics choices can be changed independently.
+- Moving from Site improvement to External media stops analytics but leaves External media enabled.
+- Moving to No optional services revokes both.
+- Limited analytics does not load provider media and therefore cannot collect media-related behavior/playback telemetry.
+- Current preset/effective state is visually obvious and keyboard accessible.
 - Reduced-motion users do not receive repeating glint animation.
 - The control remains above Project Details and Skill Filtered View.
 - Existing stored preferences are never broadened automatically during migration.
