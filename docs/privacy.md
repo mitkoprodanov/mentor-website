@@ -39,12 +39,14 @@ Privacy must remain reachable without becoming a persistent banner.
 ### Resting state
 
 - Use a **small lock-icon Privacy button** fixed to the **bottom-left corner of the viewport**.
+- The resting control is not a full circle: it is a compact corner-attached rounded tab emerging from the viewport edge, with only the exposed corner(s) rounded.
+- Treat it like other ordinary site buttons: same hover language and a subtle idle glint.
 - Keep it independent of the NavBar and document flow.
 - It must remain visible, sharp and interactive above blurred page layers, including while Project Details or Skill Filtered View is open.
 - When no native modal dialog is open, host it in the top-level viewport/UI layer.
 - When a native `showModal()` dialog is open, the Privacy UI may be rendered or mirrored inside that active dialog's interactive subtree so it remains usable without closing or resetting the modal. This is the one allowed exception to top-level ownership.
 - Respect viewport safe-area insets and normal edge spacing.
-- Once the visitor has made a privacy choice, the normal resting state is the lock button only.
+- Once the visitor has made a privacy choice, the normal resting state is the compact lock tab only.
 
 ### Attention while unanswered
 
@@ -53,7 +55,7 @@ While consent is unanswered:
 - show the **thin Privacy bar floating along the bottom of the viewport**;
 - keep it visually lightweight rather than using a modal or blocking banner;
 - keep both the bar and Privacy button above blurred page layers and interactable in the current active UI layer;
-- the lock button may have a subtle periodic **idle glint** to indicate that an action is available;
+- use the same subtle periodic **idle glint** as other attention-seeking site buttons;
 - respect `prefers-reduced-motion`: no repeating glint/attention animation when reduced motion is requested.
 
 The unanswered bar is informational and selectable. It must never block use of the site.
@@ -89,46 +91,43 @@ When Privacy is opened over a native modal view:
 
 Because `showModal()` makes elements outside the dialog inert, do not solve this with `z-index` or a top-layer popover outside the dialog. Use the active dialog as the Privacy host while it is modal.
 
-### Hover / focus preview
+### Open, preview and pin behavior
 
-Hovering the lock button with a pointer, or focusing it with keyboard navigation:
+The Privacy tab follows the site's ordinary button behavior:
 
-- gives it the same selectable glow/hover language as other site buttons;
-- temporarily displays the privacy bar;
-- shows the compact Privacy control and the current effective choices;
-- hides the temporary bar again when hover/focus leaves **unless the control has been pinned open**.
+- hover/focus applies the normal hover visuals and opens the bar in **preview** mode;
+- leaving the tab/bar closes a preview-open bar;
+- clicking/tapping the tab opens and **pins** the bar;
+- the pinned state must be visibly reflected on the Privacy tab;
+- clicking the tab again while pinned closes it;
+- touch devices open directly into the pinned state.
 
-Hover alone never changes consent.
+A pinned bar also closes on outside click, `Escape`, or the explicit minimize control.
 
-### Click / tap: pin open
+Selecting External media or Analytics does not close the bar, because the visitor may want to change both permissions. Clicking inside the bar must not accidentally dismiss it.
 
-Clicking the lock button pins the privacy bar open so it no longer disappears on unhover.
+### Privacy bar layout and choices
 
-Touch devices have no hover, so a tap opens the pinned state directly.
+When opening, the compact Privacy tab rapidly expands/reveals to the right into the bottom bar. The transition should feel fast and direct, similar to the Skills UI, with the tab/border visually acting as the origin of the bar rather than the bar simply fading in.
 
-A pinned bar closes when:
+Keep the bar in this order:
 
-- the visitor clicks/taps outside it;
-- the visitor presses `Escape`;
-- the Privacy button is used again as an explicit close action, or another explicit close affordance is used.
+1. privacy choices;
+2. **Details**;
+3. a narrow full-height **minimize** button at the far right using a `<` icon rather than an `X`.
 
-Selecting External media or Analytics does not automatically close the bar, because the visitor may want to change both permissions.
+The minimize control should read as collapsing the bar, occupy the full bar height, and be only as wide as necessary.
 
-Clicking inside the bar must not accidentally dismiss it.
+The choices are:
 
-### Privacy choices
+- standalone rounded control: **No optional services** — **Maximum privacy**;
+- one shared rounded control to its right containing two independently selectable halves:
+  - **External media** — **Essential visuals**
+  - **Analytics** — **Site improvement**
 
-The compact bar contains three selectable choices:
+The External media / Analytics group uses one common rounded outer border and a straight divider between its two halves. This must visually communicate that the two services are related optional choices but can be set independently.
 
-`No optional services   External media   Analytics`
-
-with supporting text:
-
-- **No optional services** — **Maximum privacy**
-- **External media** — **Essential visuals**
-- **Analytics** — **Site improvement**
-
-External media and Analytics behave as independent selectable options. No optional services represents neither being allowed and is mutually exclusive with them.
+No optional services represents neither optional service being allowed and is mutually exclusive with either half.
 
 Requirements:
 
@@ -139,11 +138,11 @@ Requirements:
 - disabling the last enabled optional service returns to No optional services;
 - keyboard operation and visible focus are required.
 
-The bar may include one short explanation:
+Keep one short framing sentence in the bar:
 
-> Choose whether to load external media and allow anonymous usage analytics.
+> Privacy settings for optional site services.
 
-A **Details** control exposes the minimum additional information without making the main bar larger.
+A **Details** control exposes the minimum additional information without enlarging the primary choice area.
 
 ### Details
 
@@ -293,10 +292,10 @@ Both hosts must render the same Privacy state and behavior. Modal/project/filter
 - Fresh visitor: no analytics or provider requests occur before consent.
 - Fresh visitor: both optional permissions are effectively disabled without treating silence as refusal.
 - Fresh visitor: thin reminder bar is visible but non-blocking.
-- Settled visitor: only the small bottom-left lock control remains at rest.
+- Settled visitor: only the compact bottom-left lock tab remains at rest.
 - Privacy button and bar remain reachable independently of the NavBar.
-- Hover/focus previews the bar without changing state.
-- Click/tap pins the bar; pointer leaving no longer closes it.
+- Hover/focus previews the bar without changing consent; leaving closes it unless pinned.
+- Click/tap pins the bar and visibly marks the Privacy tab as pinned; clicking it again closes it.
 - Outside click, `Escape`, or explicit close dismisses it without changing consent.
 - **No optional services — Maximum privacy** disables both optional permissions.
 - **External media — Essential visuals** can be enabled independently.
@@ -307,6 +306,10 @@ Both hosts must render the same Privacy state and behavior. Modal/project/filter
 - Disabling the final enabled optional service returns to No optional services.
 - Analytics without External media is valid; provider media remains unloaded and media-related behavior/playback telemetry is therefore unavailable.
 - Selecting External media or Analytics does not automatically close a pinned bar.
+- The bar opens with a fast rightward expansion/reveal from the bottom-left Privacy tab, similar in pace to Skills.
+- The choices come first; Details follows on the right.
+- External media and Analytics share one rounded outer border with a straight divider and remain independently selectable.
+- The far-right close affordance is a narrow full-height `<` minimize button, not an `X`.
 - The selected states are visually obvious and keyboard accessible.
 - Details are available without being required to understand the basic choice.
 - Privacy choices can be changed or withdrawn at any time.
