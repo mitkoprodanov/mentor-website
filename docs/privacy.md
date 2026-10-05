@@ -39,8 +39,10 @@ Privacy must remain reachable without becoming a persistent banner.
 ### Resting state
 
 - Use a **small lock-icon Privacy button** fixed to the **bottom-left corner of the viewport**.
-- Keep it in the top-level viewport/UI layer, independent of the NavBar and document flow.
-- It must remain visible, sharp and interactive above modal backdrops and blurred page layers, including Project Details and Skill Filtered View.
+- Keep it independent of the NavBar and document flow.
+- It must remain visible, sharp and interactive above blurred page layers, including while Project Details or Skill Filtered View is open.
+- When no native modal dialog is open, host it in the top-level viewport/UI layer.
+- When a native `showModal()` dialog is open, the Privacy UI may be rendered or mirrored inside that active dialog's interactive subtree so it remains usable without closing or resetting the modal. This is the one allowed exception to top-level ownership.
 - Respect viewport safe-area insets and normal edge spacing.
 - Once the visitor has made a privacy choice, the normal resting state is the lock button only.
 
@@ -50,7 +52,7 @@ While consent is unanswered:
 
 - show the **thin Privacy bar floating along the bottom of the viewport**;
 - keep it visually lightweight rather than using a modal or blocking banner;
-- keep both the bar and Privacy button above modal backdrops and blurred page layers;
+- keep both the bar and Privacy button above blurred page layers and interactable in the current active UI layer;
 - the lock button may have a subtle periodic **idle glint** to indicate that an action is available;
 - respect `prefers-reduced-motion`: no repeating glint/attention animation when reduced motion is requested.
 
@@ -65,11 +67,27 @@ The Privacy bar is a **thin floating bottom bar anchored to the viewport**, not 
 Requirements:
 
 - it stays at the bottom of the visible viewport while scrolling;
-- it remains above modal backdrops and blurred background layers;
-- opening or closing Project Details, Skill Filtered View or another modal does not close, re-parent, blur or disable the Privacy UI;
-- it must not inherit modal blur, opacity, pointer blocking or stacking context;
+- it remains visually above blurred background layers;
+- opening or closing Project Details, Skill Filtered View or another modal does not close, reset or change the Privacy choices;
+- when a native modal `<dialog>` opened with `showModal()` is active, Privacy must be available from within that dialog's interactive subtree; ordinary `z-index` or an external popover must not be relied on to bypass modal inertness;
+- moving the rendered Privacy surface between the normal viewport host and the active modal host must preserve the same consent state and open/pinned state;
 - narrow/mobile layouts may wrap or compact the contents, but the bar should remain thin and non-blocking;
 - respect bottom/left/right safe-area insets.
+
+### Privacy over modal views
+
+Project Details must remain open while Privacy is used.
+
+When Privacy is opened over a native modal view:
+
+- the underlying modal stays mounted, visible and at the same scroll/view state;
+- Privacy becomes the active interaction surface without closing or recreating the modal;
+- changing External media or Analytics applies immediately to the existing modal content;
+- granting External media replaces eligible placeholders with embeds in place;
+- revoking External media restores placeholders in place;
+- closing Privacy returns interaction to the same modal state.
+
+Because `showModal()` makes elements outside the dialog inert, do not solve this with `z-index` or a top-layer popover outside the dialog. Use the active dialog as the Privacy host while it is modal.
 
 ### Hover / focus preview
 
@@ -261,9 +279,14 @@ Primary implementation locations:
 - telemetry lifecycle/client files documented in [telemetry.md](telemetry.md)
 - `src/scripts/projectModal.client.ts` — load/revoke external embeds
 
-The privacy control must be architected as **top-level viewport UI**, outside page/modal containers and outside any ancestor that receives modal blur, transforms, opacity or pointer blocking.
+Privacy state and behavior must be owned by **top-level site UI**, not by individual modal implementations.
 
-The Privacy button and bar share the same top-level stacking layer and remain independently interactive above Project Details, Skill Filtered View, modal backdrops and other ordinary site UI. Modal/project/filter views must not own, duplicate, re-parent or visually suppress the Privacy UI.
+Rendering has two allowed hosts:
+
+- the normal top-level viewport host when no native modal dialog is active;
+- the currently active native modal dialog when `showModal()` would otherwise make the external Privacy UI inert.
+
+Both hosts must render the same Privacy state and behavior. Modal/project/filter views must not duplicate consent logic or create their own privacy state. Switching hosts must not close, reset or recreate either Privacy or the underlying modal.
 
 ## 9. Acceptance criteria for the compact redesign
 
@@ -290,9 +313,12 @@ The Privacy button and bar share the same top-level stacking layer and remain in
 - Reduced-motion users do not receive repeating glint animation.
 - The Privacy button is fixed to the bottom-left viewport corner.
 - The Privacy bar opens as a thin floating bar along the bottom of the viewport.
-- Both remain visible, sharp and interactive above Project Details, Skill Filtered View, modal backdrops and blurred page layers.
+- Privacy remains visible, sharp and interactive while Project Details or Skill Filtered View is open.
+- Native modal inertness is handled by rendering Privacy inside the active modal when required; ordinary `z-index` is not treated as sufficient.
 - Modal blur never affects the Privacy button or Privacy bar.
 - Scrolling does not move the Privacy UI with document content.
-- Opening or closing a modal does not close or reset the Privacy UI.
+- Opening or closing a modal does not reset Privacy state.
+- Opening Privacy does not close, recreate or change the scroll/view state of Project Details.
+- Granting or revoking External media while Project Details is open updates eligible content in place.
 - Mobile safe-area insets are respected.
 - Existing stored preferences are never broadened automatically during migration.
