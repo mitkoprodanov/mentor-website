@@ -1,203 +1,177 @@
-// DOM wiring for PrivacyConsent.astro: two INDEPENDENT choices, Anonymous analytics and
-// External media. Pure view logic: analytics decisions live in lib/telemetry/lifecycle.ts
-// (via `telemetryControl`), External media decisions in lib/externalMedia.ts; this only reflects
-// their status and forwards the visitor's clicks. One choice never touches the other.
+// DOM wiring for PrivacyConsent.astro (docs/privacy.md): a fixed lock button + a thin floating bar
+// with three choices over TWO independent permissions. Pure view logic: analytics decisions live in
+// lib/telemetry/lifecycle.ts (via `telemetryControl`), External media in lib/externalMedia.ts, the
+// derive/select/open-pin-close rules in lib/privacyControl.ts. This file only reflects their status and
+// forwards the visitor's input. There is no state of its own beyond open/pin (PrivacyBarState).
 //
-// Flow: persistent "Privacy" control -> small bar -> optional "Details".
-//   * First visit, `consent` mode, analytics unanswered: the bar opens by itself (analytics row only).
-//     Dismissing it decides nothing; the persistent control reopens it.
-//   * A gated third-party embed activated without permission opens the bar on External media.
-//
-// Closing: outside pointer/tap, the x button and Escape close the whole Privacy UI (bar and Details),
-// never changing a choice. Exception: while analytics is unanswered and the visitor has never closed
-// Privacy themselves, an outside click only closes Details and leaves the bar up.
+// Hosting: ONE root element. Normally a child of <body>. A native modal <dialog> (Project Details) makes
+// everything outside it inert, so while one is open the SAME root is moved into it and moved back after.
+// State is untouched by the move (it lives in JS), the dialog is never recreated or reset, and focus is
+// restored. Skill Filtered View is not a <dialog>; the body-level root simply sits above it.
 
 import { telemetryControl } from '../lib/telemetry';
-import type { TelemetryStatus } from '../lib/telemetry';
 import { EXTERNAL_MEDIA_REQUEST_EVENT, externalMedia } from '../lib/externalMedia.ts';
-import type { ExternalMediaStatus } from '../lib/externalMedia.ts';
+import { PrivacyBarState, isNone, isUnanswered, planConsentWrites, selectChoice } from '../lib/privacyControl.ts';
+import type { ChoiceId, Permissions } from '../lib/privacyControl.ts';
 
-type Scope = 'analytics' | 'external' | 'both';
+const HOVER_LEAVE_MS = 180; // lets the pointer cross the gap between the lock and the bar
 
 function init(): void {
 	const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
-	const bar = $('#privacy-prompt');
+	const root = $('#privacy-root');
 	const toggle = $<HTMLButtonElement>('#privacy-toggle');
-	const panel = $('#privacy-panel');
-	const rowA = $('#privacy-row-analytics');
-	const rowM = $('#privacy-row-media');
-	const aState = $('#privacy-analytics-state');
-	const mState = $('#privacy-media-state');
-	const aNo = $<HTMLButtonElement>('#privacy-a-no');
-	const aYes = $<HTMLButtonElement>('#privacy-a-yes');
-	const mNo = $<HTMLButtonElement>('#privacy-m-no');
-	const mYes = $<HTMLButtonElement>('#privacy-m-yes');
-	const aStatus = $('#privacy-analytics-status');
-	const mStatus = $('#privacy-media-status');
-	const aSwitch = $<HTMLButtonElement>('#privacy-a-switch');
-	const mSwitch = $<HTMLButtonElement>('#privacy-m-switch');
-	if (!bar || !toggle || !panel || !rowA || !rowM || !aState || !mState || !aNo || !aYes || !mNo || !mYes) return;
-	if (!aStatus || !mStatus || !aSwitch || !mSwitch) return;
+	const bar = $('#privacy-bar');
+	const note = $('#privacy-note');
+	const details = $('#privacy-details');
+	const detailsBtn = $<HTMLButtonElement>('[data-privacy-action="details"]');
+	if (!root || !toggle || !bar || !note || !details || !detailsBtn) return;
+	const choiceBtn = (id: ChoiceId): HTMLButtonElement | null => bar.querySelector<HTMLButtonElement>(`[data-privacy-choice="${id}"]`);
+	const ids: ChoiceId[] = ['none', 'media', 'analytics'];
 
-	let barOpen = false; // the compact bar is up
-	let scope: Scope = 'both';
-	let panelOpen = false; // Details is up (the bar is hidden meanwhile)
-	let returnFocusTo: HTMLElement | null = null; // the element that opened the UI (gate button), else the control
+	const state = new PrivacyBarState();
+	let moving = false; // true while the root is being re-hosted (the move blurs focus; ignore that)
 	let swallowBackdropClick = false; // see the capture click handler
+	let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
-	const isOpen = (): boolean => barOpen || panelOpen;
+	const analyticsChoosable = (): boolean => telemetryControl.status().mode === 'consent';
 
-	// Whether the visitor has ever closed the Privacy UI themselves (toggle, x, Escape). A UI-only
-	// hint, kept apart from consent: it never answers analytics. Blocked storage degrades to memory.
-	const DISMISSED_KEY = 'mgs_privacy_dismissed';
-	let dismissedInMemory = false;
-	const wasDismissed = (): boolean => {
-		try {
-			return dismissedInMemory || localStorage.getItem(DISMISSED_KEY) === '1';
-		} catch {
-			return dismissedInMemory;
+	/** The two permissions, read straight from their owners. "No optional services" is derived. */
+	const permissions = (): Permissions => ({
+		media: externalMedia.status().allowed,
+		analytics: telemetryControl.status().running,
+	});
+
+	// ---- hosting -----------------------------------------------------------------------------
+	const activeModal = (): HTMLDialogElement | null => {
+		for (const d of document.querySelectorAll<HTMLDialogElement>('dialog')) {
+			try {
+				if (d.open && d.matches(':modal')) return d;
+			} catch {
+				if (d.open) return d;
+			}
 		}
-	};
-	const markDismissed = (): void => {
-		dismissedInMemory = true;
-		try {
-			localStorage.setItem(DISMISSED_KEY, '1');
-		} catch {
-			/* blocked: memory only */
-		}
+		return null;
 	};
 
-	/** A modal project <dialog> makes everything outside it inert, so while one is open the bar and
-	 *  Details live inside it (a gated embed's External media prompt must be usable there); otherwise
-	 *  they live in <body>. Containment checks below use composedPath(), so reparenting is harmless. */
-	const place = (): void => {
-		const host = document.querySelector<HTMLElement>('dialog[open]') ?? document.body;
-		for (const el of [bar, panel]) if (el.parentElement !== host) host.appendChild(el);
+	const syncHost = (): void => {
+		const host: HTMLElement = activeModal() ?? document.body;
+		if (root.parentElement === host) return;
+		const active = document.activeElement;
+		const refocus = active instanceof HTMLElement && root.contains(active) ? active : null;
+		moving = true;
+		host.appendChild(root);
+		refocus?.focus({ preventScroll: true });
+		moving = false;
 	};
 
+	// ---- rendering ---------------------------------------------------------------------------
 	const render = (): void => {
-		place();
-		const a: TelemetryStatus = telemetryControl.status();
-		const m: ExternalMediaStatus = externalMedia.status();
-		const aChoosable = a.mode === 'consent';
-		const aUnanswered = aChoosable && a.consent === null;
-
-		bar.hidden = !(barOpen && !panelOpen);
-		panel.hidden = !panelOpen;
-		toggle.setAttribute('aria-expanded', String(isOpen()));
-		toggle.hidden = false;
-		rowA.hidden = scope === 'external';
-		rowM.hidden = scope === 'analytics';
-
-		// Analytics row: adapts to the current state rather than pretending it is a first visit.
-		if (!aChoosable) {
-			aState.textContent = a.mode === 'forced' ? 'Currently on (local development build).' : 'Currently not active on this version of the site.';
-			aNo.hidden = true;
-			aYes.hidden = true;
-		} else if (aUnanswered) {
-			aState.textContent = '';
-			aNo.hidden = false;
-			aYes.hidden = false;
-			aNo.textContent = 'No thanks';
-		} else {
-			aState.textContent = a.running ? 'Currently on.' : 'Currently off.';
-			aNo.hidden = !a.running;
-			aYes.hidden = a.running;
-			aNo.textContent = 'Turn off';
-		}
-
-		// External media row.
-		if (m.consent === null) {
-			mState.textContent = '';
-			mNo.hidden = false;
-			mYes.hidden = false;
-			mNo.textContent = 'Not now';
-		} else {
-			mState.textContent = m.allowed ? 'Currently on.' : 'Currently off.';
-			mNo.hidden = !m.allowed;
-			mYes.hidden = m.allowed;
-			mNo.textContent = 'Turn off';
-		}
-
-		// Details: current setting + control for each area.
-		if (!aChoosable) {
-			aStatus.textContent = a.mode === 'forced' ? 'On (local development build).' : 'Not active on this version of the site.';
-			aSwitch.hidden = true;
-		} else {
-			aStatus.textContent = a.running ? 'On.' : 'Off.';
-			if (!a.remembered) aStatus.textContent += ' (Your browser blocked remembering this choice.)';
-			aSwitch.hidden = false;
-			aSwitch.textContent = a.running ? 'Turn off' : 'Allow analytics';
-			aSwitch.dataset.next = a.running ? 'refuse' : 'allow';
-		}
-		mStatus.textContent = m.allowed ? 'On.' : 'Off.';
-		if (!m.remembered) mStatus.textContent += ' (Your browser blocked remembering this choice.)';
-		mSwitch.textContent = m.allowed ? 'Turn off' : 'Allow external media';
-		mSwitch.dataset.next = m.allowed ? 'refuse' : 'allow';
-	};
-
-	const openBar = (s: Scope, opener: HTMLElement | null, focusId?: string): void => {
-		barOpen = true;
-		panelOpen = false;
-		scope = s;
-		returnFocusTo = opener;
-		render();
-		if (focusId) $<HTMLButtonElement>(focusId)?.focus();
-	};
-
-	/** Closes the WHOLE Privacy UI (bar and Details). Never decides or changes anything. */
-	const closeAll = (restoreFocus: boolean): void => {
-		if (!isOpen()) return;
-		if (restoreFocus) markDismissed(); // user-initiated close (toggle / x / Escape)
-		barOpen = false;
-		panelOpen = false;
-		render();
-		if (restoreFocus) {
-			const back = returnFocusTo && document.contains(returnFocusTo) && !returnFocusTo.hidden ? returnFocusTo : toggle;
-			back.focus();
-		}
-		returnFocusTo = null;
-	};
-
-	const openDetails = (): void => {
-		panelOpen = true;
-		render();
-		(!aSwitch.hidden ? aSwitch : mSwitch).focus();
-	};
-
-	/** A choice made from the bar has done its job; the manual "both" bar stays so the other row can be changed. */
-	const afterDecision = (): void => {
-		if (scope !== 'both') barOpen = false;
-		render();
-	};
-
-	/** Fresh state (analytics unanswered AND the visitor never closed Privacy themselves): the bar must
-	 *  not vanish on an outside click. An open Details panel still closes, falling back to the bar. */
-	const outsideClickKeepsBar = (): boolean => {
+		syncHost();
 		const a = telemetryControl.status();
-		if (!(a.mode === 'consent' && a.consent === null && scope !== 'external' && !wasDismissed())) return false;
-		if (panelOpen) {
-			panelOpen = false;
-			render();
-			swallowBackdropClick = true;
-		}
-		return true;
+		const m = externalMedia.status();
+		const locked = !analyticsChoosable();
+		const perms = permissions();
+		state.setUnanswered(isUnanswered(m.consent, a.consent, !locked));
+
+		toggle.hidden = false;
+		bar.hidden = !state.visible;
+		toggle.setAttribute('aria-expanded', String(state.visible));
+		toggle.dataset.attention = String(isUnanswered(m.consent, a.consent, !locked) && !state.visible);
+
+		const pressed: Record<ChoiceId, boolean> = { none: isNone(perms), media: perms.media, analytics: perms.analytics };
+		for (const id of ids) choiceBtn(id)?.setAttribute('aria-pressed', String(pressed[id]));
+		const analyticsBtn = choiceBtn('analytics');
+		if (analyticsBtn) analyticsBtn.disabled = locked;
+
+		details.hidden = !state.details;
+		detailsBtn.setAttribute('aria-expanded', String(state.details));
+
+		const notes: string[] = [];
+		if (a.mode === 'forced') notes.push('Analytics is on in this local development build.');
+		else if (a.mode === 'off') notes.push('Analytics is not active on this version of the site.');
+		if (!m.remembered || (!locked && !a.remembered)) notes.push('Your browser blocked remembering this choice; it applies until you leave the page.');
+		note.textContent = notes.join(' ');
+		note.hidden = notes.length === 0;
 	};
 
-	// ---- outside pointer / tap ---------------------------------------------------------------
-	// Capture phase on the document, so nothing (dialog handlers, stopPropagation, reparenting)
-	// can hide the event; containment uses composedPath(). pointerdown always precedes the click
-	// that opens the UI, so the opening click can never count as an outside click.
+	// ---- choices -----------------------------------------------------------------------------
+	const choose = (id: ChoiceId): void => {
+		const locked = !analyticsChoosable();
+		const current = permissions();
+		const next = selectChoice(current, id, locked);
+		const writes = planConsentWrites(
+			current,
+			next,
+			{ media: externalMedia.status().consent, analytics: telemetryControl.status().consent },
+			!locked,
+		);
+		// Media first (cheap, local), then analytics; each owner persists, starts/stops and notifies.
+		if (writes.media === 'allow') externalMedia.allow();
+		else if (writes.media === 'refuse') externalMedia.refuse();
+		if (writes.analytics === 'allow') telemetryControl.allow();
+		else if (writes.analytics === 'refuse') telemetryControl.refuse();
+		state.pin(); // choosing is deliberate engagement: stays open so the other permission can change too
+		render();
+	};
+
+	// ---- open / close ------------------------------------------------------------------------
+	const closeFocusFix = (): void => {
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && bar.contains(active)) toggle.focus({ preventScroll: true });
+	};
+
+	const enter = (e: PointerEvent): void => {
+		if (e.pointerType === 'touch') return; // touch has no hover: a tap pins directly
+		clearTimeout(hoverTimer);
+		state.pointerEnter();
+		render();
+	};
+	const leave = (e: PointerEvent): void => {
+		if (e.pointerType === 'touch') return;
+		clearTimeout(hoverTimer);
+		hoverTimer = setTimeout(() => {
+			state.pointerLeave();
+			render();
+		}, HOVER_LEAVE_MS);
+	};
+	for (const el of [toggle, bar]) {
+		el.addEventListener('pointerenter', enter as EventListener);
+		el.addEventListener('pointerleave', leave as EventListener);
+	}
+
+	root.addEventListener('focusin', (e) => {
+		if ((e.target as Element).matches(':focus-visible')) {
+			state.focusIn();
+			render();
+		}
+	});
+	root.addEventListener('focusout', (e) => {
+		if (moving) return;
+		const to = (e as FocusEvent).relatedTarget;
+		if (to instanceof Node && root.contains(to)) return;
+		state.focusOut();
+		render();
+	});
+
+	toggle.addEventListener('click', () => {
+		clearTimeout(hoverTimer);
+		const wasPinned = state.isPinned;
+		state.toggleClick();
+		render();
+		if (wasPinned) closeFocusFix();
+	});
+
+	// Outside pointer/tap: capture phase so nothing (dialog handlers, stopPropagation) can hide it.
+	// pointerdown precedes the click that opens the UI, so an opening click is never "outside".
 	document.addEventListener(
 		'pointerdown',
 		(e) => {
-			if (!isOpen()) return;
-			const path = e.composedPath();
-			if (path.includes(bar) || path.includes(panel) || path.includes(toggle)) return;
-			if (outsideClickKeepsBar()) return;
-			closeAll(false); // the pointer is already going somewhere else: do not steal focus
-			// The same gesture must not also close a project dialog it lands on (its backdrop).
-			swallowBackdropClick = true;
+			if (e.composedPath().includes(root)) return;
+			if (state.outsidePress()) {
+				render();
+				// The same gesture must not also close a project dialog whose backdrop it lands on.
+				swallowBackdropClick = true;
+			}
 		},
 		true,
 	);
@@ -214,95 +188,51 @@ function init(): void {
 		true,
 	);
 
-	document.addEventListener('click', (e) => {
-		const el = (e.target as Element | null)?.closest<HTMLElement>('[data-privacy-action]');
+	// Clicks inside the bar never dismiss it (outside detection above ignores them).
+	bar.addEventListener('click', (e) => {
+		const el = (e.target as Element | null)?.closest<HTMLElement>('[data-privacy-choice], [data-privacy-action]');
 		if (!el) return;
-		switch (el.dataset.privacyAction) {
-			case 'analytics-allow':
-				telemetryControl.allow();
-				afterDecision();
-				break;
-			case 'analytics-refuse':
-				telemetryControl.refuse();
-				afterDecision();
-				break;
-			case 'media-allow':
-				externalMedia.allow();
-				afterDecision();
-				break;
-			case 'media-refuse':
-				externalMedia.refuse();
-				afterDecision();
-				break;
-			case 'analytics-switch':
-				if (el.dataset.next === 'allow') telemetryControl.allow();
-				else telemetryControl.refuse();
-				render();
-				break;
-			case 'media-switch':
-				if (el.dataset.next === 'allow') externalMedia.allow();
-				else externalMedia.refuse();
-				render();
-				break;
-			case 'details':
-				openDetails();
-				break;
-			case 'close':
-			case 'bar-close':
-				closeAll(true);
-				break;
+		const choice = el.dataset.privacyChoice as ChoiceId | undefined;
+		if (choice) {
+			choose(choice);
+			return;
+		}
+		if (el.dataset.privacyAction === 'details') {
+			state.toggleDetails();
+			render();
+		} else if (el.dataset.privacyAction === 'close') {
+			state.close();
+			render();
+			closeFocusFix();
+			toggle.focus({ preventScroll: true });
 		}
 	});
 
-	toggle.addEventListener('click', () => {
-		if (isOpen()) closeAll(true);
-		else openBar('both', null);
+	// A gated third-party embed was activated without permission: open the bar pinned on External media
+	// (never loading just that one item).
+	document.addEventListener(EXTERNAL_MEDIA_REQUEST_EVENT, () => {
+		state.pin();
+		render();
+		choiceBtn('media')?.focus({ preventScroll: true });
 	});
 
-	// A gated third-party embed was activated without permission: show the External media choice
-	// (never loading just that one item). Focus returns to that embed's button when closed.
-	document.addEventListener(EXTERNAL_MEDIA_REQUEST_EVENT, (e) => {
-		const from = e.target instanceof HTMLElement ? e.target : null;
-		openBar('external', from, '#privacy-m-yes');
-	});
+	const onEscape = (e: Event): void => {
+		if (!state.escape()) return;
+		e.preventDefault(); // close Privacy only, never a project dialog beneath it
+		e.stopPropagation();
+		render();
+		toggle.focus({ preventScroll: true });
+	};
+	document.addEventListener('keydown', (e) => e.key === 'Escape' && onEscape(e), true);
+	// Fallback for browsers that deliver the dialog `cancel` without our keydown.
+	document.addEventListener('cancel', onEscape, true);
 
-	document.addEventListener(
-		'keydown',
-		(e) => {
-			if (e.key !== 'Escape' || !isOpen()) return;
-			e.preventDefault(); // close Privacy only, never a project dialog beneath it
-			e.stopPropagation();
-			closeAll(true);
-		},
-		true,
-	);
-	// Fallback for browsers that deliver the dialog `cancel` before/without our keydown.
-	document.addEventListener(
-		'cancel',
-		(e) => {
-			if (isOpen()) e.preventDefault();
-		},
-		true,
-	);
-	// The dialog closing takes our (possibly hosted) bar with it: move it home and re-render.
-	document.addEventListener(
-		'close',
-		(e) => {
-			if ((e.target as Element | null)?.tagName === 'DIALOG') render();
-		},
-		true,
-	);
+	// Re-host whenever a dialog opens/closes, however it was dismissed.
+	new MutationObserver(syncHost).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+	document.addEventListener('close', (e) => (e.target as Element | null)?.tagName === 'DIALOG' && syncHost(), true);
 
 	telemetryControl.subscribe(render);
 	externalMedia.subscribe(render);
-
-	// First visit: in consent mode with analytics still unanswered, open the compact analytics bar by
-	// itself (never Details, never telemetry). forced/off modes never show this prompt.
-	const a0 = telemetryControl.status();
-	if (a0.mode === 'consent' && a0.consent === null) {
-		barOpen = true;
-		scope = 'analytics';
-	}
 	render();
 }
 

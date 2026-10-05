@@ -635,39 +635,6 @@ test('external media: old/unknown stored values are ignored safely (no migration
 	assert.deepEqual([blocked.status().allowed, blocked.status().remembered], [true, false]);
 });
 
-test('privacy UI: small bar first, Details second; both independent areas; concise copy; close affordances', () => {
-	const ui = read('src/components/PrivacyConsent.astro');
-	const script = read('src/scripts/privacyConsent.client.ts');
-	assert.match(ui, /id="privacy-prompt"[^>]*hidden/);
-	assert.match(ui, /id="privacy-toggle"[^>]*hidden/);
-	assert.match(ui, /id="privacy-toggle"[^>]*aria-controls="privacy-prompt"/); // control opens the bar, not Details
-	assert.match(ui, /id="privacy-toggle"[^>]*>Privacy</); // generic label: not analytics-only
-	for (const label of ['No thanks', 'Allow analytics', 'Not now', 'Allow external media', 'Details']) {
-		assert.ok(ui.includes(label), label);
-	}
-	assert.ok(ui.includes('No ads or persistent visitor ID'));
-	assert.ok(ui.includes('External media') && ui.includes('YouTube and LinkedIn'));
-	assert.ok(ui.includes('up to 90 days'));
-	// no implementation detail in the visitor-facing UI
-	assert.ok(!/Worker|D1|Cloudflare|utm_|viewport|session ID|event/i.test(ui.split('<style>')[0]));
-	// each area has its own controls wired to its own system
-	assert.ok(script.includes('telemetryControl.allow()') && script.includes('externalMedia.allow()'));
-	assert.ok(script.includes("addEventListener(EXTERNAL_MEDIA_REQUEST_EVENT"));
-	// Details: top-right close button
-	assert.match(ui, /privacy-panel__close"[^>]*data-privacy-action="close"/);
-	// first visit: the compact analytics bar opens by itself, in consent mode with analytics unanswered only
-	assert.ok(script.includes("a0.mode === 'consent' && a0.consent === null"));
-	assert.match(script, /barOpen = true;\s*scope = 'analytics';/);
-	// every close path is the same whole-UI close: outside pointer, x, Escape, never Details -> bar
-	assert.ok(script.includes('closeAll'));
-	assert.ok(!script.includes('closeDetails'));
-	assert.match(script, /addEventListener\(\s*'pointerdown'[\s\S]{0,500}composedPath\(\)[\s\S]{0,400}closeAll\(false\)[\s\S]{0,200},\s*true,/);
-	assert.ok(script.includes("e.key !== 'Escape'") && script.includes('e.preventDefault(); // close Privacy only'));
-	assert.match(script, /case 'close':\s*case 'bar-close':\s*closeAll\(true\)/);
-	// the gate dispatches from its own button so focus can return to it
-	assert.ok(read('src/scripts/projectModal.client.ts').includes('btn.dispatchEvent(new CustomEvent(EXTERNAL_MEDIA_REQUEST_EVENT'));
-});
-
 test('no telemetry-only listener is installed at module load (only via onStart)', () => {
 	for (const f of ['src/scripts/explicitActions.client.ts', 'src/scripts/visibility.client.ts']) {
 		const src = read(f);
