@@ -204,11 +204,11 @@ const tracks = await Promise.all(
 						    flows via a same-employer seam into the box beside it
 						    — see showEnd above. */}
 						<div class={`track-header track-header--${track.side}`}>
-							{showEnd && <span class="track-year">{end}</span>}
-							<div class="track-title-row">
+							<div class="track-title-text">
+								{showEnd && <span class="track-year">{end}</span>}
 								<h4 class:list={{ emphasized: company.underMentor === true }}>{company.name}</h4>
-								{resolveLogo(company) && <Logo logo={resolveLogo(company)!} variant="header" />}
 							</div>
+							{resolveLogo(company) && <Logo logo={resolveLogo(company)!} variant="header" />}
 						</div>
 						<div class="track-projects">
 							{/* Visibility Matrix (docs/telemetry.md sections 6/8/17.3): this
@@ -494,19 +494,40 @@ const tracks = await Promise.all(
 
 	.track-header {
 		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		flex-direction: row;
+		align-items: stretch;
+		gap: 1.25rem;
 		padding: 0.25rem 0 0.5rem;
 	}
 
+	/* Year + name glued together as one block; the logo spans their joint
+	   height beside it. Ádám's side mirrors: logo first, toward the centre. */
+	.track-title-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	/* Text hugs this person's outer edge; the logo is pushed to the card's opposite edge. */
 	.track-header--left {
-		align-items: flex-start;
+		justify-content: space-between;
 		text-align: left;
 	}
 
+	.track-header--left .track-title-text {
+		align-items: flex-start;
+	}
+
 	.track-header--right {
-		align-items: flex-end;
+		justify-content: space-between;
+		flex-direction: row-reverse;
 		text-align: right;
+	}
+
+	.track-header--right .track-title-text {
+		align-items: flex-end;
 	}
 
 	/* The end year sits at the very bottom of the card, on this person's own
@@ -523,18 +544,6 @@ const tracks = await Promise.all(
 	}
 
 	.track-footer--right {
-		justify-content: flex-end;
-	}
-
-	/* Name + optional logo on one line; the logo sits to the right of the name. */
-	.track-title-row {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.track-header--right .track-title-row {
 		justify-content: flex-end;
 	}
 
@@ -806,6 +815,10 @@ const tracks = await Promise.all(
 
 		.track-company {
 			padding: var(--pad-card-sm);
+		}
+
+		.track-header {
+			gap: 0.6rem;
 		}
 
 		.track-header h4 {

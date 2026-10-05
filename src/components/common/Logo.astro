@@ -1,11 +1,24 @@
 ---
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { LogoDef } from '../../data/logos';
+
+/** Intrinsic width/height of a PNG under /public (IHDR chunk), or undefined if unreadable. */
+function pngRatio(src: string): number | undefined {
+	try {
+		const buf = readFileSync(join(process.cwd(), 'public', src));
+		return buf.readUInt32BE(16) / buf.readUInt32BE(20);
+	} catch {
+		return undefined;
+	}
+}
 
 /**
  * The single renderer for a registry logo (data/logos.ts), used everywhere a
  * logo is shown. The registry definition says what the artwork needs (backing
  * plate); the `variant` says where it is shown and so how it is sized:
- *   - 'header':  beside a company name in a company box header (fixed height);
+ *   - 'header':  beside the year + company name block in a company box header
+ *     (stretches to that block's height, never below logo.headerHeight);
  *   - 'preview': small badge beside a project name on the Timeline (fixed width);
  *   - 'detail':  beside the title in the project modal (fixed width).
  * Purely presentational and noninteractive. `data-partner-logo` carries the
@@ -19,13 +32,16 @@ interface Props {
 const { logo, variant } = Astro.props;
 
 const size = {
-	header: `height: ${logo.headerHeight ?? 26}px;`,
+	header: 'position: absolute; inset: 0; width: 100%; height: 100%;',
 	preview: `width: ${logo.previewWidth ?? 80}px;`,
 	detail: `width: ${logo.detailWidth ?? 130}px;`,
 }[variant];
 ---
 
-<span class:list={['logo', `logo--${variant}`, logo.plate && `logo--${logo.plate}`]}>
+<span
+	class:list={['logo', `logo--${variant}`, logo.plate && `logo--${logo.plate}`]}
+	style={variant === 'header' ? `min-height: ${logo.headerHeight ?? 26}px; aspect-ratio: ${pngRatio(logo.src) ?? 3};` : undefined}
+>
 	<img src={logo.src} alt="" aria-hidden="true" data-partner-logo={logo.id} style={size} />
 </span>
 
@@ -44,6 +60,35 @@ const size = {
 		height: auto;
 		max-width: 100%;
 		object-fit: contain;
+	}
+
+	/* Header logos stretch to the full height of the year + name block beside them. */
+	.logo--header {
+		align-self: stretch;
+	}
+
+	/* The wrapper's aspect-ratio sets its width from the stretched height; the image just fills it, adding nothing to the header's own height. */
+	.logo--header {
+		position: relative;
+	}
+
+	.logo--header img {
+		max-width: none;
+		width: 100%;
+		height: 100%;
+	}
+
+	/* Plate padding is a fixed band inside the stretched box (not extra size on top of it). */
+	.logo--header.logo--light,
+	.logo--header.logo--black {
+		padding: 0;
+	}
+
+	.logo--header.logo--light img,
+	.logo--header.logo--black img {
+		inset: 3px 6px !important;
+		width: calc(100% - 12px) !important;
+		height: calc(100% - 6px) !important;
 	}
 
 	.logo--preview {

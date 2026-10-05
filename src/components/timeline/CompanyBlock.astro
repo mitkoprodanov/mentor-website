@@ -108,11 +108,11 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		   sits centered; one-sided leaves align to that person's column). */
 	}
 	<div class:list={['company-header', `company-header--${endSide ?? 'center'}`]}>
-		{endSide && <span class="company-year">{end}</span>}
-		<div class="company-title-row">
+		<div class="company-title-text">
+			{endSide && <span class="company-year">{end}</span>}
 			<h3 class:list={{ emphasized }}>{company.name}</h3>
-			{companyLogo && <Logo logo={companyLogo} variant="header" />}
 		</div>
+		{companyLogo && <Logo logo={companyLogo} variant="header" />}
 	</div>
 	<div class="company-projects">
 		{company.projects.map((project, i) => <ProjectRow project={project} emphasized={emphasized} dateRange={company.dateRange} index={i} />)}
@@ -250,8 +250,9 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 	   Ádám. See the startSide/endSide logic above. */
 	.company-header {
 		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
+		flex-direction: row;
+		align-items: stretch;
+		gap: 1.5rem;
 		padding: 0.25rem 0 1.5rem;
 	}
 
@@ -262,19 +263,42 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		padding: 1.5rem 0 0.25rem;
 	}
 
+	/* Year + name stay glued as one block; the logo sits beside it, spanning
+	   the block's full height. Ádám's side mirrors (logo first, toward centre). */
+	.company-title-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		justify-content: center;
+	}
+
 	.company-header--center {
-		align-items: center;
+		justify-content: center;
 		text-align: center;
 	}
 
+	.company-header--center .company-title-text {
+		align-items: center;
+	}
+
 	.company-header--left {
-		align-items: flex-start;
+		justify-content: flex-start;
 		text-align: left;
 	}
 
+	.company-header--left .company-title-text {
+		align-items: flex-start;
+	}
+
 	.company-header--right {
-		align-items: flex-end;
+		/* row-reverse flips the main axis, so flex-start is the right edge. */
+		justify-content: flex-start;
+		flex-direction: row-reverse;
 		text-align: right;
+	}
+
+	.company-header--right .company-title-text {
+		align-items: flex-end;
 	}
 
 	.company-footer--center {
@@ -294,22 +318,6 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		font-variant-numeric: tabular-nums;
 		letter-spacing: 0.05em;
 		color: var(--fg-muted);
-	}
-
-	/* Name + optional logo on one line; the logo sits to the right of the name. */
-	.company-title-row {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.6rem;
-	}
-
-	.company-header--center .company-title-row {
-		justify-content: center;
-	}
-
-	.company-header--right .company-title-row {
-		justify-content: flex-end;
 	}
 
 	.company-header h3 {
@@ -348,6 +356,7 @@ const endSide = leftLeaves && rightLeaves ? 'center' : leftLeaves ? 'left' : rig
 		}
 
 		.company-header {
+			gap: 0.75rem;
 			padding: 0.15rem 0 1rem;
 		}
 
