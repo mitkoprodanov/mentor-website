@@ -102,21 +102,23 @@ The Privacy tab follows the site's ordinary button behavior:
 - clicking the tab again while pinned closes it;
 - touch devices open directly into the pinned state.
 
-A pinned bar also closes on outside click, `Escape`, or the explicit minimize control.
+A pinned bar also closes on outside click, `Escape`, or the explicit minimize control. The minimize control exists **only while the bar is pinned**; preview-open bars do not show it.
 
 Selecting External media or Analytics does not close the bar, because the visitor may want to change both permissions. Clicking inside the bar must not accidentally dismiss it.
 
 ### Privacy bar layout and choices
 
-When opening, the compact Privacy tab rapidly expands/reveals to the right into the bottom bar. The transition should feel fast and direct, similar to the Skills UI, with the tab/border visually acting as the origin of the bar rather than the bar simply fading in.
+When opening and closing, the Privacy bar should visibly originate from the bottom-left Privacy tab and scale/reveal primarily **horizontally to the right**. The transition should feel fast and direct, similar to the Skills UI. Reveal the contents once there is enough room for them; do not animate the bar to the full viewport width merely for effect. On desktop, the open bar should stop at the width required by its contents plus normal spacing.
 
 Keep the bar in this order:
 
-1. privacy choices;
-2. **Details**;
-3. a narrow full-height **minimize** button at the far right using a `<` icon rather than an `X`.
+1. the Privacy tab;
+2. the short framing sentence;
+3. privacy choices;
+4. **Details**;
+5. when pinned only, a narrow full-height **minimize** button at the far right using a `<` icon rather than an `X`.
 
-The minimize control should read as collapsing the bar, occupy the full bar height, and be only as wide as necessary.
+The minimize control should read as collapsing the pinned bar, occupy the full bar height, and be only as wide as necessary. It is hidden in preview mode.
 
 The choices are:
 
@@ -306,10 +308,11 @@ Both hosts must render the same Privacy state and behavior. Modal/project/filter
 - Disabling the final enabled optional service returns to No optional services.
 - Analytics without External media is valid; provider media remains unloaded and media-related behavior/playback telemetry is therefore unavailable.
 - Selecting External media or Analytics does not automatically close a pinned bar.
-- The bar opens with a fast rightward expansion/reveal from the bottom-left Privacy tab, similar in pace to Skills.
-- The choices come first; Details follows on the right.
+- The bar opens and closes with a fast horizontal scale/reveal originating from the bottom-left Privacy tab, similar in pace to Skills.
+- On desktop, the bar grows only as wide as needed for its contents; it does not expand to the full viewport width for animation.
+- The visual order is Privacy tab → framing sentence → choices → Details → minimize when pinned.
 - External media and Analytics share one rounded outer border with a straight divider and remain independently selectable.
-- The far-right close affordance is a narrow full-height `<` minimize button, not an `X`.
+- The far-right close affordance is a narrow full-height `<` minimize button, shown only while pinned and never in preview mode.
 - The selected states are visually obvious and keyboard accessible.
 - Details are available without being required to understand the basic choice.
 - Privacy choices can be changed or withdrawn at any time.
