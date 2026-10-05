@@ -24,7 +24,8 @@ function init(): void {
 	const note = $('#privacy-note');
 	const details = $('#privacy-details');
 	const detailsBtn = $<HTMLButtonElement>('[data-privacy-action="details"]');
-	if (!root || !toggle || !bar || !note || !details || !detailsBtn) return;
+	const closeBtn = $<HTMLButtonElement>('[data-privacy-action="close"]');
+	if (!root || !toggle || !bar || !note || !details || !detailsBtn || !closeBtn) return;
 	const choiceBtn = (id: ChoiceId): HTMLButtonElement | null => bar.querySelector<HTMLButtonElement>(`[data-privacy-choice="${id}"]`);
 	const ids: ChoiceId[] = ['none', 'media', 'analytics'];
 
@@ -74,9 +75,12 @@ function init(): void {
 		state.setUnanswered(isUnanswered(m.consent, a.consent, !locked));
 
 		toggle.hidden = false;
-		bar.hidden = !state.visible;
+		bar.dataset.open = String(state.visible);
+		// Minimize exists only while pinned. While closing it is left as-is so the bar keeps its
+		// width for the close transition; every open re-evaluates it here.
+		if (state.visible) closeBtn.hidden = !state.isPinned;
 		toggle.setAttribute('aria-expanded', String(state.visible));
-		toggle.dataset.attention = String(isUnanswered(m.consent, a.consent, !locked) && !state.visible);
+		toggle.dataset.pinned = String(state.isPinned);
 
 		const pressed: Record<ChoiceId, boolean> = { none: isNone(perms), media: perms.media, analytics: perms.analytics };
 		for (const id of ids) choiceBtn(id)?.setAttribute('aria-pressed', String(pressed[id]));

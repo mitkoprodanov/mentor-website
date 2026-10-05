@@ -1,49 +1,56 @@
 ---
-// Compact Privacy control (docs/privacy.md): a fixed lock button (bottom-left) and a thin floating
-// bar with three choices over TWO independent permissions (External media, Analytics).
+// Compact Privacy control (docs/privacy.md): a corner-attached lock tab (bottom-left) and a thin
+// bottom bar that expands rightward from it, with three choices over TWO independent permissions
+// (External media, Analytics).
 // ONE instance of this markup exists. Normally it lives in <body>; while a native modal <dialog> is
 // open (everything outside it is inert) privacyConsent.client.ts moves the same root into that
 // dialog, so state and logic are shared and nothing is duplicated. Behaviour: privacyConsent.client.ts.
 ---
 
 <div class="privacy-root" id="privacy-root">
-	<button type="button" class="privacy-toggle" id="privacy-toggle" aria-label="Privacy" aria-expanded="false" aria-controls="privacy-bar" hidden>
+	<button type="button" class="privacy-toggle btn-sheen" id="privacy-toggle" aria-label="Privacy" aria-expanded="false" aria-controls="privacy-bar" hidden>
 		<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
 			<rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"></rect>
 			<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
 		</svg>
 	</button>
 
-	<section class="privacy-bar" id="privacy-bar" role="group" aria-label="Privacy choices" hidden>
-		<p class="privacy-bar__intro">Choose whether to load external media and allow anonymous usage analytics.</p>
+	<section class="privacy-bar" id="privacy-bar" role="group" aria-label="Privacy choices">
+		<div class="privacy-bar__main">
+			<p class="privacy-bar__intro">Privacy settings for optional site services.</p>
+			<div class="privacy-bar__choices">
+				<button type="button" class="privacy-choice privacy-choice--none" data-privacy-choice="none" aria-pressed="false">
+					<span class="privacy-choice__mark" aria-hidden="true"></span>
+					<span class="privacy-choice__text"><strong>No optional services</strong><small>Maximum privacy</small></span>
+				</button>
+				<div class="privacy-group" role="group" aria-label="Optional services">
+					<button type="button" class="privacy-choice privacy-choice--half" data-privacy-choice="media" aria-pressed="false">
+						<span class="privacy-choice__mark" aria-hidden="true"></span>
+						<span class="privacy-choice__text"><strong>External media</strong><small>Essential visuals</small></span>
+					</button>
+					<button type="button" class="privacy-choice privacy-choice--half" data-privacy-choice="analytics" aria-pressed="false">
+						<span class="privacy-choice__mark" aria-hidden="true"></span>
+						<span class="privacy-choice__text"><strong>Anonymous analytics</strong><small>Site improvement</small></span>
+					</button>
+				</div>
+			</div>
 
-		<div class="privacy-bar__choices">
-			<button type="button" class="privacy-choice" data-privacy-choice="none" aria-pressed="false">
-				<span class="privacy-choice__mark" aria-hidden="true"></span>
-				<span class="privacy-choice__text"><strong>No optional services</strong><small>Maximum privacy</small></span>
-			</button>
-			<button type="button" class="privacy-choice" data-privacy-choice="media" aria-pressed="false">
-				<span class="privacy-choice__mark" aria-hidden="true"></span>
-				<span class="privacy-choice__text"><strong>External media</strong><small>Essential visuals</small></span>
-			</button>
-			<button type="button" class="privacy-choice" data-privacy-choice="analytics" aria-pressed="false">
-				<span class="privacy-choice__mark" aria-hidden="true"></span>
-				<span class="privacy-choice__text"><strong>Analytics</strong><small>Site improvement</small></span>
-			</button>
-		</div>
-
-		<div class="privacy-bar__tools">
 			<button type="button" class="privacy-link" data-privacy-action="details" aria-expanded="false" aria-controls="privacy-details">Details</button>
-			<button type="button" class="privacy-bar__close" data-privacy-action="close" aria-label="Close Privacy">×</button>
+
+			<p class="privacy-bar__note" id="privacy-note" role="status" hidden></p>
+
+			<div class="privacy-details" id="privacy-details" hidden>
+				<p><strong>External media</strong><br />Loads embedded content from YouTube, Facebook and LinkedIn. Your browser connects to these providers when their content is displayed.</p>
+				<p><strong>Analytics</strong><br />Collects anonymous usage data to understand how the site is used and improve it. No persistent visitor ID, cross-site tracking or session replay. Raw analytics data is retained for 90 days.</p>
+				<p><strong>Your choices</strong><br />Your privacy choices are stored in this browser and can be changed at any time using Privacy.</p>
+			</div>
 		</div>
 
-		<p class="privacy-bar__note" id="privacy-note" role="status" hidden></p>
-
-		<div class="privacy-details" id="privacy-details" hidden>
-			<p><strong>External media</strong><br />Loads embedded content from YouTube, Facebook and LinkedIn. Your browser connects to these providers when their content is displayed.</p>
-			<p><strong>Analytics</strong><br />Collects anonymous usage data to understand how the site is used and improve it. No persistent visitor ID, cross-site tracking or session replay. Raw analytics data is retained for 90 days.</p>
-			<p><strong>Your choices</strong><br />Your privacy choices are stored in this browser and can be changed at any time using Privacy.</p>
-		</div>
+		<button type="button" class="privacy-bar__close" data-privacy-action="close" aria-label="Minimize Privacy" hidden>
+			<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
+				<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+			</svg>
+		</button>
 	</section>
 </div>
 
@@ -52,13 +59,13 @@
 	   uses opacity/filter/transform on an ancestor, so modal blur can never reach it. */
 	.privacy-root {
 		display: contents;
-		--privacy-edge: max(0.75rem, env(safe-area-inset-bottom));
-		--privacy-edge-l: max(0.75rem, env(safe-area-inset-left));
-		--privacy-edge-r: max(0.75rem, env(safe-area-inset-right));
+		--privacy-tab-w: calc(2.5rem + env(safe-area-inset-left));
+		--privacy-tab-h: calc(2.25rem + env(safe-area-inset-bottom));
+		--privacy-edge-r: env(safe-area-inset-right);
 	}
 
 	.privacy-toggle[hidden],
-	.privacy-bar[hidden],
+	.privacy-bar__close[hidden],
 	.privacy-details[hidden],
 	.privacy-bar__note[hidden] {
 		display: none;
@@ -68,85 +75,115 @@
 	.privacy-bar {
 		position: fixed;
 		z-index: 1000;
-		bottom: max(0.75rem, env(safe-area-inset-bottom));
+		bottom: 0;
+		left: 0;
 	}
 
+	/* Corner-attached tab: flush with the left/bottom viewport edges, only the exposed top-right
+	   corner is rounded. Sits above the bar so it reads as the bar's origin. */
 	.privacy-toggle {
-		left: max(0.75rem, env(safe-area-inset-left));
+		z-index: 1001;
 		display: grid;
 		place-items: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		padding: 0;
-		border-radius: 50%;
+		width: var(--privacy-tab-w);
+		height: var(--privacy-tab-h);
+		padding: 0 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
 		border: 1px solid var(--mentor-border);
+		border-width: 1px 1px 0 0;
+		border-radius: 0 12px 0 0;
 		background: color-mix(in oklab, var(--bg-alt) 96%, transparent);
 		color: var(--fg-muted);
-		box-shadow: 0 4px 14px var(--color-shadow-deep);
+		box-shadow: 0 -2px 12px var(--color-shadow-deep);
 		cursor: pointer;
 		overflow: hidden;
+		--sheen-color: var(--mentor);
+		--sheen-strength: 0.35;
+		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 	}
 
 	.privacy-toggle:hover,
-	.privacy-toggle:focus-visible,
-	.privacy-toggle[aria-expanded='true'] {
+	.privacy-toggle:focus-visible {
 		color: var(--fg);
 		border-color: var(--mentor);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--mentor) 28%, transparent), 0 4px 14px var(--color-shadow-deep);
+		box-shadow: 0 0 0 3px color-mix(in oklab, var(--mentor) 28%, transparent), 0 -2px 12px var(--color-shadow-deep);
 	}
 
-	/* Subtle periodic glint while unanswered; reduced-motion users get none. */
-	.privacy-toggle[data-attention='true']::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(110deg, transparent 35%, color-mix(in oklab, var(--mentor) 55%, white) 50%, transparent 65%);
-		transform: translateX(-120%);
-		animation: privacy-glint 6s ease-in-out 2s infinite;
-		pointer-events: none;
+	.privacy-toggle:focus-visible {
+		outline: 2px solid var(--mentor);
+		outline-offset: -4px;
 	}
 
-	@keyframes privacy-glint {
-		0%, 70% { transform: translateX(-120%); }
-		100% { transform: translateX(120%); }
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.privacy-toggle[data-attention='true']::after {
-			animation: none;
-			display: none;
-		}
+	/* Pinned: filled, unmistakable (distinct from hover/preview). */
+	.privacy-toggle[data-pinned='true'] {
+		color: var(--bg);
+		background: var(--mentor);
+		border-color: var(--mentor);
+		box-shadow: 0 0 16px 1px color-mix(in oklab, var(--mentor) 55%, transparent);
 	}
 
 	.privacy-bar {
-		left: calc(var(--privacy-edge-l) + 2.75rem);
-		right: var(--privacy-edge-r);
+		/* Content-driven width: the bar stops where its contents end (capped to the viewport). */
+		right: auto;
+		width: max-content;
+		max-width: 100vw;
+		display: flex;
+		align-items: stretch;
+		min-height: var(--privacy-tab-h);
+		max-height: calc(100dvh - 2rem);
+		padding-right: var(--privacy-edge-r);
+		background: color-mix(in oklab, var(--bg-alt) 97%, transparent);
+		border: 1px solid var(--mentor-border);
+		border-width: 1px 1px 0 0;
+		border-radius: 0 12px 0 0;
+		box-shadow: 0 -6px 26px var(--color-shadow-deep);
+		color: var(--fg);
+		font-size: 0.78rem;
+		line-height: 1.35;
+		/* Closed: clipped down to the tab's footprint, so the tab's border is the origin. Opening and
+		   closing both run the same quick horizontal reveal; `visibility` flips at the end of a close so
+		   the closed bar is neither focusable nor announced. */
+		clip-path: inset(-30px calc(100% - var(--privacy-tab-w)) 0 0);
+		visibility: hidden;
+		transition: clip-path 0.16s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.16s;
+	}
+
+	.privacy-bar[data-open='true'] {
+		clip-path: inset(-30px -30px 0 0);
+		visibility: visible;
+		transition: clip-path 0.16s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.privacy-bar,
+		.privacy-bar[data-open='true'] {
+			transition: none;
+		}
+	}
+
+	.privacy-bar__main {
+		flex: 1 1 auto;
+		min-width: 0;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.4rem 0.9rem;
-		padding: 0.45rem 0.7rem;
-		max-height: calc(100dvh - 2rem);
+		padding: 0.45rem 0.7rem 0.45rem calc(var(--privacy-tab-w) + 0.75rem);
+		padding-bottom: calc(0.45rem + env(safe-area-inset-bottom));
 		overflow-y: auto;
-		background: color-mix(in oklab, var(--bg-alt) 97%, transparent);
-		border: 1px solid var(--mentor-border);
-		border-radius: 12px;
-		box-shadow: 0 8px 26px var(--color-shadow-deep);
-		color: var(--fg);
-		font-size: 0.78rem;
-		line-height: 1.35;
-	}
-
-	.privacy-bar__intro {
-		margin: 0;
-		flex: 1 1 14rem;
-		color: var(--fg-muted);
 	}
 
 	.privacy-bar__choices {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.4rem;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+
+	.privacy-bar__intro {
+		margin: 0;
+		flex: 0 1 auto;
+		min-width: 0;
+		color: var(--fg-muted);
 	}
 
 	.privacy-choice {
@@ -155,12 +192,30 @@
 		gap: 0.45rem;
 		font: inherit;
 		padding: 0.3rem 0.65rem 0.3rem 0.5rem;
-		border-radius: 10px;
 		border: 1px solid var(--mentor-border);
+		border-radius: 10px;
 		background: transparent;
 		color: var(--fg);
 		text-align: left;
 		cursor: pointer;
+	}
+
+	/* External media + Analytics: one shared rounded outer border, one straight divider,
+	   two independently selectable halves. */
+	.privacy-group {
+		display: flex;
+		border: 1px solid var(--mentor-border);
+		border-radius: 10px;
+		overflow: hidden;
+	}
+
+	.privacy-choice--half {
+		border: 0;
+		border-radius: 0;
+	}
+
+	.privacy-choice--half + .privacy-choice--half {
+		border-left: 1px solid var(--mentor-border);
 	}
 
 	.privacy-choice__text {
@@ -185,14 +240,17 @@
 		line-height: 1;
 	}
 
-	.privacy-choice[data-privacy-choice='none'] .privacy-choice__mark {
+	.privacy-choice--none .privacy-choice__mark {
 		border-radius: 50%;
 	}
 
 	.privacy-choice[aria-pressed='true'] {
 		background: var(--mentor-bg);
-		border-color: var(--mentor);
 		box-shadow: inset 0 0 0 1px var(--mentor);
+	}
+
+	.privacy-choice--none[aria-pressed='true'] {
+		border-color: var(--mentor);
 	}
 
 	.privacy-choice[aria-pressed='true'] .privacy-choice__mark {
@@ -205,24 +263,25 @@
 		content: '✓';
 	}
 
-	.privacy-choice:hover,
+	.privacy-choice:hover:not(:disabled) {
+		background: color-mix(in oklab, var(--mentor) 14%, transparent);
+	}
+
 	.privacy-choice:focus-visible,
 	.privacy-link:focus-visible,
 	.privacy-bar__close:focus-visible {
 		outline: 2px solid var(--mentor);
+		outline-offset: -2px;
+	}
+
+	.privacy-choice--none:focus-visible,
+	.privacy-link:focus-visible {
 		outline-offset: 2px;
 	}
 
 	.privacy-choice:disabled {
 		opacity: 0.65;
 		cursor: default;
-	}
-
-	.privacy-bar__tools {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		margin-left: auto;
 	}
 
 	.privacy-link {
@@ -235,20 +294,32 @@
 		cursor: pointer;
 	}
 
+	/* Narrow, full-height minimize control at the far right. */
 	.privacy-bar__close {
-		font: inherit;
-		font-size: 1.2rem;
-		line-height: 1;
-		background: none;
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		padding: 0;
 		border: 0;
-		padding: 0 0.3rem;
+		border-left: 1px solid var(--mentor-border);
+		background: none;
 		color: var(--fg-muted);
 		cursor: pointer;
+		transition: color 0.15s ease, background 0.15s ease;
 	}
 
+	.privacy-bar__close:hover {
+		color: var(--fg);
+		background: color-mix(in oklab, var(--mentor) 14%, transparent);
+	}
+
+	/* Full-row blocks that must not widen the content-sized bar: zero intrinsic width, full row once laid out. */
 	.privacy-bar__note,
 	.privacy-details {
-		flex: 1 1 100%;
+		flex: 1 1 0;
+		width: 0;
+		min-width: 100%;
 		margin: 0;
 	}
 
@@ -262,6 +333,9 @@
 
 	@media (max-width: 600px) {
 		.privacy-bar {
+			width: 100vw;
+		}
+		.privacy-bar__main {
 			gap: 0.3rem 0.6rem;
 		}
 		.privacy-bar__intro {
@@ -270,8 +344,14 @@
 		.privacy-bar__choices {
 			flex: 1 1 100%;
 		}
-		.privacy-choice {
-			flex: 1 1 8rem;
+		.privacy-choice--none {
+			flex: 1 1 100%;
+		}
+		.privacy-group {
+			flex: 1 1 100%;
+		}
+		.privacy-choice--half {
+			flex: 1 1 50%;
 		}
 	}
 </style>

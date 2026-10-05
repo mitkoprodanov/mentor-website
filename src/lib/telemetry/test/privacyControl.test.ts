@@ -195,7 +195,7 @@ test('selecting a permission never closes a pinned bar', () => {
 test('privacy UI markup: three choices, exact copy, Details with the documented minimum text', () => {
 	const markup = read('src/components/PrivacyConsent.astro').split('<style>')[0];
 	for (const t of ['No optional services', 'Maximum privacy', 'External media', 'Essential visuals', 'Analytics', 'Site improvement',
-		'Choose whether to load external media and allow anonymous usage analytics.', 'Details',
+		'Privacy settings for optional site services.', 'Details',
 		'Loads embedded content from YouTube, Facebook and LinkedIn. Your browser connects to these providers when their content is displayed.',
 		'Collects anonymous usage data to understand how the site is used and improve it. No persistent visitor ID, cross-site tracking or session replay. Raw analytics data is retained for 90 days.',
 		'Your privacy choices are stored in this browser and can be changed at any time using Privacy.']) {
@@ -204,7 +204,17 @@ test('privacy UI markup: three choices, exact copy, Details with the documented 
 	assert.equal((markup.match(/data-privacy-choice="/g) ?? []).length, 3);
 	assert.equal((markup.match(/aria-pressed="false"/g) ?? []).length, 3);
 	assert.match(markup, /id="privacy-toggle"[^>]*aria-label="Privacy"/);
-	assert.ok(markup.includes('aria-label="Close Privacy"'));
+	assert.ok(markup.includes('aria-label="Minimize Privacy"'));
+	assert.ok(!markup.includes('×')); // minimize is a < chevron, not an X
+	const at = (t: string): number => markup.indexOf(t);
+	// tab → sentence → controls → Details → minimize
+	assert.ok(at('id="privacy-toggle"') < at('Privacy settings for optional site services.'));
+	assert.ok(at('Privacy settings for optional site services.') < at('data-privacy-choice="none"'));
+	assert.ok(at('data-privacy-choice="analytics"') < at('data-privacy-action="details"') && at('data-privacy-action="details"') < at('data-privacy-action="close"'));
+	// minimize exists only while pinned: hidden by default, shown by the script only when pinned
+	assert.match(markup, /data-privacy-action="close"[^>]*\shidden>/);
+	assert.match(read('src/scripts/privacyConsent.client.ts'), /closeBtn\.hidden = !state\.isPinned/);
+	assert.match(markup, /privacy-group[\s\S]*data-privacy-choice="media"[\s\S]*data-privacy-choice="analytics"/);
 	assert.ok(!/Worker|D1|Cloudflare|utm_|session ID/i.test(markup));
 	assert.ok(read('src/components/PrivacyConsent.astro').includes("content: '✓'")); // selected is not colour-only
 });
@@ -219,7 +229,7 @@ test('privacy UI stacking: viewport-fixed, above backdrops, no blur/transform an
 	const root = css.slice(start, css.indexOf('}', start));
 	assert.ok(!/transform|filter|opacity|isolation|contain/.test(root));
 	for (const inset of ['safe-area-inset-bottom', 'safe-area-inset-left', 'safe-area-inset-right']) assert.ok(css.includes(inset), inset);
-	assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,200}animation: none/);
+	assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,200}transition: none/);
 	// every other layer on the page (filter/person backdrops, modal chrome, navbar, rotate overlay) is below it
 	for (const f of ['src/components/ScrollyRegion.astro', 'src/components/NavBar.astro', 'src/components/RotateOverlay.astro']) {
 		for (const m of read(f).matchAll(/z-index:\s*(\d+)/g)) assert.ok(Number(m[1]) < 1000, `${f} z-index ${m[1]}`);
