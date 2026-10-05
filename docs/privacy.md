@@ -38,24 +38,38 @@ Privacy must remain reachable without becoming a persistent banner.
 
 ### Resting state
 
-- Use a **small lock-icon button** in the top-right corner.
-- Visually align it with the existing NavBar corner when the NavBar is present, but do **not** make its visibility depend on the NavBar.
-- Host it in the top-level viewport/UI layer so it stays visible above views that hide or replace the NavBar, including Project Details and Skill Filtered View.
-- It must remain above ordinary modal content and be independently interactive.
-- Once the visitor has made a privacy choice, the normal resting state is the icon only.
+- Use a **small lock-icon Privacy button** fixed to the **bottom-left corner of the viewport**.
+- Keep it in the top-level viewport/UI layer, independent of the NavBar and document flow.
+- It must remain visible, sharp and interactive above modal backdrops and blurred page layers, including Project Details and Skill Filtered View.
+- Respect viewport safe-area insets and normal edge spacing.
+- Once the visitor has made a privacy choice, the normal resting state is the lock button only.
 
 ### Attention while unanswered
 
 While consent is unanswered:
 
-- show a **thin privacy bar** at the top of the page, directly below the NavBar when present; when the NavBar is absent, anchor it to the top safe UI edge;
+- show the **thin Privacy bar floating along the bottom of the viewport**;
 - keep it visually lightweight rather than using a modal or blocking banner;
+- keep both the bar and Privacy button above modal backdrops and blurred page layers;
 - the lock button may have a subtle periodic **idle glint** to indicate that an action is available;
 - respect `prefers-reduced-motion`: no repeating glint/attention animation when reduced motion is requested.
 
 The unanswered bar is informational and selectable. It must never block use of the site.
 
 ## 3. Interaction behavior
+
+### Privacy bar placement
+
+The Privacy bar is a **thin floating bottom bar anchored to the viewport**, not to the NavBar, document flow, current modal or page section.
+
+Requirements:
+
+- it stays at the bottom of the visible viewport while scrolling;
+- it remains above modal backdrops and blurred background layers;
+- opening or closing Project Details, Skill Filtered View or another modal does not close, re-parent, blur or disable the Privacy UI;
+- it must not inherit modal blur, opacity, pointer blocking or stacking context;
+- narrow/mobile layouts may wrap or compact the contents, but the bar should remain thin and non-blocking;
+- respect bottom/left/right safe-area insets.
 
 ### Hover / focus preview
 
@@ -78,7 +92,7 @@ A pinned bar closes when:
 
 - the visitor clicks/taps outside it;
 - the visitor presses `Escape`;
-- an explicit close affordance is used, if one is present.
+- the Privacy button is used again as an explicit close action, or another explicit close affordance is used.
 
 Selecting External media or Analytics does not automatically close the bar, because the visitor may want to change both permissions.
 
@@ -247,15 +261,17 @@ Primary implementation locations:
 - telemetry lifecycle/client files documented in [telemetry.md](telemetry.md)
 - `src/scripts/projectModal.client.ts` — load/revoke external embeds
 
-The privacy control should be architected as **top-level site UI**, not as modal-owned UI. Modal/project/filter views may coexist beneath it, but should not need their own privacy copy or consent implementation.
+The privacy control must be architected as **top-level viewport UI**, outside page/modal containers and outside any ancestor that receives modal blur, transforms, opacity or pointer blocking.
+
+The Privacy button and bar share the same top-level stacking layer and remain independently interactive above Project Details, Skill Filtered View, modal backdrops and other ordinary site UI. Modal/project/filter views must not own, duplicate, re-parent or visually suppress the Privacy UI.
 
 ## 9. Acceptance criteria for the compact redesign
 
 - Fresh visitor: no analytics or provider requests occur before consent.
 - Fresh visitor: both optional permissions are effectively disabled without treating silence as refusal.
 - Fresh visitor: thin reminder bar is visible but non-blocking.
-- Settled visitor: only the small top-right lock control remains at rest.
-- Lock remains reachable when the NavBar disappears.
+- Settled visitor: only the small bottom-left lock control remains at rest.
+- Privacy button and bar remain reachable independently of the NavBar.
 - Hover/focus previews the bar without changing state.
 - Click/tap pins the bar; pointer leaving no longer closes it.
 - Outside click, `Escape`, or explicit close dismisses it without changing consent.
@@ -272,5 +288,11 @@ The privacy control should be architected as **top-level site UI**, not as modal
 - Details are available without being required to understand the basic choice.
 - Privacy choices can be changed or withdrawn at any time.
 - Reduced-motion users do not receive repeating glint animation.
-- The control remains above Project Details and Skill Filtered View.
+- The Privacy button is fixed to the bottom-left viewport corner.
+- The Privacy bar opens as a thin floating bar along the bottom of the viewport.
+- Both remain visible, sharp and interactive above Project Details, Skill Filtered View, modal backdrops and blurred page layers.
+- Modal blur never affects the Privacy button or Privacy bar.
+- Scrolling does not move the Privacy UI with document content.
+- Opening or closing a modal does not close or reset the Privacy UI.
+- Mobile safe-area insets are respected.
 - Existing stored preferences are never broadened automatically during migration.
