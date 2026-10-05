@@ -1,7 +1,8 @@
 ---
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { LogoDef } from '../../data/logos';
+import type { LogoDef, LogoTransition } from '../../data/logos';
+import LogoPlate from './LogoPlate.astro';
 
 /** Intrinsic width/height of a PNG under /public (IHDR chunk), or undefined if unreadable. */
 function pngRatio(src: string): number | undefined {
@@ -27,9 +28,11 @@ function pngRatio(src: string): number | undefined {
 interface Props {
 	logo: LogoDef;
 	variant: 'header' | 'preview' | 'detail';
+	/** Background-to-logo transition band (see LogoPlate.astro). Default: DEFAULT_LOGO_TRANSITION. */
+	transition?: LogoTransition;
 }
 
-const { logo, variant } = Astro.props;
+const { logo, variant, transition } = Astro.props;
 
 const size = {
 	header: 'position: absolute; inset: 0; width: 100%; height: 100%;',
@@ -38,12 +41,16 @@ const size = {
 }[variant];
 ---
 
-<span
-	class:list={['logo', `logo--${variant}`, logo.plate && `logo--${logo.plate}`]}
+<LogoPlate
+	treatment={transition}
+	layer={logo.plate === 'light' ? '#f3eee4' : '#000'}
+	stretch={variant === 'header'}
 	style={variant === 'header' ? `min-height: ${logo.headerHeight ?? 26}px; aspect-ratio: ${pngRatio(logo.src) ?? 3};` : undefined}
 >
-	<img src={logo.src} alt="" aria-hidden="true" data-partner-logo={logo.id} style={size} />
-</span>
+	<span class:list={['logo', `logo--${variant}`, logo.plate && `logo--${logo.plate}`]}>
+		<img src={logo.src} alt="" aria-hidden="true" data-partner-logo={logo.id} style={size} />
+	</span>
+</LogoPlate>
 
 <style>
 	.logo {
@@ -52,6 +59,8 @@ const size = {
 		flex-shrink: 0;
 		overflow: hidden;
 		line-height: 0;
+		/* Radius left inside LogoPlate's transition band. */
+		border-radius: var(--lp-inner-r, 0px);
 	}
 
 	.logo img {
@@ -62,14 +71,11 @@ const size = {
 		object-fit: contain;
 	}
 
-	/* Header logos stretch to the full height of the year + name block beside them. */
+	/* Header logos fill the LogoPlate frame, which stretches to the full height of the year + name block beside them. */
+	/* The frame's aspect-ratio sets its width from the stretched height; the logo just fills inside the band, adding nothing to the header's own height. */
 	.logo--header {
-		align-self: stretch;
-	}
-
-	/* The wrapper's aspect-ratio sets its width from the stretched height; the image just fills it, adding nothing to the header's own height. */
-	.logo--header {
-		position: relative;
+		position: absolute;
+		inset: var(--lp-total);
 	}
 
 	.logo--header img {

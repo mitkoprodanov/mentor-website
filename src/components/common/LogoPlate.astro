@@ -1,0 +1,153 @@
+---
+import { DEFAULT_LOGO_BAND_SCALE, DEFAULT_LOGO_TRANSITION, type LogoTransition } from '../../data/logos';
+
+/**
+ * Reusable frame that eases the dark site background into a logo's own
+ * rectangular background. The logo (and its plate) is slotted in untouched; the
+ * transition is a band of up to two layers *around* it — padding added outside
+ * the artwork, never an overlay on it — so it scales with any logo size. The
+ * layers are made of the logo's own background colour (`layer` prop: black for
+ * black-plate logos, the cream for light ones), so alpha rises from the page
+ * (outside) toward full logo colour (inside).
+ *
+ * A treatment is just a set of custom properties (below):
+ *   --a-* = outer layer, --b-* = inner layer; `t` thickness (px at scale 1),
+ *   `o`/`i` alpha at the outer/inner edge. Flat layers are simply `o` = `i`.
+ *   --m-t / --m-a = optional line between the layers: thickness and alpha.
+ *
+ * Treatments (default: DEFAULT_LOGO_TRANSITION in data/logos.ts; for quick
+ * comparison in the browser append `?logoPlate=<name>&logoScale=<n>` to the page URL):
+ *   none          no band (baseline)
+ *   single        one 3px layer at 50%
+ *   double        2px @ 33% outside + 2px @ 67% inside
+ *   double-wide   7px @ 33% outside + 2px @ 67% inside
+ *   gradient-full one 5px layer, 0% → 100% toward the logo
+ *   gradient-mid  one 5px layer, 25% → 75%
+ *   hybrid        3px fixed @ 33% outside + 4px gradient 50% → 100% inside
+ *  Additional ideas:
+ *   double-line   double, with a 1px line at 100% between the two layers
+ *   feather       one soft 8px layer, 0% → 100% (longest, gentlest fade)
+ *   halo          6px gradient 0% → 50%, sealed by a 1px 100% hairline at the logo
+ *   soft-double   two gradient layers: 4px 0% → 33%, then 3px 33% → 75%
+ *
+ * Props: `treatment` picks the variant; `stretch` makes the frame fill its
+ * parent's height (used by header logos, with `style` supplying aspect-ratio and
+ * min-height); everything else lives in the slot.
+ */
+interface Props {
+	treatment?: LogoTransition;
+	stretch?: boolean;
+	/** Multiplies every band width. Default: DEFAULT_LOGO_BAND_SCALE. */
+	scale?: number;
+	/** The logo's own background colour; the band layers are made of it. Default: the site background. */
+	layer?: string;
+	style?: string;
+}
+
+const { treatment = DEFAULT_LOGO_TRANSITION, stretch = false, scale = DEFAULT_LOGO_BAND_SCALE, layer, style } = Astro.props;
+const frameStyle = [`--lp-scale: ${scale}`, layer && `--lp-layer: ${layer}`, style].filter(Boolean).join('; ');
+---
+
+<span class:list={['logo-plate', stretch && 'logo-plate--stretch']} data-logo-plate={treatment} style={frameStyle}>
+	<span class="lp-layer lp-layer--a"></span>
+	<span class="lp-layer lp-layer--line"></span>
+	<span class="lp-layer lp-layer--b"></span>
+	<slot />
+</span>
+
+<style is:global>
+	.logo-plate {
+		--lp-r: var(--r-badge, 6px);
+		/* Global width multiplier for every band (set via LogoPlate `scale`, DEFAULT_LOGO_BAND_SCALE, or ?logoScale=). */
+		--lp-scale: 1;
+		--a-px: calc(var(--a-t) * 1px * var(--lp-scale));
+		--b-px: calc(var(--b-t) * 1px * var(--lp-scale));
+		--m-px: calc(var(--m-t) * 1px * var(--lp-scale));
+		--lp-total: calc(var(--a-px) + var(--m-px) + var(--b-px));
+		/* Radius left for whatever sits inside the band. */
+		--lp-inner-r: max(0px, calc(var(--lp-r) - var(--lp-total)));
+
+		/* Defaults = `double`. */
+		--a-t: 2; --a-o: 33%; --a-i: 33%;
+		--b-t: 2; --b-o: 67%; --b-i: 67%;
+		/* Line between the layers: thickness (px at scale 1) and alpha. */
+		--m-t: 0; --m-a: 0%;
+
+		position: relative;
+		display: inline-flex;
+		flex-shrink: 0;
+		box-sizing: border-box;
+		padding: var(--lp-total);
+		border-radius: var(--lp-r);
+		line-height: 0;
+	}
+
+	.logo-plate--stretch {
+		align-self: stretch;
+		/* Content box carries aspect-ratio / min-height, so the band is added around the logo's own size rather than eating into it. */
+		box-sizing: content-box;
+	}
+
+	.logo-plate[data-logo-plate='none']          { --a-t: 0; --a-o: 0%; --a-i: 0%; --b-t: 0; --b-o: 0%; --b-i: 0%; }
+	.logo-plate[data-logo-plate='single']        { --a-t: 3; --a-o: 50%; --a-i: 50%; --b-t: 0; --b-o: 0%; --b-i: 0%; }
+	.logo-plate[data-logo-plate='double']        { --a-t: 2; --a-o: 33%; --a-i: 33%; --b-t: 2; --b-o: 67%; --b-i: 67%; }
+	.logo-plate[data-logo-plate='double-wide']   { --a-t: 7; --a-o: 33%; --a-i: 33%; --b-t: 2; --b-o: 67%; --b-i: 67%; }
+	.logo-plate[data-logo-plate='gradient-full'] { --a-t: 5; --a-o: 0%;  --a-i: 100%; --b-t: 0; --b-o: 0%; --b-i: 0%; }
+	.logo-plate[data-logo-plate='gradient-mid']  { --a-t: 5; --a-o: 25%; --a-i: 75%; --b-t: 0; --b-o: 0%; --b-i: 0%; }
+	.logo-plate[data-logo-plate='hybrid']        { --a-t: 3; --a-o: 33%; --a-i: 33%; --b-t: 4; --b-o: 50%; --b-i: 100%; }
+	.logo-plate[data-logo-plate='double-line']   { --a-t: 2; --a-o: 33%; --a-i: 33%; --b-t: 2; --b-o: 67%; --b-i: 67%; --m-t: 1; --m-a: 100%; }
+	.logo-plate[data-logo-plate='feather']       { --a-t: 8; --a-o: 0%;  --a-i: 100%; --b-t: 0; --b-o: 0%; --b-i: 0%; }
+	.logo-plate[data-logo-plate='halo']          { --a-t: 6; --a-o: 0%;  --a-i: 50%; --b-t: 1; --b-o: 100%; --b-i: 100%; }
+	.logo-plate[data-logo-plate='soft-double']   { --a-t: 4; --a-o: 0%;  --a-i: 33%; --b-t: 3; --b-o: 33%; --b-i: 75%; }
+	.logo-plate[data-logo-plate='test']          { --a-t: 6; --a-o: 0%;  --a-i: 25%; --b-t: 3; --b-o: 30%; --b-i: 70%; --m-t: 1; --m-a: 50%; }
+
+	/*
+	 * Each layer is a rounded-rectangle ring made of the logo's own background
+	 * colour (--lp-layer), alpha rising from --o outside to --i toward the logo:
+	 *   ::before  a flat ring (border) at alpha --o;
+	 *   ::after   the ramp (--i minus --o): a blurred outward shadow of the box inside
+	 *             the ring, which is strongest at the logo edge and fades outward,
+	 *             following the rounded corners.
+	 */
+	.logo-plate .lp-layer {
+		position: absolute;
+		pointer-events: none;
+		border-radius: max(0px, calc(var(--lp-r) - var(--off)));
+		--color: var(--lp-layer, var(--bg));
+	}
+
+	.logo-plate .lp-layer--a { --off: 0px;           --t: var(--a-px); --o: var(--a-o); --i: var(--a-i); inset: 0; }
+	.logo-plate .lp-layer--b { --off: calc(var(--a-px) + var(--m-px)); --t: var(--b-px); --o: var(--b-o); --i: var(--b-i); inset: calc(var(--a-px) + var(--m-px)); }
+	/* A single rounded line between the two layers: same ring as a flat layer, alpha --m-a. */
+	.logo-plate .lp-layer--line { --off: var(--a-px); --t: var(--m-px); --o: var(--m-a); --i: var(--m-a); inset: var(--a-px); }
+
+	.logo-plate .lp-layer::before,
+	.logo-plate .lp-layer::after {
+		content: '';
+		position: absolute;
+		border-radius: inherit;
+	}
+
+	.logo-plate .lp-layer::before {
+		inset: 0;
+		border: var(--t) solid color-mix(in srgb, var(--color) var(--o), transparent);
+	}
+
+	.logo-plate .lp-layer::after {
+		inset: var(--t);
+		border-radius: max(0px, calc(var(--lp-r) - var(--off) - var(--t)));
+		box-shadow: 0 0 var(--t) calc(var(--t) / 2) color-mix(in srgb, var(--color) calc((var(--i) - var(--o)) * 0.97), transparent);
+	}
+</style>
+
+<script>
+	// Visual-testing aid: ?logoPlate=<treatment> overrides every logo frame on the page.
+	const params = new URLSearchParams(location.search);
+	// Tolerate stray characters such as "<double>".
+	const forced = params.get('logoPlate')?.toLowerCase().replace(/[^a-z-]/g, '');
+	const scale = parseFloat(params.get('logoScale') ?? '');
+	document.querySelectorAll<HTMLElement>('[data-logo-plate]').forEach((el) => {
+		if (forced) el.dataset.logoPlate = forced;
+		if (scale >= 0) el.style.setProperty('--lp-scale', String(scale));
+	});
+</script>

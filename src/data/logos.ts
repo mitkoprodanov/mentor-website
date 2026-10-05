@@ -19,6 +19,29 @@
 
 export type LogoId = 'riot-games' | 'primal' | 'black-hole' | 'flying-wild-hog';
 
+/**
+ * How the dark site background is eased into a logo's own rectangle (see
+ * components/common/LogoPlate.astro for what each looks like). Presentation only.
+ */
+export type LogoTransition =
+	| 'none'
+	| 'single'
+	| 'double'
+	| 'double-wide'
+	| 'double-line'
+	| 'gradient-full'
+	| 'gradient-mid'
+	| 'hybrid'
+	| 'feather'
+	| 'halo'
+	| 'soft-double';
+
+/** The one switch for the logo transition treatment, site-wide. */
+export const DEFAULT_LOGO_TRANSITION: LogoTransition = 'double-wide';
+
+/** Global multiplier for every logo band width (1 = the base widths listed in LogoPlate.astro). */
+export const DEFAULT_LOGO_BAND_SCALE = 2;
+
 export interface LogoDef {
 	id: LogoId;
 	/** Path under /public (e.g. '/logos/riot/riot-games-lockup-red.png'). */
