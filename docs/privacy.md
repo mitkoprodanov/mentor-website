@@ -9,21 +9,21 @@ Single source of truth for privacy **product behavior, consent UX and cross-cutt
 The privacy model has **two independent optional permissions**:
 
 - **External media**
-- **Analytics**
+- **Anonymous analytics**
 
 The compact Privacy control exposes them together with an explicit no-consent choice:
 
-| Control | Supporting text | External media | Analytics |
+| Control | Supporting text | External media | Anonymous analytics |
 |---|---|---:|---:|
 | **No optional services** | **Maximum privacy** | Off | Off |
 | **External media** | **Essential visuals** | On | unchanged |
-| **Analytics** | **Site improvement** | unchanged | On |
+| **Anonymous analytics** | **Site improvement** | unchanged | On |
 
 Interaction rules:
 
-- selecting **No optional services** disables both External media and Analytics;
-- selecting either External media or Analytics deselects No optional services;
-- External media and Analytics are independent and may be enabled separately or together;
+- selecting **No optional services** disables both External media and Anonymous analytics;
+- selecting either External media or Anonymous analytics deselects No optional services;
+- External media and Anonymous analytics are independent and may be enabled separately or together;
 - disabling the last enabled optional service returns the control to No optional services.
 
 ### Effective default vs explicit choice
@@ -84,7 +84,7 @@ When Privacy is opened over a native modal view:
 
 - the underlying modal stays mounted, visible and at the same scroll/view state;
 - Privacy becomes the active interaction surface without closing or recreating the modal;
-- changing External media or Analytics applies immediately to the existing modal content;
+- changing External media or Anonymous analytics applies immediately to the existing modal content;
 - granting External media replaces eligible placeholders with embeds in place;
 - revoking External media restores placeholders in place;
 - closing Privacy returns interaction to the same modal state.
@@ -104,7 +104,7 @@ The Privacy tab follows the site's ordinary button behavior:
 
 A pinned bar also closes on outside click, `Escape`, or the explicit minimize control. The minimize control exists **only while the bar is pinned**; preview-open bars do not show it.
 
-Selecting External media or Analytics does not close the bar, because the visitor may want to change both permissions. Clicking inside the bar must not accidentally dismiss it.
+Selecting External media or Anonymous analytics does not close the bar, because the visitor may want to change both permissions. Clicking inside the bar must not accidentally dismiss it.
 
 ### Privacy bar layout and choices
 
@@ -125,16 +125,16 @@ The choices are:
 - standalone rounded control: **No optional services** — **Maximum privacy**;
 - one shared rounded control to its right containing two independently selectable halves:
   - **External media** — **Essential visuals**
-  - **Analytics** — **Site improvement**
+  - **Anonymous analytics** — **Site improvement**
 
-The External media / Analytics group uses one common rounded outer border and a straight divider between its two halves. This must visually communicate that the two services are related optional choices but can be set independently.
+The External media / Anonymous analytics group uses one common rounded outer border and a straight divider between its two halves. This must visually communicate that the two services are related optional choices but can be set independently.
 
 No optional services represents neither optional service being allowed and is mutually exclusive with either half.
 
 Requirements:
 
 - the current state must be visually unmistakable without relying on color alone;
-- External media and Analytics must visibly support simultaneous selection;
+- External media and Anonymous analytics must visibly support simultaneous selection;
 - selecting No optional services disables both optional services;
 - selecting either optional service deselects No optional services;
 - disabling the last enabled optional service returns to No optional services;
@@ -151,7 +151,7 @@ A **Details** control exposes the minimum additional information without enlargi
 **External media**  
 Loads embedded content from YouTube, Facebook and LinkedIn. Your browser connects to these providers when their content is displayed.
 
-**Analytics**  
+**Anonymous analytics**  
 Collects anonymous usage data to understand how the site is used and improve it. No persistent visitor ID, cross-site tracking or session replay. Raw analytics data is retained for 90 days.
 
 **Your choices**  
@@ -181,7 +181,7 @@ The media-kind classification remains centralized in `src/lib/embeds.ts` through
 
 ### Anonymous analytics
 
-Production analytics starts **only** when Analytics is explicitly allowed or when a remembered analytics consent already exists.
+Production analytics starts **only** when Anonymous analytics is explicitly allowed or when a remembered analytics consent already exists.
 
 Before consent:
 
@@ -301,17 +301,17 @@ Both hosts must render the same Privacy state and behavior. Modal/project/filter
 - Outside click, `Escape`, or explicit close dismisses it without changing consent.
 - **No optional services — Maximum privacy** disables both optional permissions.
 - **External media — Essential visuals** can be enabled independently.
-- **Analytics — Site improvement** can be enabled independently.
-- External media and Analytics can be enabled simultaneously.
+- **Anonymous analytics — Site improvement** can be enabled independently.
+- External media and Anonymous analytics can be enabled simultaneously.
 - Selecting either optional service deselects No optional services.
 - Selecting No optional services disables both optional services.
 - Disabling the final enabled optional service returns to No optional services.
-- Analytics without External media is valid; provider media remains unloaded and media-related behavior/playback telemetry is therefore unavailable.
-- Selecting External media or Analytics does not automatically close a pinned bar.
+- Anonymous analytics without External media is valid; provider media remains unloaded and media-related behavior/playback telemetry is therefore unavailable.
+- Selecting External media or Anonymous analytics does not automatically close a pinned bar.
 - The bar opens and closes with a fast horizontal scale/reveal originating from the bottom-left Privacy tab, similar in pace to Skills.
 - On desktop, the bar grows only as wide as needed for its contents; it does not expand to the full viewport width for animation.
 - The visual order is Privacy tab → framing sentence → choices → Details → minimize when pinned.
-- External media and Analytics share one rounded outer border with a straight divider and remain independently selectable.
+- External media and Anonymous analytics share one rounded outer border with a straight divider and remain independently selectable.
 - The far-right close affordance is a narrow full-height `<` minimize button, shown only while pinned and never in preview mode.
 - The selected states are visually obvious and keyboard accessible.
 - Details are available without being required to understand the basic choice.
