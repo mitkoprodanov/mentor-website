@@ -447,6 +447,7 @@ export const timeline: TimelineEntry[] = [
 						name: 'Space Punks',
 						url: 'https://playspacepunks.com/',
 						info: 'Humorous, comic-style sci-fi online co-op action RPG built around fast-paced combat and synergizing character abilities',
+						logoId: 'flying-wild-hog',
 						media: spacePunksMedia,
 						experiences: [
 							{

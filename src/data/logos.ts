@@ -86,6 +86,8 @@ export const logos: Record<LogoId, LogoDef> = {
 	'flying-wild-hog': {
 		id: 'flying-wild-hog',
 		src: '/logos/flying-wild-hog/flying-wild-hog-white.png',
+		previewWidth: 40,
+		detailWidth: 40,
 		headerHeight: 34,
 		plate: 'black',
 	},

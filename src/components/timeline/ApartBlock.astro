@@ -76,6 +76,8 @@ const tracks = await Promise.all(
 							// experience contributed the tag.
 							modalTagIds: sortTagIdsByIndex([...new Set(cards.flatMap((c) => c.tagIds))]),
 							modalMedia: project.media ?? PLACEHOLDER_MEDIA,
+							// Explicit project → registry logo (data/logos.ts); none → no logo.
+							logo: resolveLogo(project),
 						};
 					}),
 				);
@@ -218,7 +220,7 @@ const tracks = await Promise.all(
 							    ProjectRow.astro, so it needs the same instrumentation,
 							    unconditionally (not gated on project.name — see Ericsson
 							    Hungary's unnamed single-project company). */}
-							{projects.map(({ project, cards, modalId, visibilityId, modalDateRange, peopleLabel, modalTagIds, modalMedia }) => (
+							{projects.map(({ project, cards, modalId, visibilityId, modalDateRange, peopleLabel, modalTagIds, modalMedia, logo }) => (
 								<div
 								class="track-row"
 								data-visibility-target-type="timeline_project"
@@ -285,6 +287,7 @@ const tracks = await Promise.all(
 												tagIds={modalTagIds}
 												media={modalMedia}
 												url={project.url}
+												logo={logo}
 											>
 												{cards.map((c) => (
 													<div
