@@ -15,6 +15,7 @@ import { PrivacyBarState, isNone, isUnanswered, planConsentWrites, selectChoice 
 import type { ChoiceId, Permissions } from '../lib/privacyControl.ts';
 
 const HOVER_LEAVE_MS = 180; // lets the pointer cross the gap between the lock and the bar
+const ATTN_MS = 1800; // keep in sync with the mgs-options-attn animation in PrivacyConsent.astro
 
 function init(): void {
 	const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
@@ -212,11 +213,24 @@ function init(): void {
 		}
 	});
 
+	// Short attention cue on External media: restarts if already running, then removes itself.
+	let attnTimer: ReturnType<typeof setTimeout> | undefined;
+	const highlightMedia = (): void => {
+		const b = choiceBtn('media');
+		if (!b) return;
+		clearTimeout(attnTimer);
+		b.classList.remove('mgs-options-choice--attn');
+		void b.offsetWidth; // restart the CSS animation
+		b.classList.add('mgs-options-choice--attn');
+		attnTimer = setTimeout(() => b.classList.remove('mgs-options-choice--attn'), ATTN_MS);
+	};
+
 	// A gated third-party embed was activated without permission: open the bar pinned on External media
 	// (never loading just that one item).
 	document.addEventListener(EXTERNAL_MEDIA_REQUEST_EVENT, () => {
 		state.pin();
 		render();
+		highlightMedia();
 		choiceBtn('media')?.focus({ preventScroll: true });
 	});
 
