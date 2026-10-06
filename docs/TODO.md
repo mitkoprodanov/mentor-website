@@ -117,6 +117,23 @@ Not a ticketing system: keep entries short, update status inline, delete when do
   commands by design).
 - **Area:** docs/privacy.md, workers/telemetry
 
+### Move telemetry Worker to a custom domain
+- **Type:** Cleanup / Infra
+- **Status:** Open
+- Move the telemetry Worker from its `workers.dev` URL to a dedicated custom domain/subdomain
+  (for example `telemetry.mentorgamestudio.com`) and update `PRODUCTION_ENDPOINT` in
+  `src/lib/telemetry/config.ts` and the CORS configuration. Not a blocker for production telemetry.
+- **Area:** workers/telemetry, src/lib/telemetry/config.ts
+
+### CI deploys only the site, not the telemetry Worker
+- **Type:** Cleanup / Infra
+- **Status:** Open
+- `.github/workflows/deploy.yml` deploys GitHub Pages only and triggers on `main`, but the
+  default branch is `master`. The Worker is deployed by hand (`npm run worker:deploy`), and D1
+  migrations in `migrations/` are applied by hand (`wrangler d1 execute --remote --file`).
+  Decide whether to add a Worker deploy job and fix the branch trigger.
+- **Area:** .github/workflows/deploy.yml
+
 ## Done
 
 ### External media permission (replaces per-item embed gates)
