@@ -18,11 +18,11 @@ const HOVER_LEAVE_MS = 180; // lets the pointer cross the gap between the lock a
 
 function init(): void {
 	const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel);
-	const root = $('#privacy-root');
-	const toggle = $<HTMLButtonElement>('#privacy-toggle');
-	const bar = $('#privacy-bar');
-	const note = $('#privacy-note');
-	const details = $('#privacy-details');
+	const root = $('#mgs-options-root');
+	const toggle = $<HTMLButtonElement>('#mgs-options-toggle');
+	const bar = $('#mgs-options-tray');
+	const note = $('#mgs-options-note');
+	const details = $('#mgs-options-details');
 	const detailsBtn = $<HTMLButtonElement>('[data-privacy-action="details"]');
 	const closeBtn = $<HTMLButtonElement>('[data-privacy-action="close"]');
 	if (!root || !toggle || !bar || !note || !details || !detailsBtn || !closeBtn) return;

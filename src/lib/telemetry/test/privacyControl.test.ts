@@ -203,18 +203,18 @@ test('privacy UI markup: three choices, exact copy, Details with the documented 
 	}
 	assert.equal((markup.match(/data-privacy-choice="/g) ?? []).length, 3);
 	assert.equal((markup.match(/aria-pressed="false"/g) ?? []).length, 3);
-	assert.match(markup, /id="privacy-toggle"[^>]*aria-label="Privacy"/);
+	assert.match(markup, /id="mgs-options-toggle"[^>]*aria-label="Privacy"/);
 	assert.ok(markup.includes('aria-label="Minimize Privacy"'));
 	assert.ok(!markup.includes('×')); // minimize is a < chevron, not an X
 	const at = (t: string): number => markup.indexOf(t);
 	// tab → sentence → controls → Details → minimize
-	assert.ok(at('id="privacy-toggle"') < at('Privacy settings for optional site services.'));
+	assert.ok(at('id="mgs-options-toggle"') < at('Privacy settings for optional site services.'));
 	assert.ok(at('Privacy settings for optional site services.') < at('data-privacy-choice="none"'));
 	assert.ok(at('data-privacy-choice="analytics"') < at('data-privacy-action="details"') && at('data-privacy-action="details"') < at('data-privacy-action="close"'));
 	// minimize exists only while pinned: hidden by default, shown by the script only when pinned
 	assert.match(markup, /data-privacy-action="close"[^>]*\shidden>/);
 	assert.match(read('src/scripts/privacyConsent.client.ts'), /closeBtn\.hidden = !state\.isPinned/);
-	assert.match(markup, /privacy-group[\s\S]*data-privacy-choice="media"[\s\S]*data-privacy-choice="analytics"/);
+	assert.match(markup, /mgs-options-group[\s\S]*data-privacy-choice="media"[\s\S]*data-privacy-choice="analytics"/);
 	assert.ok(!/Worker|D1|Cloudflare|utm_|session ID/i.test(markup));
 	assert.ok(read('src/components/PrivacyConsent.astro').includes("content: '✓'")); // selected is not colour-only
 });
@@ -222,10 +222,10 @@ test('privacy UI markup: three choices, exact copy, Details with the documented 
 test('privacy UI stacking: viewport-fixed, above backdrops, no blur/transform ancestor, safe areas, reduced motion', () => {
 	const ui = read('src/components/PrivacyConsent.astro');
 	const css = ui.split('<style>')[1];
-	assert.match(css, /\.privacy-toggle,\s*\.privacy-bar \{\s*position: fixed;\s*z-index: 1000;/);
+	assert.match(css, /\.mgs-options-toggle,\s*\.mgs-options-tray \{\s*position: fixed;\s*z-index: 1000;/);
 	assert.ok(css.includes('display: contents')); // the wrapper creates no box or stacking context
 	assert.ok(!/backdrop-filter|filter:|will-change/.test(css));
-	const start = css.indexOf('.privacy-root {');
+	const start = css.indexOf('.mgs-options-root {');
 	const root = css.slice(start, css.indexOf('}', start));
 	assert.ok(!/transform|filter|opacity|isolation|contain/.test(root));
 	for (const inset of ['safe-area-inset-bottom', 'safe-area-inset-left', 'safe-area-inset-right']) assert.ok(css.includes(inset), inset);
@@ -265,4 +265,28 @@ test('single source of truth: no preset/level state remains in the privacy code'
 	for (const f of ['src/scripts/privacyConsent.client.ts', 'src/lib/privacyControl.ts', 'src/components/PrivacyConsent.astro']) {
 		assert.ok(!/preset|privacyLevel|cumulative/i.test(read(f)), f);
 	}
+});
+
+// Brave Shields (cosmetic filtering) injects `display:none !important` for generic selectors that look
+// like cookie/consent banners (e.g. `.privacy-bar`, `#privacy-bar`), so the bar had no box in production.
+// The component's OWN ids/classes must stay neutral and project-namespaced. (`data-*` attributes and
+// visible/ARIA text are unaffected.)
+test('privacy UI selectors: project-namespaced, free of filter-sensitive terms', () => {
+	const markup = read('src/components/PrivacyConsent.astro').split('<style>')[0];
+	const css = read('src/components/PrivacyConsent.astro').split('<style>')[1];
+	const names = new Set<string>();
+	for (const m of markup.matchAll(/\sclass="([^"]*)"/g)) for (const c of m[1].split(/\s+/)) if (c) names.add(c);
+	for (const m of markup.matchAll(/\sid="([^"]*)"/g)) names.add(m[1]);
+	for (const m of css.matchAll(/[.#]([A-Za-z_][\w-]*)/g)) if (!/^\d/.test(m[1]) && /[a-z]/i.test(m[1])) names.add(m[1]);
+	const own = [...names].filter((n) => /^(mgs-|privacy|cookie|consent|gdpr|tracking|analytics)/i.test(n) || /privacy|cookie|consent|gdpr|tracking|analytics/i.test(n));
+	assert.ok(own.length > 0);
+	for (const n of own) {
+		assert.ok(!/cookie|consent|privacy|gdpr|tracking|analytics/i.test(n), `filter-sensitive selector name: ${n}`);
+		assert.ok(n.startsWith('mgs-'), `not in the mgs- namespace: ${n}`);
+	}
+	const root = markup.match(/<div class="([^"]*)" id="([^"]*)"/);
+	assert.ok(root && root[1].startsWith('mgs-') && root[2].startsWith('mgs-'), 'root must use the mgs- namespace');
+	// the client script must only look up the renamed ids
+	const client = read('src/scripts/privacyConsent.client.ts');
+	for (const m of client.matchAll(/\$(?:<[^>]*>)?\('#([\w-]+)'\)/g)) assert.ok(m[1].startsWith('mgs-'), `client selector #${m[1]}`);
 });

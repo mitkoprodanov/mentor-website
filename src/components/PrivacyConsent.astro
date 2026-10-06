@@ -7,46 +7,46 @@
 // dialog, so state and logic are shared and nothing is duplicated. Behaviour: privacyConsent.client.ts.
 ---
 
-<div class="privacy-root" id="privacy-root">
-	<button type="button" class="privacy-toggle btn-sheen" id="privacy-toggle" aria-label="Privacy" aria-expanded="false" aria-controls="privacy-bar" hidden>
+<div class="mgs-options-root" id="mgs-options-root">
+	<button type="button" class="mgs-options-toggle btn-sheen" id="mgs-options-toggle" aria-label="Privacy" aria-expanded="false" aria-controls="mgs-options-tray" hidden>
 		<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
 			<rect x="5" y="10.5" width="14" height="10" rx="2" fill="currentColor"></rect>
 			<path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
 		</svg>
 	</button>
 
-	<section class="privacy-bar" id="privacy-bar" role="group" aria-label="Privacy choices">
-		<div class="privacy-bar__main">
-			<p class="privacy-bar__intro">Privacy settings for optional site services.</p>
-			<div class="privacy-bar__choices">
-				<button type="button" class="privacy-choice privacy-choice--none" data-privacy-choice="none" aria-pressed="false">
-					<span class="privacy-choice__mark" aria-hidden="true"></span>
-					<span class="privacy-choice__text"><strong>No optional services</strong><small>Maximum privacy</small></span>
+	<section class="mgs-options-tray" id="mgs-options-tray" role="group" aria-label="Privacy choices">
+		<div class="mgs-options-tray__main">
+			<p class="mgs-options-tray__intro">Privacy settings for optional site services.</p>
+			<div class="mgs-options-tray__choices">
+				<button type="button" class="mgs-options-choice mgs-options-choice--none" data-privacy-choice="none" aria-pressed="false">
+					<span class="mgs-options-choice__mark" aria-hidden="true"></span>
+					<span class="mgs-options-choice__text"><strong>No optional services</strong><small>Maximum privacy</small></span>
 				</button>
-				<div class="privacy-group" role="group" aria-label="Optional services">
-					<button type="button" class="privacy-choice privacy-choice--half" data-privacy-choice="media" aria-pressed="false">
-						<span class="privacy-choice__mark" aria-hidden="true"></span>
-						<span class="privacy-choice__text"><strong>External media</strong><small>Essential visuals</small></span>
+				<div class="mgs-options-group" role="group" aria-label="Optional services">
+					<button type="button" class="mgs-options-choice mgs-options-choice--half" data-privacy-choice="media" aria-pressed="false">
+						<span class="mgs-options-choice__mark" aria-hidden="true"></span>
+						<span class="mgs-options-choice__text"><strong>External media</strong><small>Essential visuals</small></span>
 					</button>
-					<button type="button" class="privacy-choice privacy-choice--half" data-privacy-choice="analytics" aria-pressed="false">
-						<span class="privacy-choice__mark" aria-hidden="true"></span>
-						<span class="privacy-choice__text"><strong>Anonymous analytics</strong><small>Site improvement</small></span>
+					<button type="button" class="mgs-options-choice mgs-options-choice--half" data-privacy-choice="analytics" aria-pressed="false">
+						<span class="mgs-options-choice__mark" aria-hidden="true"></span>
+						<span class="mgs-options-choice__text"><strong>Anonymous analytics</strong><small>Site improvement</small></span>
 					</button>
 				</div>
 			</div>
 
-			<button type="button" class="privacy-link" data-privacy-action="details" aria-expanded="false" aria-controls="privacy-details">Details</button>
+			<button type="button" class="mgs-options-link" data-privacy-action="details" aria-expanded="false" aria-controls="mgs-options-details">Details</button>
 
-			<p class="privacy-bar__note" id="privacy-note" role="status" hidden></p>
+			<p class="mgs-options-tray__note" id="mgs-options-note" role="status" hidden></p>
 
-			<div class="privacy-details" id="privacy-details" hidden>
+			<div class="mgs-options-details" id="mgs-options-details" hidden>
 				<p><strong>External media</strong><br />Loads embedded content from YouTube, Facebook and LinkedIn. Your browser connects to these providers when their content is displayed.</p>
 				<p><strong>Anonymous analytics</strong><br />Collects anonymous usage data to understand how the site is used and improve it. No persistent visitor ID, cross-site tracking or session replay. Raw analytics data is retained for 90 days.</p>
 				<p><strong>Your choices</strong><br />Your privacy choices are stored in this browser and can be changed at any time using Privacy.</p>
 			</div>
 		</div>
 
-		<button type="button" class="privacy-bar__close" data-privacy-action="close" aria-label="Minimize Privacy" hidden>
+		<button type="button" class="mgs-options-tray__close" data-privacy-action="close" aria-label="Minimize Privacy" hidden>
 			<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">
 				<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
 			</svg>
@@ -57,22 +57,22 @@
 <style>
 	/* Top-level viewport UI: the root generates no box; the two fixed children are the UI. Nothing here
 	   uses opacity/filter/transform on an ancestor, so modal blur can never reach it. */
-	.privacy-root {
+	.mgs-options-root {
 		display: contents;
 		--privacy-tab-w: calc(2.5rem + env(safe-area-inset-left));
 		--privacy-tab-h: calc(2.25rem + env(safe-area-inset-bottom));
 		--privacy-edge-r: env(safe-area-inset-right);
 	}
 
-	.privacy-toggle[hidden],
-	.privacy-bar__close[hidden],
-	.privacy-details[hidden],
-	.privacy-bar__note[hidden] {
+	.mgs-options-toggle[hidden],
+	.mgs-options-tray__close[hidden],
+	.mgs-options-details[hidden],
+	.mgs-options-tray__note[hidden] {
 		display: none;
 	}
 
-	.privacy-toggle,
-	.privacy-bar {
+	.mgs-options-toggle,
+	.mgs-options-tray {
 		position: fixed;
 		z-index: 1000;
 		bottom: 0;
@@ -81,7 +81,7 @@
 
 	/* Corner-attached tab: flush with the left/bottom viewport edges, only the exposed top-right
 	   corner is rounded. Sits above the bar so it reads as the bar's origin. */
-	.privacy-toggle {
+	.mgs-options-toggle {
 		z-index: 1001;
 		display: grid;
 		place-items: center;
@@ -101,27 +101,27 @@
 		transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 	}
 
-	.privacy-toggle:hover,
-	.privacy-toggle:focus-visible {
+	.mgs-options-toggle:hover,
+	.mgs-options-toggle:focus-visible {
 		color: var(--fg);
 		border-color: var(--mentor);
 		box-shadow: 0 0 0 3px color-mix(in oklab, var(--mentor) 28%, transparent), 0 -2px 12px var(--color-shadow-deep);
 	}
 
-	.privacy-toggle:focus-visible {
+	.mgs-options-toggle:focus-visible {
 		outline: 2px solid var(--mentor);
 		outline-offset: -4px;
 	}
 
 	/* Pinned: filled, unmistakable (distinct from hover/preview). */
-	.privacy-toggle[data-pinned='true'] {
+	.mgs-options-toggle[data-pinned='true'] {
 		color: var(--bg);
 		background: var(--mentor);
 		border-color: var(--mentor);
 		box-shadow: 0 0 16px 1px color-mix(in oklab, var(--mentor) 55%, transparent);
 	}
 
-	.privacy-bar {
+	.mgs-options-tray {
 		/* Content-driven width: the bar stops where its contents end (capped to the viewport). */
 		right: auto;
 		width: max-content;
@@ -147,20 +147,20 @@
 		transition: clip-path 0.16s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.16s;
 	}
 
-	.privacy-bar[data-open='true'] {
+	.mgs-options-tray[data-open='true'] {
 		clip-path: inset(-30px -30px 0 0);
 		visibility: visible;
 		transition: clip-path 0.16s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.privacy-bar,
-		.privacy-bar[data-open='true'] {
+		.mgs-options-tray,
+		.mgs-options-tray[data-open='true'] {
 			transition: none;
 		}
 	}
 
-	.privacy-bar__main {
+	.mgs-options-tray__main {
 		flex: 1 1 auto;
 		min-width: 0;
 		display: flex;
@@ -172,21 +172,21 @@
 		overflow-y: auto;
 	}
 
-	.privacy-bar__choices {
+	.mgs-options-tray__choices {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: stretch;
 		gap: 0.5rem;
 	}
 
-	.privacy-bar__intro {
+	.mgs-options-tray__intro {
 		margin: 0;
 		flex: 0 1 auto;
 		min-width: 0;
 		color: var(--fg-muted);
 	}
 
-	.privacy-choice {
+	.mgs-options-choice {
 		display: flex;
 		align-items: center;
 		gap: 0.45rem;
@@ -202,33 +202,33 @@
 
 	/* External media + Analytics: one shared rounded outer border, one straight divider,
 	   two independently selectable halves. */
-	.privacy-group {
+	.mgs-options-group {
 		display: flex;
 		border: 1px solid var(--mentor-border);
 		border-radius: 10px;
 		overflow: hidden;
 	}
 
-	.privacy-choice--half {
+	.mgs-options-choice--half {
 		border: 0;
 		border-radius: 0;
 	}
 
-	.privacy-choice--half + .privacy-choice--half {
+	.mgs-options-choice--half + .mgs-options-choice--half {
 		border-left: 1px solid var(--mentor-border);
 	}
 
-	.privacy-choice__text {
+	.mgs-options-choice__text {
 		display: grid;
 	}
 
-	.privacy-choice small {
+	.mgs-options-choice small {
 		color: var(--fg-muted);
 		font-size: 0.7rem;
 	}
 
 	/* Selected = filled tint + a check mark in the indicator (never colour alone). */
-	.privacy-choice__mark {
+	.mgs-options-choice__mark {
 		display: grid;
 		place-items: center;
 		flex: none;
@@ -240,51 +240,51 @@
 		line-height: 1;
 	}
 
-	.privacy-choice--none .privacy-choice__mark {
+	.mgs-options-choice--none .mgs-options-choice__mark {
 		border-radius: 50%;
 	}
 
-	.privacy-choice[aria-pressed='true'] {
+	.mgs-options-choice[aria-pressed='true'] {
 		background: var(--mentor-bg);
 		box-shadow: inset 0 0 0 1px var(--mentor);
 	}
 
-	.privacy-choice--none[aria-pressed='true'] {
+	.mgs-options-choice--none[aria-pressed='true'] {
 		border-color: var(--mentor);
 	}
 
-	.privacy-choice[aria-pressed='true'] .privacy-choice__mark {
+	.mgs-options-choice[aria-pressed='true'] .mgs-options-choice__mark {
 		border-color: var(--mentor);
 		background: var(--mentor);
 		color: var(--bg);
 	}
 
-	.privacy-choice[aria-pressed='true'] .privacy-choice__mark::before {
+	.mgs-options-choice[aria-pressed='true'] .mgs-options-choice__mark::before {
 		content: '✓';
 	}
 
-	.privacy-choice:hover:not(:disabled) {
+	.mgs-options-choice:hover:not(:disabled) {
 		background: color-mix(in oklab, var(--mentor) 14%, transparent);
 	}
 
-	.privacy-choice:focus-visible,
-	.privacy-link:focus-visible,
-	.privacy-bar__close:focus-visible {
+	.mgs-options-choice:focus-visible,
+	.mgs-options-link:focus-visible,
+	.mgs-options-tray__close:focus-visible {
 		outline: 2px solid var(--mentor);
 		outline-offset: -2px;
 	}
 
-	.privacy-choice--none:focus-visible,
-	.privacy-link:focus-visible {
+	.mgs-options-choice--none:focus-visible,
+	.mgs-options-link:focus-visible {
 		outline-offset: 2px;
 	}
 
-	.privacy-choice:disabled {
+	.mgs-options-choice:disabled {
 		opacity: 0.65;
 		cursor: default;
 	}
 
-	.privacy-link {
+	.mgs-options-link {
 		font: inherit;
 		background: none;
 		border: 0;
@@ -295,7 +295,7 @@
 	}
 
 	/* Narrow, full-height minimize control at the far right. */
-	.privacy-bar__close {
+	.mgs-options-tray__close {
 		flex: none;
 		display: grid;
 		place-items: center;
@@ -309,48 +309,48 @@
 		transition: color 0.15s ease, background 0.15s ease;
 	}
 
-	.privacy-bar__close:hover {
+	.mgs-options-tray__close:hover {
 		color: var(--fg);
 		background: color-mix(in oklab, var(--mentor) 14%, transparent);
 	}
 
 	/* Full-row blocks that must not widen the content-sized bar: zero intrinsic width, full row once laid out. */
-	.privacy-bar__note,
-	.privacy-details {
+	.mgs-options-tray__note,
+	.mgs-options-details {
 		flex: 1 1 0;
 		width: 0;
 		min-width: 100%;
 		margin: 0;
 	}
 
-	.privacy-bar__note {
+	.mgs-options-tray__note {
 		color: var(--fg-muted);
 	}
 
-	.privacy-details p {
+	.mgs-options-details p {
 		margin: 0.35rem 0 0;
 	}
 
 	@media (max-width: 600px) {
-		.privacy-bar {
+		.mgs-options-tray {
 			width: 100vw;
 		}
-		.privacy-bar__main {
+		.mgs-options-tray__main {
 			gap: 0.3rem 0.6rem;
 		}
-		.privacy-bar__intro {
+		.mgs-options-tray__intro {
 			flex-basis: 100%;
 		}
-		.privacy-bar__choices {
+		.mgs-options-tray__choices {
 			flex: 1 1 100%;
 		}
-		.privacy-choice--none {
+		.mgs-options-choice--none {
 			flex: 1 1 100%;
 		}
-		.privacy-group {
+		.mgs-options-group {
 			flex: 1 1 100%;
 		}
-		.privacy-choice--half {
+		.mgs-options-choice--half {
 			flex: 1 1 50%;
 		}
 	}
