@@ -27,6 +27,12 @@ if (process.argv.includes('build') && (process.env.PUBLIC_TELEMETRY_MODE || proc
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://mentorgamestudio.com',
+	// GitHub Pages is static and cannot send HTTP 3xx responses, so Astro emits
+	// /linkedin/index.html with a meta-refresh + canonical link instead.
+	redirects: {
+		'/linkedin':
+			'/?utm_source=linkedin&utm_medium=social&utm_campaign=website_launch&utm_content=company',
+	},
 	vite: {
 		define: {
 			__SITE_VERSION__: JSON.stringify(siteVersion()),

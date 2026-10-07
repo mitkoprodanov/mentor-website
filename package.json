@@ -10,6 +10,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "social:launch-image": "node tools/website-launch-image/serve.mjs",
+    "social:launch-image:render": "node tools/website-launch-image/render.mjs",
+    "redirects:test": "node --test scripts/test/redirects.test.mjs",
     "worker:test": "node --test \"workers/telemetry/test/*.test.ts\"",
     "worker:typecheck": "tsc -p workers/telemetry",
     "worker:dev": "wrangler dev --config workers/telemetry/wrangler.jsonc",
@@ -33,6 +36,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@cloudflare/workers-types": "^5.20260925.1",
+    "playwright": "^1.63.0",
     "typescript": "^6.0.3",
     "wrangler": "^4.139.0"
   }

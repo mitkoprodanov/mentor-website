@@ -28,3 +28,7 @@ pnpm-debug.log*
 .dev.vars
 .env.*
 .dev.vars.*
+
+# website launch image tool exports
+tools/website-launch-image/output/*
+!tools/website-launch-image/output/.gitkeep

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Website launch image</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<!-- The canvas is a fixed pixel size (see --canvas-w / --canvas-h in style.css).
+	     Screenshot <img> tags are never cropped or restyled; only their wrappers are. -->
+	<main class="canvas" id="canvas">
+		<div class="bg"></div>
+
+		<figure class="panel panel--skills">
+			<img src="assets/mitko-skills.png" alt="Skills panel">
+		</figure>
+
+		<figure class="panel panel--main">
+			<img src="assets/main-timeline.png" alt="Shared projects timeline">
+		</figure>
+
+		<figure class="panel panel--punks">
+			<img src="assets/space-punks.png" alt="Space Punks project detail">
+		</figure>
+	</main>
+
+	<script>
+		// Preview only: shrink the canvas to fit the window. Append ?fit=0 for true 1:1 size.
+		(function () {
+			if (new URLSearchParams(location.search).get('fit') === '0') return;
+			var c = document.getElementById('canvas');
+			document.body.classList.add('fit');
+			document.body.style.overflow = 'hidden';
+			function fit() {
+				var s = Math.min(1, innerWidth / c.offsetWidth, innerHeight / c.offsetHeight);
+				c.style.setProperty('--canvas-scale', s);
+			}
+			addEventListener('resize', fit);
+			fit();
+		})();
+	</script>
+</body>
+</html>
