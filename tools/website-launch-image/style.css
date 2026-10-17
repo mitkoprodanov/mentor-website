@@ -45,14 +45,14 @@
 /* ===================================================================== */
 .panel--main {
 	--x: 100px;  --y: 40px;  --w: 850px;
-	--rot-x: -8deg; --rot-y: 10deg;  --rot-z: 1.5deg;  --z: 1;
+	--rot-x: -6deg; --rot-y: 8deg;  --rot-z: 1deg;  --z: 1;
 }
 .panel--skills {
-	--x: 30px;   --y: 175px; --w: 300px;
+	--x: 50px;   --y: 200px; --w: 300px;
 	--rot-x: 0deg; --rot-y: 34deg;   --rot-z: 0.5deg; --z: 2;
 }
 .panel--punks {
-	--x: 600px;  --y: 190px; --w: 550px;
+	--x: 610px;  --y: 180px; --w: 520px;
 	--rot-x: 0deg; --rot-y: -30deg;  --rot-z: .5deg;   --z: 3;
 }
 
