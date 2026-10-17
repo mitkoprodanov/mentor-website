@@ -49,13 +49,13 @@ const sentence: Seg[] = [
 	{ id: 'in-sync',            text: 'battle-tested duo',    side: 'left'  },
 	' with ',
 	{ id: 'shipped-experiences', text: 'proven experience',   side: 'right' },
-	' to build on,',
+	' to build on, ',
 	{ br: true },
 	'we offer ',
 	{ id: 'easy-integration',   text: 'easy integration',     side: 'left'  },
 	' and take ',
 	{ id: 'true-ownership',     text: 'true ownership',       side: 'right' },
-	' —',
+	' — ',
 	{ br: true },
 	'delivering ',
 	{ id: 'complete-development', text: 'lasting game features and systems', side: 'left' },
@@ -108,7 +108,7 @@ const tooltipAttrs = (id: string) =>
 				typeof seg === 'string' ? (
 					seg
 				) : 'br' in seg ? (
-					<br />
+					<br class="line-break" />
 				) : (
 					<button
 						class="part btn-sheen"
@@ -329,6 +329,12 @@ const tooltipAttrs = (id: string) =>
 	   without shifting it). ─────────────────────────────────────────────────── */
 
 	@media (max-width: 1250px) {
+		/* The three-line layout only fits where the side panels also fit. Below
+		   that, drop the forced breaks and let the sentence wrap naturally. */
+		.line-break {
+			display: none;
+		}
+
 		.vision--hero .sentence-detail {
 			top: calc(100% + 1rem);
 			left: 50%;
