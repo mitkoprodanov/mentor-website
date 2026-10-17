@@ -146,6 +146,16 @@ const tooltipAttrs = (id: string) =>
 		margin: 1.6rem auto 0;
 	}
 
+	/* The longest line ("delivering … ready to scale.") needs ~630px (plus
+	   the 24px side padding). On viewports too narrow for that, drop the forced breaks and let the
+	   sentence wrap naturally. Independent of the tooltip placement breakpoint,
+	   so phone landscape keeps the three lines. */
+	@media (max-width: 680px) {
+		.line-break {
+			display: none;
+		}
+	}
+
 	.vision--hero {
 		animation: sentence-in 550ms cubic-bezier(0.22, 1, 0.36, 1) 1250ms both;
 	}
@@ -329,12 +339,6 @@ const tooltipAttrs = (id: string) =>
 	   without shifting it). ─────────────────────────────────────────────────── */
 
 	@media (max-width: 1250px) {
-		/* The three-line layout only fits where the side panels also fit. Below
-		   that, drop the forced breaks and let the sentence wrap naturally. */
-		.line-break {
-			display: none;
-		}
-
 		.vision--hero .sentence-detail {
 			top: calc(100% + 1rem);
 			left: 50%;
